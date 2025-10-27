@@ -14,7 +14,7 @@ export default defineNuxtConfig({
     }
   },
 
-  modules: [],
+  modules: ['@nuxtjs/tailwindcss'],
 
   app: {
     head: {

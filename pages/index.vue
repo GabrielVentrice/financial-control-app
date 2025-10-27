@@ -1,76 +1,141 @@
 <template>
-  <div class="container">
-    <header class="header">
-      <h1>Controle Financeiro</h1>
-      <p>Integrado com Google Sheets</p>
-    </header>
-
-    <div class="controls">
-      <button @click="refresh" :disabled="loading" class="btn-refresh">
-        {{ loading ? 'Carregando...' : 'Atualizar Dados' }}
-      </button>
-
-      <div class="search-box">
-        <input
-          v-model="searchTerm"
-          type="text"
-          placeholder="Buscar por descrição..."
-          class="search-input"
-        />
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow">
+      <div class="px-8 py-6">
+        <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
+        <p class="text-gray-600 mt-1">Visão geral das suas finanças</p>
       </div>
     </div>
 
-    <div v-if="error" class="error-message">
-      {{ error }}
-    </div>
+    <!-- Controls -->
+    <div class="px-8 py-6">
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center gap-4 flex-wrap">
+          <button
+            @click="refresh"
+            :disabled="loading"
+            class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400"
+          >
+            {{ loading ? 'Carregando...' : 'Atualizar Dados' }}
+          </button>
 
-    <div v-if="!loading && !error" class="summary">
-      <div class="summary-card">
-        <h3>Total de Transações</h3>
-        <p class="summary-value">{{ filteredTransactions.length }}</p>
+          <div class="flex-1 min-w-[300px]">
+            <input
+              v-model="searchTerm"
+              type="text"
+              placeholder="Buscar por descrição..."
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+        </div>
+
+        <!-- Filter info -->
+        <div class="mt-4 flex items-center gap-2 text-sm text-gray-600">
+          <span class="font-medium">Filtro ativo:</span>
+          <span class="px-3 py-1 bg-primary-100 text-primary-800 rounded-full">
+            {{ selectedPerson }}
+          </span>
+        </div>
       </div>
-      <div class="summary-card">
-        <h3>Valor Total</h3>
-        <p class="summary-value">R$ {{ totalAmount.toFixed(2) }}</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-if="error" class="px-8 pb-8">
+      <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <p class="text-red-800 font-medium">Erro ao carregar dados</p>
+        <p class="text-red-600 text-sm mt-2">{{ error }}</p>
       </div>
     </div>
 
-    <div v-if="loading" class="loading">
-      Carregando transações...
+    <!-- Loading State -->
+    <div v-if="loading" class="px-8 py-12 text-center">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
+      <p class="mt-4 text-gray-600">Carregando transações...</p>
     </div>
 
-    <div v-else-if="filteredTransactions.length > 0" class="transactions-table">
-      <table>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Origem</th>
-            <th>Destino</th>
-            <th>Descrição</th>
-            <th>Valor</th>
-            <th>Registrado em</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="transaction in filteredTransactions" :key="transaction.transactionId">
-            <td>{{ formatDate(transaction.date) }}</td>
-            <td>{{ transaction.origin }}</td>
-            <td>{{ transaction.destination }}</td>
-            <td>{{ transaction.description }}</td>
-            <td class="amount">R$ {{ transaction.amount.toFixed(2) }}</td>
-            <td>{{ formatDate(transaction.recordedAt) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <!-- Content -->
+    <div v-else-if="!error" class="px-8 pb-8">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-6">
+          <p class="text-gray-600 text-sm font-medium">Total de Transações</p>
+          <p class="text-3xl font-bold text-gray-900 mt-2">{{ filteredTransactions.length }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+          <p class="text-gray-600 text-sm font-medium">Valor Total</p>
+          <p class="text-3xl font-bold text-primary-600 mt-2">{{ formatCurrency(totalAmount) }}</p>
+        </div>
+      </div>
 
-    <div v-else-if="!loading" class="no-data">
-      Nenhuma transação encontrada
+      <!-- Transactions Table -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Data
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Origem
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Destino
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Descrição
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Valor
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Registrado em
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr
+                v-for="transaction in filteredTransactions"
+                :key="transaction.transactionId"
+                class="hover:bg-gray-50 transition-colors"
+              >
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ formatDate(transaction.date) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  {{ transaction.origin }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  {{ transaction.destination }}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                  {{ transaction.description }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                  {{ formatCurrency(transaction.amount) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ formatDate(transaction.recordedAt) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div v-if="filteredTransactions.length === 0" class="text-center py-12">
+          <p class="text-gray-500">Nenhuma transação encontrada</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue'
+
+// Composables
 const {
   transactions,
   loading,
@@ -80,19 +145,38 @@ const {
   getTransactionsByDescription,
 } = useTransactions()
 
+const { selectedPerson, identifyPerson } = usePersonFilter()
+
+// State
 const searchTerm = ref('')
 
+// Computed
 const filteredTransactions = computed(() => {
-  if (!searchTerm.value) {
-    return transactions.value
+  let filtered = transactions.value
+
+  // Filter by person
+  if (selectedPerson.value !== 'Ambos') {
+    filtered = filtered.filter(transaction => {
+      const person = identifyPerson(transaction.origin)
+      return person === selectedPerson.value
+    })
   }
-  return getTransactionsByDescription(searchTerm.value)
+
+  // Then filter by search term
+  if (searchTerm.value) {
+    filtered = filtered.filter(t =>
+      t.description.toLowerCase().includes(searchTerm.value.toLowerCase())
+    )
+  }
+
+  return filtered
 })
 
 const totalAmount = computed(() => {
   return getTotalAmount(filteredTransactions.value)
 })
 
+// Methods
 const refresh = async () => {
   await fetchTransactions()
 }
@@ -107,176 +191,20 @@ const formatDate = (dateString: string) => {
   }
 }
 
-// Carregar dados ao montar o componente
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value)
+}
+
+// Lifecycle
 onMounted(() => {
   fetchTransactions()
 })
+
+// Watch for person filter changes
+watch(selectedPerson, () => {
+  // Data will be automatically recomputed due to computed properties
+})
 </script>
-
-<style scoped>
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.header h1 {
-  font-size: 2.5rem;
-  color: #2c3e50;
-  margin-bottom: 10px;
-}
-
-.header p {
-  color: #7f8c8d;
-  font-size: 1.1rem;
-}
-
-.controls {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  align-items: center;
-}
-
-.btn-refresh {
-  padding: 10px 20px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s;
-}
-
-.btn-refresh:hover:not(:disabled) {
-  background-color: #2980b9;
-}
-
-.btn-refresh:disabled {
-  background-color: #95a5a6;
-  cursor: not-allowed;
-}
-
-.search-box {
-  flex: 1;
-}
-
-.search-input {
-  width: 100%;
-  padding: 10px 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-}
-
-.error-message {
-  background-color: #e74c3c;
-  color: white;
-  padding: 15px;
-  border-radius: 5px;
-  margin-bottom: 20px;
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-  font-size: 1.2rem;
-  color: #7f8c8d;
-}
-
-.summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.summary-card {
-  background-color: #f8f9fa;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.summary-card h3 {
-  margin: 0 0 10px 0;
-  color: #7f8c8d;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-}
-
-.summary-value {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #2c3e50;
-  margin: 0;
-}
-
-.transactions-table {
-  overflow-x: auto;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  background-color: #34495e;
-  color: white;
-}
-
-th {
-  padding: 15px;
-  text-align: left;
-  font-weight: 600;
-}
-
-tbody tr {
-  border-bottom: 1px solid #ecf0f1;
-}
-
-tbody tr:hover {
-  background-color: #f8f9fa;
-}
-
-td {
-  padding: 15px;
-}
-
-.amount {
-  font-weight: 600;
-  color: #27ae60;
-}
-
-.no-data {
-  text-align: center;
-  padding: 60px 20px;
-  color: #7f8c8d;
-  font-size: 1.2rem;
-}
-
-@media (max-width: 768px) {
-  .controls {
-    flex-direction: column;
-  }
-
-  .transactions-table {
-    font-size: 0.9rem;
-  }
-
-  th, td {
-    padding: 10px;
-  }
-}
-</style>

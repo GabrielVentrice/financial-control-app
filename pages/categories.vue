@@ -1,0 +1,451 @@
+<template>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow">
+      <div class="px-8 py-6">
+        <h1 class="text-3xl font-bold text-gray-800">Gastos por Categoria</h1>
+        <p class="text-gray-600 mt-1">Análise de despesas organizadas por categoria</p>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="px-8 py-4">
+      <div class="bg-white rounded-lg shadow px-6 py-3">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-gray-700">
+              Mês:
+            </label>
+            <input
+              v-model="selectedMonth"
+              type="month"
+              class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+
+          <div class="flex items-center gap-2 text-sm text-gray-600">
+            <span class="font-medium">Pessoa:</span>
+            <span class="px-3 py-1 bg-primary-100 text-primary-800 rounded-full font-medium">
+              {{ selectedPerson }}
+            </span>
+          </div>
+
+          <button
+            @click="refreshData"
+            :disabled="loading"
+            class="px-4 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400"
+          >
+            {{ loading ? 'Carregando...' : 'Atualizar' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Excluded Categories Info -->
+      <div v-if="EXCLUDED_CATEGORIES.length > 0" class="mt-3 px-6 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <details class="text-sm">
+          <summary class="cursor-pointer text-yellow-800 font-medium hover:text-yellow-900">
+            ⚠️ {{ EXCLUDED_CATEGORIES.length }} categoria(s) excluída(s) da análise
+          </summary>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <span
+              v-for="category in EXCLUDED_CATEGORIES"
+              :key="category"
+              class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full border border-yellow-300"
+            >
+              {{ category }}
+            </span>
+          </div>
+          <p class="mt-2 text-xs text-yellow-700">
+            Para modificar, edite EXCLUDED_CATEGORIES em pages/categories.vue
+          </p>
+        </details>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="px-8 py-12 text-center">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
+      <p class="mt-4 text-gray-600">Carregando dados...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="px-8 py-12">
+      <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <p class="text-red-800 font-medium">Erro ao carregar dados</p>
+        <p class="text-red-600 text-sm mt-2">{{ error }}</p>
+      </div>
+    </div>
+
+    <!-- Categories Grid -->
+    <div v-else class="px-8 pb-8">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+          <p class="text-gray-600 text-sm font-medium uppercase tracking-wide">Total de Categorias</p>
+          <p class="text-3xl font-bold text-gray-900 mt-2">{{ categories.length }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+          <p class="text-gray-600 text-sm font-medium uppercase tracking-wide">Total de Transações</p>
+          <p class="text-3xl font-bold text-gray-900 mt-2">{{ totalTransactions }}</p>
+        </div>
+        <div class="bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
+          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Gasto Total</p>
+          <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(totalAmount) }}</p>
+        </div>
+      </div>
+
+      <!-- Categories List -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Categoria
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Transações
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Valor Total
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                % do Total
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Média por Transação
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr
+              v-for="category in categories"
+              :key="category.name"
+              class="hover:bg-gray-50 transition-colors"
+            >
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-200">
+                    <span class="text-2xl">{{ getCategoryIcon(category.name) }}</span>
+                  </div>
+                  <div class="ml-4">
+                    <div class="text-sm font-semibold text-gray-900">{{ category.name }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                  {{ category.count }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-lg font-bold text-primary-600">
+                  {{ formatCurrency(category.total) }}
+                </div>
+              </td>
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="flex-1 min-w-[120px]">
+                    <div class="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+                      <div
+                        class="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all duration-500 shadow"
+                        :style="{ width: `${category.percentage}%` }"
+                      ></div>
+                    </div>
+                  </div>
+                  <span class="text-sm font-semibold text-gray-700 min-w-[45px] text-right">{{ category.percentage.toFixed(1) }}%</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                {{ formatCurrency(category.average) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div v-if="categories.length === 0" class="text-center py-12">
+          <p class="text-gray-500">Nenhuma transação encontrada para o período selecionado</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue'
+import type { Transaction } from '~/types/transaction'
+
+// Composables
+const { selectedPerson, identifyPerson } = usePersonFilter()
+
+// State
+const transactions = ref<Transaction[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
+
+// Get current month in YYYY-MM format
+const getCurrentMonth = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
+const selectedMonth = ref(getCurrentMonth())
+
+// ===== CONFIGURAÇÃO: Categorias Excluídas =====
+// Adicione aqui os nomes das categorias que NÃO devem aparecer na análise
+// A comparação é case-insensitive (não diferencia maiúsculas de minúsculas)
+const EXCLUDED_CATEGORIES = [
+  'Sem Categoria',
+  'Credit Account Juliana',
+  'Credit Account Gabriel',
+  'Bank Account Juliana',
+  'Bank Account Gabriel',
+  'Credit Card Juliana',
+  'Credit Card Gabriel'
+  // Adicione mais categorias aqui conforme necessário
+]
+
+// Função auxiliar para verificar se uma categoria deve ser excluída
+const shouldExcludeCategory = (categoryName: string): boolean => {
+  const lowerCaseName = categoryName.toLowerCase()
+  return EXCLUDED_CATEGORIES.some(excluded =>
+    excluded.toLowerCase() === lowerCaseName
+  )
+}
+
+// Computed
+const formattedMonth = computed(() => {
+  const [year, month] = selectedMonth.value.split('-')
+  const date = new Date(parseInt(year), parseInt(month) - 1)
+  return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+})
+
+const filteredTransactions = computed(() => {
+  console.log('📊 [Categories] Recomputando filteredTransactions. Pessoa selecionada:', selectedPerson.value)
+  let filtered = transactions.value
+
+  // Filter by person
+  if (selectedPerson.value !== 'Ambos') {
+    const beforeCount = filtered.length
+    filtered = filtered.filter(transaction => {
+      const person = identifyPerson(transaction.origin)
+      return person === selectedPerson.value
+    })
+    console.log(`📊 [Categories] Filtrado por ${selectedPerson.value}: ${beforeCount} -> ${filtered.length} transações`)
+  }
+
+  // Filter by month
+  const [year, month] = selectedMonth.value.split('-')
+  filtered = filtered.filter(t => {
+    const date = new Date(t.date)
+    return date.getFullYear() === parseInt(year) &&
+           date.getMonth() === parseInt(month) - 1
+  })
+
+  console.log('📊 [Categories] Total após filtros:', filtered.length)
+  return filtered
+})
+
+interface CategoryData {
+  name: string
+  count: number
+  total: number
+  percentage: number
+  average: number
+}
+
+const categories = computed(() => {
+  const categoryMap = new Map<string, { count: number; total: number }>()
+
+  filteredTransactions.value.forEach(transaction => {
+    const category = transaction.destination || 'Sem Categoria'
+    const existing = categoryMap.get(category) || { count: 0, total: 0 }
+
+    categoryMap.set(category, {
+      count: existing.count + 1,
+      total: existing.total + transaction.amount
+    })
+  })
+
+  const total = totalAmount.value
+  const result: CategoryData[] = []
+
+  categoryMap.forEach((data, name) => {
+    // Filtrar categorias excluídas
+    if (!shouldExcludeCategory(name)) {
+      result.push({
+        name,
+        count: data.count,
+        total: data.total,
+        percentage: total > 0 ? (data.total / total) * 100 : 0,
+        average: data.total / data.count
+      })
+    }
+  })
+
+  // Sort by total (descending)
+  return result.sort((a, b) => b.total - a.total)
+})
+
+// Computed para transações não excluídas (considera filtro de categorias excluídas)
+const nonExcludedTransactions = computed(() => {
+  return filteredTransactions.value.filter(t => {
+    const category = t.destination || 'Sem Categoria'
+    return !shouldExcludeCategory(category)
+  })
+})
+
+const totalTransactions = computed(() => nonExcludedTransactions.value.length)
+
+const totalAmount = computed(() => {
+  return nonExcludedTransactions.value.reduce((sum, t) => sum + t.amount, 0)
+})
+
+// Methods
+const getCategoryIcon = (categoryName: string): string => {
+  const name = categoryName.toLowerCase()
+
+  // Alimentação e Restaurantes
+  if (name.includes('restaurante') || name.includes('comida') || name.includes('alimentação') ||
+      name.includes('almoço') || name.includes('jantar') || name.includes('lanche') ||
+      name.includes('food') || name.includes('restaurant')) {
+    return '🍽️'
+  }
+
+  // Mercado e Supermercado
+  if (name.includes('mercado') || name.includes('supermercado') || name.includes('grocery')) {
+    return '🛒'
+  }
+
+  // Transporte
+  if (name.includes('uber') || name.includes('taxi') || name.includes('transporte') ||
+      name.includes('combustível') || name.includes('gasolina') || name.includes('transport')) {
+    return '🚗'
+  }
+
+  // Saúde
+  if (name.includes('saúde') || name.includes('farmácia') || name.includes('médico') ||
+      name.includes('hospital') || name.includes('health') || name.includes('pharmacy')) {
+    return '⚕️'
+  }
+
+  // Educação
+  if (name.includes('educação') || name.includes('escola') || name.includes('curso') ||
+      name.includes('livro') || name.includes('education')) {
+    return '📚'
+  }
+
+  // Moradia
+  if (name.includes('aluguel') || name.includes('condomínio') || name.includes('casa') ||
+      name.includes('rent') || name.includes('moradia')) {
+    return '🏠'
+  }
+
+  // Contas e Serviços
+  if (name.includes('conta') || name.includes('luz') || name.includes('água') ||
+      name.includes('internet') || name.includes('telefone') || name.includes('bill')) {
+    return '📄'
+  }
+
+  // Entretenimento
+  if (name.includes('cinema') || name.includes('streaming') || name.includes('netflix') ||
+      name.includes('spotify') || name.includes('lazer') || name.includes('entertainment')) {
+    return '🎬'
+  }
+
+  // Roupas e Vestuário
+  if (name.includes('roupa') || name.includes('vestuário') || name.includes('loja') ||
+      name.includes('clothes') || name.includes('fashion')) {
+    return '👕'
+  }
+
+  // Tecnologia
+  if (name.includes('tecnologia') || name.includes('eletrônico') || name.includes('tech') ||
+      name.includes('computador') || name.includes('celular')) {
+    return '💻'
+  }
+
+  // Viagem
+  if (name.includes('viagem') || name.includes('hotel') || name.includes('passagem') ||
+      name.includes('travel') || name.includes('flight')) {
+    return '✈️'
+  }
+
+  // Pets
+  if (name.includes('pet') || name.includes('veterinário') || name.includes('animal')) {
+    return '🐾'
+  }
+
+  // Beleza
+  if (name.includes('beleza') || name.includes('salão') || name.includes('cabelo') ||
+      name.includes('beauty') || name.includes('cosmético')) {
+    return '💄'
+  }
+
+  // Academia e Esportes
+  if (name.includes('academia') || name.includes('esporte') || name.includes('fitness') ||
+      name.includes('gym')) {
+    return '💪'
+  }
+
+  // Pagamentos e Transferências
+  if (name.includes('pagamento') || name.includes('transferência') || name.includes('pix') ||
+      name.includes('payment') || name.includes('transfer')) {
+    return '💳'
+  }
+
+  // Investimentos
+  if (name.includes('investimento') || name.includes('poupança') || name.includes('invest') ||
+      name.includes('savings')) {
+    return '📈'
+  }
+
+  // Bebidas
+  if (name.includes('bar') || name.includes('bebida') || name.includes('café') ||
+      name.includes('drink') || name.includes('coffee')) {
+    return '☕'
+  }
+
+  // Presentes
+  if (name.includes('presente') || name.includes('gift')) {
+    return '🎁'
+  }
+
+  // Default - Sem categoria ou outros
+  return '💰'
+}
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value)
+}
+
+const refreshData = async () => {
+  loading.value = true
+  error.value = null
+
+  try {
+    const response = await $fetch<Transaction[]>('/api/transactions')
+    transactions.value = response
+  } catch (e) {
+    error.value = 'Não foi possível carregar os dados. Tente novamente.'
+    console.error('Error fetching transactions:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Lifecycle
+onMounted(() => {
+  refreshData()
+})
+
+// Watch for person filter changes
+watch(selectedPerson, () => {
+  // Data will be automatically recomputed due to computed properties
+})
+</script>
