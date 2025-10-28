@@ -1,0 +1,214 @@
+{
+  "description": "Dados de teste para debug do sistema de parcelas",
+  "timezone": "America/Sao_Paulo (UTC-3)",
+  "testCases": [
+    {
+      "scenario": "Parcela iniciada em 15/01/2025",
+      "transaction": {
+        "transactionId": "test-001",
+        "date": "2025-01-15",
+        "origin": "Cartão Gabriel",
+        "destination": "Installments/Financing",
+        "description": "Netflix 01/12",
+        "amount": -49.90,
+        "recordedAt": "2025-01-15T10:00:00Z",
+        "remoteId": "remote-001"
+      },
+      "expectedOutput": [
+        {
+          "parcela": "01/12",
+          "dataEsperada": "2025-01-15",
+          "observacao": "Mantém data original (dia 15)"
+        },
+        {
+          "parcela": "02/12",
+          "dataEsperada": "2025-02-01",
+          "observacao": "Dia 01 do mês seguinte"
+        },
+        {
+          "parcela": "03/12",
+          "dataEsperada": "2025-03-01",
+          "observacao": "Dia 01 do mês seguinte"
+        },
+        {
+          "parcela": "04/12",
+          "dataEsperada": "2025-04-01"
+        },
+        {
+          "parcela": "05/12",
+          "dataEsperada": "2025-05-01"
+        },
+        {
+          "parcela": "06/12",
+          "dataEsperada": "2025-06-01"
+        },
+        {
+          "parcela": "07/12",
+          "dataEsperada": "2025-07-01"
+        },
+        {
+          "parcela": "08/12",
+          "dataEsperada": "2025-08-01"
+        },
+        {
+          "parcela": "09/12",
+          "dataEsperada": "2025-09-01"
+        },
+        {
+          "parcela": "10/12",
+          "dataEsperada": "2025-10-01"
+        },
+        {
+          "parcela": "11/12",
+          "dataEsperada": "2025-11-01"
+        },
+        {
+          "parcela": "12/12",
+          "dataEsperada": "2025-12-01"
+        }
+      ]
+    },
+    {
+      "scenario": "Parcela iniciada em 01/02/2025 (já no dia 01)",
+      "transaction": {
+        "transactionId": "test-002",
+        "date": "2025-02-01",
+        "origin": "Cartão Juliana",
+        "destination": "Installments/Financing",
+        "description": "Amazon Prime 01/06",
+        "amount": -14.90,
+        "recordedAt": "2025-02-01T08:00:00Z",
+        "remoteId": "remote-002"
+      },
+      "expectedOutput": [
+        {
+          "parcela": "01/06",
+          "dataEsperada": "2025-02-01",
+          "observacao": "Mantém data original (já é dia 01)"
+        },
+        {
+          "parcela": "02/06",
+          "dataEsperada": "2025-03-01"
+        },
+        {
+          "parcela": "03/06",
+          "dataEsperada": "2025-04-01"
+        },
+        {
+          "parcela": "04/06",
+          "dataEsperada": "2025-05-01"
+        },
+        {
+          "parcela": "05/06",
+          "dataEsperada": "2025-06-01"
+        },
+        {
+          "parcela": "06/06",
+          "dataEsperada": "2025-07-01"
+        }
+      ]
+    },
+    {
+      "scenario": "Parcela de fim de ano (atravessa ano)",
+      "transaction": {
+        "transactionId": "test-003",
+        "date": "2024-11-20",
+        "origin": "Cartão Gabriel",
+        "destination": "Installments/Financing",
+        "description": "Notebook Dell 01/10",
+        "amount": -450.00,
+        "recordedAt": "2024-11-20T14:30:00Z",
+        "remoteId": "remote-003"
+      },
+      "expectedOutput": [
+        {
+          "parcela": "01/10",
+          "dataEsperada": "2024-11-20",
+          "observacao": "Mantém data original"
+        },
+        {
+          "parcela": "02/10",
+          "dataEsperada": "2024-12-01",
+          "observacao": "Dezembro 2024"
+        },
+        {
+          "parcela": "03/10",
+          "dataEsperada": "2025-01-01",
+          "observacao": "Janeiro 2025 - ATRAVESSA ANO"
+        },
+        {
+          "parcela": "04/10",
+          "dataEsperada": "2025-02-01"
+        },
+        {
+          "parcela": "05/10",
+          "dataEsperada": "2025-03-01"
+        },
+        {
+          "parcela": "06/10",
+          "dataEsperada": "2025-04-01"
+        },
+        {
+          "parcela": "07/10",
+          "dataEsperada": "2025-05-01"
+        },
+        {
+          "parcela": "08/10",
+          "dataEsperada": "2025-06-01"
+        },
+        {
+          "parcela": "09/10",
+          "dataEsperada": "2025-07-01"
+        },
+        {
+          "parcela": "10/10",
+          "dataEsperada": "2025-08-01"
+        }
+      ]
+    }
+  ],
+  "debugInstructions": {
+    "passo1": "Abra o console do navegador (F12)",
+    "passo2": "Navegue até a página que processa parcelas (ex: /categories)",
+    "passo3": "Observe os logs com emojis: 🔄, ✅, 📅, 🕐, 📆",
+    "passo4": "Compare as 'Data final (ISO)' com as 'dataEsperada' deste arquivo",
+    "passo5": "Procure por diferenças de 1 dia (ex: 2025-01-31 ao invés de 2025-02-01)",
+    "problemasComuns": {
+      "problema": "Data aparece como último dia do mês anterior",
+      "causa": "Conversão UTC para horário local (UTC-3)",
+      "exemplo": "Esperado: 2025-02-01, Obtido: 2025-01-31",
+      "explicacao": "new Date('2025-02-01') cria meia-noite UTC, que é 21h do dia 31/01 em UTC-3"
+    }
+  },
+  "comoTestar": {
+    "metodo1_console": [
+      "1. Copie uma das transações acima",
+      "2. No console do navegador, cole:",
+      "   const { useInstallments } = await import('~/composables/useInstallments')",
+      "   const { processInstallments } = useInstallments()",
+      "   const result = processInstallments([COLE_A_TRANSACAO_AQUI])",
+      "   console.table(result.map(t => ({ desc: t.description, date: t.date })))"
+    ],
+    "metodo2_googleSheets": [
+      "1. Adicione uma linha no Google Sheets com:",
+      "   - Date: 2025-01-15",
+      "   - Origin: Cartão Gabriel",
+      "   - Destination: Installments/Financing",
+      "   - Description: Teste Debug 01/03",
+      "   - Amount: -100",
+      "2. Recarregue a página da aplicação",
+      "3. Observe os logs no console",
+      "4. Verifique se as datas geradas são:",
+      "   - 2025-01-15 (parcela 1)",
+      "   - 2025-02-01 (parcela 2)",
+      "   - 2025-03-01 (parcela 3)"
+    ]
+  },
+  "observacoesImportantes": {
+    "formato_data_sheets": "Google Sheets retorna datas no formato YYYY-MM-DD",
+    "timezone_javascript": "new Date('YYYY-MM-DD') interpreta como UTC (00:00)",
+    "timezone_brasil": "UTC-3 (Brasília) = 3 horas a menos que UTC",
+    "problema_utc": "Meia-noite UTC (00:00) = 21h do dia anterior em Brasília (21:00)",
+    "solucao": "Usar new Date(year, month, day) ao invés de new Date('YYYY-MM-DD') para trabalhar em horário local"
+  }
+}

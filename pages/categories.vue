@@ -117,21 +117,34 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr
-              v-for="category in categories"
-              :key="category.name"
-              class="hover:bg-gray-50 transition-colors"
-            >
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="flex items-center">
-                  <div class="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-200">
-                    <span class="text-2xl">{{ getCategoryIcon(category.name) }}</span>
+            <template v-for="category in categories" :key="category.name">
+              <tr
+                @click="toggleCategory(category.name)"
+                class="hover:bg-gray-50 transition-colors cursor-pointer"
+                :class="{ 'bg-primary-50': expandedCategory === category.name }"
+              >
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center gap-3">
+                    <!-- Indicador de expansão -->
+                    <svg
+                      class="h-5 w-5 text-gray-400 transition-transform"
+                      :class="{ 'rotate-90': expandedCategory === category.name }"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+
+                    <div class="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-200">
+                      <span class="text-2xl">{{ getCategoryIcon(category.name) }}</span>
+                    </div>
+                    <div class="ml-2">
+                      <div class="text-sm font-semibold text-gray-900">{{ category.name }}</div>
+                      <div class="text-xs text-gray-500">Clique para ver transações</div>
+                    </div>
                   </div>
-                  <div class="ml-4">
-                    <div class="text-sm font-semibold text-gray-900">{{ category.name }}</div>
-                  </div>
-                </div>
-              </td>
+                </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                   {{ category.count }}
@@ -155,10 +168,54 @@
                   <span class="text-sm font-semibold text-gray-700 min-w-[45px] text-right">{{ category.percentage.toFixed(1) }}%</span>
                 </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                {{ formatCurrency(category.average) }}
-              </td>
-            </tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  {{ formatCurrency(category.average) }}
+                </td>
+              </tr>
+
+              <!-- Linha expandida com transações -->
+              <tr v-if="expandedCategory === category.name" class="bg-gray-50">
+                <td colspan="5" class="px-6 py-4">
+                  <div class="space-y-2">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                      Transações de {{ category.name }} ({{ getCategoryTransactions(category.name).length }})
+                    </h4>
+                    <div class="bg-white rounded-lg shadow-inner p-4 max-h-96 overflow-y-auto">
+                      <table class="min-w-full text-sm">
+                        <thead class="bg-gray-100 sticky top-0">
+                          <tr>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Data</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Origem</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Descrição</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                          <tr
+                            v-for="transaction in getCategoryTransactions(category.name)"
+                            :key="transaction.transactionId"
+                            class="hover:bg-gray-50"
+                          >
+                            <td class="px-3 py-2 whitespace-nowrap text-gray-900">
+                              {{ formatDate(transaction.date) }}
+                            </td>
+                            <td class="px-3 py-2 whitespace-nowrap text-gray-600">
+                              {{ transaction.origin }}
+                            </td>
+                            <td class="px-3 py-2 text-gray-900">
+                              {{ transaction.description }}
+                            </td>
+                            <td class="px-3 py-2 whitespace-nowrap text-right font-medium text-primary-600">
+                              {{ formatCurrency(transaction.amount) }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
 
@@ -177,11 +234,14 @@ import type { Transaction } from '~/types/transaction'
 
 // Composables
 const { selectedPerson, identifyPerson } = usePersonFilter()
+const { processInstallments } = useInstallments()
 
 // State
-const transactions = ref<Transaction[]>([])
+const rawTransactions = ref<Transaction[]>([]) // Transações originais do Google Sheets
+const transactions = ref<Transaction[]>([]) // Transações processadas (com parcelas expandidas)
 const loading = ref(false)
 const error = ref<string | null>(null)
+const expandedCategory = ref<string | null>(null) // Categoria expandida para ver transações
 
 // Get current month in YYYY-MM format
 const getCurrentMonth = () => {
@@ -223,17 +283,14 @@ const formattedMonth = computed(() => {
 })
 
 const filteredTransactions = computed(() => {
-  console.log('📊 [Categories] Recomputando filteredTransactions. Pessoa selecionada:', selectedPerson.value)
   let filtered = transactions.value
 
   // Filter by person
   if (selectedPerson.value !== 'Ambos') {
-    const beforeCount = filtered.length
     filtered = filtered.filter(transaction => {
       const person = identifyPerson(transaction.origin)
       return person === selectedPerson.value
     })
-    console.log(`📊 [Categories] Filtrado por ${selectedPerson.value}: ${beforeCount} -> ${filtered.length} transações`)
   }
 
   // Filter by month
@@ -244,7 +301,6 @@ const filteredTransactions = computed(() => {
            date.getMonth() === parseInt(month) - 1
   })
 
-  console.log('📊 [Categories] Total após filtros:', filtered.length)
   return filtered
 })
 
@@ -413,6 +469,12 @@ const getCategoryIcon = (categoryName: string): string => {
     return '🎁'
   }
 
+  // Parcelas e Financiamentos
+  if (name.includes('installment') || name.includes('financing') ||
+      name.includes('parcela') || name.includes('parcelamento')) {
+    return '📅'
+  }
+
   // Default - Sem categoria ou outros
   return '💰'
 }
@@ -424,16 +486,47 @@ const formatCurrency = (value: number) => {
   }).format(value)
 }
 
+const formatDate = (dateString: string) => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('pt-BR')
+  } catch {
+    return dateString
+  }
+}
+
+const toggleCategory = (categoryName: string) => {
+  if (expandedCategory.value === categoryName) {
+    expandedCategory.value = null
+  } else {
+    expandedCategory.value = categoryName
+  }
+}
+
+const getCategoryTransactions = (categoryName: string): Transaction[] => {
+  return nonExcludedTransactions.value
+    .filter(t => {
+      const category = t.destination || 'Sem Categoria'
+      return category === categoryName
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+}
+
 const refreshData = async () => {
   loading.value = true
   error.value = null
 
   try {
     const response = await $fetch<Transaction[]>('/api/transactions')
-    transactions.value = response
+    rawTransactions.value = response
+
+    // Processar e expandir parcelas ao longo dos meses
+    const processed = processInstallments(response)
+
+    transactions.value = processed
   } catch (e) {
     error.value = 'Não foi possível carregar os dados. Tente novamente.'
-    console.error('Error fetching transactions:', e)
   } finally {
     loading.value = false
   }

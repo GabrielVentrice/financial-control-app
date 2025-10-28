@@ -26,6 +26,68 @@ Sistema completo de controle financeiro com dashboard, filtros por pessoa (Julia
 - Filtros por descrição, período (data inicial/final) e pessoa
 - Estatísticas agregadas
 
+## Sistema de Processamento de Parcelas
+
+O sistema detecta e processa automaticamente parcelas/financiamentos, distribuindo-as ao longo dos meses.
+
+### Como Funciona
+
+**Quando uma transação tem:**
+- **Destination**: `Installments/Financing`, `Parcela` ou `Parcelamento`
+- **Descrição**: No formato `Nome X/Y` (ex: `Odonto Delgado 6/6`)
+
+**O sistema:**
+1. Identifica a parcela atual (X) e total (Y)
+2. Calcula a data da primeira parcela (1/Y)
+3. Expande em Y transações mensais, distribuindo o valor igualmente
+
+**Exemplo:**
+```
+Entrada (Google Sheets):
+  Data: 2025-06-15
+  Descrição: Odonto Delgado 6/6
+  Valor: R$ 600,00
+
+Saída (Sistema):
+  2025-01-15: Odonto Delgado 1/6 → R$ 100,00
+  2025-02-15: Odonto Delgado 2/6 → R$ 100,00
+  2025-03-15: Odonto Delgado 3/6 → R$ 100,00
+  2025-04-15: Odonto Delgado 4/6 → R$ 100,00
+  2025-05-15: Odonto Delgado 5/6 → R$ 100,00
+  2025-06-15: Odonto Delgado 6/6 → R$ 100,00
+```
+
+**Benefício:** As parcelas aparecem mês a mês na análise, não todas juntas no mesmo mês.
+
+### Detecção Inteligente
+
+O sistema agora detecta parcelas de **duas formas**:
+1. **Por categoria**: Destination contém `Installments`, `Financing`, `Parcela` ou `Parcelamento`
+2. **Por descrição**: Qualquer descrição no formato `Nome X/Y` (ex: `EC *MERCADOLIVRECA 03/07`)
+
+Isso permite processar parcelas de cartão de crédito mesmo que não tenham categoria específica.
+
+### Redistribuição Automática
+
+Quando múltiplas parcelas aparecem juntas na mesma data (comum em cartões de crédito):
+- Se ≥50% das parcelas estão presentes → **Redistribui** as datas mês a mês
+- Se <50% das parcelas → **Expande** normalmente criando todas as parcelas
+
+**Exemplo de redistribuição:**
+```
+Entrada (7 parcelas na mesma data):
+  21/09/2025: EC *MERCADOLIVRECA 01/07 → R$ 52,24
+  21/09/2025: EC *MERCADOLIVRECA 02/07 → R$ 52,18
+  ... (até 07/07)
+
+Saída (redistribuídas mês a mês):
+  01/09/2025: EC *MERCADOLIVRECA 01/07 → R$ 52,24
+  01/10/2025: EC *MERCADOLIVRECA 02/07 → R$ 52,18
+  ... (até 01/03/2026)
+```
+
+**Documentação completa:** Ver arquivo `PARCELAS.md`
+
 ## Configuração Importante: Categorias Excluídas
 
 A página de "Gastos por Categoria" possui uma configuração para excluir automaticamente certas categorias da análise.
