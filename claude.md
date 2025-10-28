@@ -10,6 +10,7 @@ This is a **Nuxt 3** financial control application that integrates with Google S
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **API Integration**: Google Sheets API via googleapis
+- **Charts**: Chart.js with vue-chartjs
 - **Runtime**: Node.js 18+
 
 ## Project Structure
@@ -33,7 +34,8 @@ financial-control-app/
 ├── pages/
 │   ├── index.vue              # Dashboard overview
 │   ├── transactions.vue       # Full transaction list with advanced filters
-│   └── categories.vue         # Category-based spending analysis
+│   ├── categories.vue         # Category-based spending analysis
+│   └── installments.vue       # Installment analysis with timeline chart
 ├── server/
 │   └── api/
 │       └── transactions.get.ts # API endpoint for fetching Google Sheets data
@@ -59,6 +61,31 @@ financial-control-app/
 - **Dashboard (`/`)**: Overview with search and totals
 - **Categories (`/categories`)**: Spending analysis by category (Destination), monthly filtering
 - **Transactions (`/transactions`)**: Full list with date range, description, and person filters
+- **Installments (`/installments`)**: Timeline analysis of installments with 13-month chart (6 months back, current, 6 months ahead), active installments tracking, and monthly breakdown
+
+### 4. Installments Feature
+The installments page provides comprehensive analysis of recurring payments:
+
+**Features:**
+- **Timeline Chart**: Bar chart showing 13 months of data (6 months before and after current month)
+  - Past months shown in gray
+  - Current month highlighted in dark blue
+  - Future months shown in light blue
+- **Summary Cards**:
+  - Active Installments: Count of payment series with future installments remaining
+  - Current Month Total: Total value of installments for the current month
+  - Average Monthly Total: Average across the 13-month period
+- **Active Installments List**: Shows all payment series with pending installments
+  - Progress bar showing paid vs. total installments
+  - First and last payment dates
+  - Monthly payment amount
+- **Monthly Breakdown Table**: Detailed view of installment count and total per month
+
+**Technical Details:**
+- Uses `useInstallments()` composable to process and expand installments across months
+- Leverages Chart.js for interactive bar charts
+- Automatically identifies installments by `Installments/Financing` category
+- Parses installment format (e.g., "Netflix 01/12") to track series
 
 ## Important Files
 
@@ -70,8 +97,10 @@ financial-control-app/
 ### Core Logic
 - [composables/usePersonFilter.ts](composables/usePersonFilter.ts): Person identification patterns and global filter state
 - [composables/useTransactions.ts](composables/useTransactions.ts): Transaction fetching, filtering helpers
+- [composables/useInstallments.ts](composables/useInstallments.ts): Installment parsing, processing, and expansion across months
 - [server/api/transactions.get.ts](server/api/transactions.get.ts): Server API endpoint that connects to Google Sheets
 - [types/transaction.ts](types/transaction.ts): TypeScript interfaces for Transaction type
+- [pages/installments.vue](pages/installments.vue): Installments timeline and analysis page
 
 ## Development Workflow
 
