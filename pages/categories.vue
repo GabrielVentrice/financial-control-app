@@ -60,6 +60,27 @@
           </p>
         </details>
       </div>
+
+      <!-- Fixed Cost Categories Info -->
+      <div v-if="FIXED_COST_CATEGORIES.length > 0" class="mt-3 px-6 py-2 bg-orange-50 border border-orange-200 rounded-lg">
+        <details class="text-sm">
+          <summary class="cursor-pointer text-orange-800 font-medium hover:text-orange-900">
+            📌 {{ FIXED_COST_CATEGORIES.length }} categoria(s) configurada(s) como custo fixo
+          </summary>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <span
+              v-for="category in FIXED_COST_CATEGORIES"
+              :key="category"
+              class="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full border border-orange-300"
+            >
+              {{ category }}
+            </span>
+          </div>
+          <p class="mt-2 text-xs text-orange-700">
+            Para modificar, edite FIXED_COST_CATEGORIES em pages/categories.vue
+          </p>
+        </details>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -84,9 +105,10 @@
           <p class="text-gray-600 text-sm font-medium uppercase tracking-wide">Total de Categorias</p>
           <p class="text-3xl font-bold text-gray-900 mt-2">{{ categories.length }}</p>
         </div>
-        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-          <p class="text-gray-600 text-sm font-medium uppercase tracking-wide">Total de Transações</p>
-          <p class="text-3xl font-bold text-gray-900 mt-2">{{ totalTransactions }}</p>
+        <div class="bg-gradient-to-br from-orange-500 to-orange-700 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
+          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Custos Fixos</p>
+          <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(fixedCostsTotal) }}</p>
+          <p class="text-orange-100 text-xs mt-2">{{ fixedCostsCategoriesCount }} {{ fixedCostsCategoriesCount === 1 ? 'categoria' : 'categorias' }}</p>
         </div>
         <div class="bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
           <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Gasto Total</p>
@@ -267,11 +289,34 @@ const EXCLUDED_CATEGORIES = [
   // Adicione mais categorias aqui conforme necessário
 ]
 
+// ===== CONFIGURAÇÃO: Categorias de Custos Fixos =====
+// Adicione aqui os nomes das categorias que devem ser consideradas como custos fixos
+// A comparação usa includes e é case-insensitive
+const FIXED_COST_CATEGORIES = [
+  'Installments/Financing',
+  'Rent',
+  'Financing',
+  'Subscriptions/Softwares',
+  'Utilities',
+  'Business & Taxes',
+  'Investments',
+  'Insurance'
+  // Adicione mais categorias aqui conforme necessário
+]
+
 // Função auxiliar para verificar se uma categoria deve ser excluída
 const shouldExcludeCategory = (categoryName: string): boolean => {
   const lowerCaseName = categoryName.toLowerCase()
   return EXCLUDED_CATEGORIES.some(excluded =>
     excluded.toLowerCase() === lowerCaseName
+  )
+}
+
+// Função auxiliar para verificar se uma categoria é de custo fixo
+const isFixedCostCategory = (categoryName: string): boolean => {
+  const lowerCaseName = categoryName.toLowerCase()
+  return FIXED_COST_CATEGORIES.some(fixed =>
+    lowerCaseName.includes(fixed.toLowerCase())
   )
 }
 
@@ -357,6 +402,28 @@ const totalTransactions = computed(() => nonExcludedTransactions.value.length)
 
 const totalAmount = computed(() => {
   return nonExcludedTransactions.value.reduce((sum, t) => sum + t.amount, 0)
+})
+
+// Computed para calcular o total de custos fixos
+const fixedCostsTotal = computed(() => {
+  return nonExcludedTransactions.value
+    .filter(t => {
+      const category = t.destination || 'Sem Categoria'
+      return isFixedCostCategory(category)
+    })
+    .reduce((sum, t) => sum + t.amount, 0)
+})
+
+// Computed para contar quantas categorias de custo fixo existem no período atual
+const fixedCostsCategoriesCount = computed(() => {
+  const categoriesSet = new Set<string>()
+  nonExcludedTransactions.value.forEach(t => {
+    const category = t.destination || 'Sem Categoria'
+    if (isFixedCostCategory(category)) {
+      categoriesSet.add(category)
+    }
+  })
+  return categoriesSet.size
 })
 
 // Methods
