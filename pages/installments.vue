@@ -1,186 +1,198 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-white shadow">
-      <div class="px-8 py-6">
-        <h1 class="text-3xl font-bold text-gray-800">Análise de Parcelas</h1>
-        <p class="text-gray-600 mt-1">Visualize parcelas passadas e futuras por período</p>
-      </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="px-8 py-4">
-      <div class="bg-white rounded-lg shadow px-6 py-3">
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-          <div class="flex items-center gap-2 text-sm text-gray-600">
-            <span class="font-medium">Pessoa:</span>
-            <span class="px-3 py-1 bg-primary-100 text-primary-800 rounded-full font-medium">
-              {{ selectedPerson }}
-            </span>
-          </div>
-
-          <button
-            @click="refreshData"
-            :disabled="loading"
-            class="px-4 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400"
-          >
-            {{ loading ? 'Carregando...' : 'Atualizar' }}
-          </button>
+  <Sidemenu>
+    <div class="bg-background-page text-text-primary min-h-screen">
+      <!-- Header -->
+      <header class="h-[72px] px-10 flex items-center justify-between border-b border-border-base">
+        <div>
+          <h1 class="text-[22px] font-medium">Análise de Parcelas</h1>
+          <p class="text-[13px] text-text-secondary mt-0.5">Visualize parcelas passadas e futuras por período</p>
         </div>
-      </div>
-    </div>
+        <button
+          @click="refreshData"
+          :disabled="loading"
+          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-[15px] disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+        >
+          {{ loading ? 'Atualizando...' : 'Atualizar' }}
+        </button>
+      </header>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="px-8 py-12 text-center">
-      <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
-      <p class="mt-4 text-gray-600">Carregando dados...</p>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="px-8 py-12">
-      <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <p class="text-red-800 font-medium">Erro ao carregar dados</p>
-        <p class="text-red-600 text-sm mt-2">{{ error }}</p>
-      </div>
-    </div>
-
-    <!-- Content -->
-    <div v-else class="px-8 pb-8">
-      <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-          <p class="text-gray-600 text-sm font-medium uppercase tracking-wide">Parcelas Ativas</p>
-          <p class="text-3xl font-bold text-gray-900 mt-2">{{ activeInstallments.length }}</p>
-          <p class="text-xs text-gray-500 mt-1">Com parcelas futuras</p>
-        </div>
-        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-          <p class="text-gray-600 text-sm font-medium uppercase tracking-wide">Total Mês Atual</p>
-          <p class="text-3xl font-bold text-gray-900 mt-2">{{ formatCurrency(currentMonthTotal) }}</p>
-          <p class="text-xs text-gray-500 mt-1">{{ formatMonthYear(currentMonth) }}</p>
-        </div>
-        <div class="bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
-          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Média Mensal</p>
-          <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(averageMonthlyTotal) }}</p>
-          <p class="text-xs text-white opacity-80 mt-1">Últimos 13 meses</p>
+      <!-- Filter Info -->
+      <div class="px-10 py-4 border-b border-border-base">
+        <div class="flex items-center gap-2 text-[13px]">
+          <span class="font-medium text-text-secondary">Pessoa:</span>
+          <span class="px-3 py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20">
+            {{ selectedPerson }}
+          </span>
         </div>
       </div>
 
-      <!-- Chart -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Parcelas por Mês (6 meses atrás → 6 meses à frente)</h2>
-        <div class="h-96">
-          <Bar :data="chartData" :options="chartOptions" />
+      <!-- Content -->
+      <main class="max-w-[1280px] px-10 py-8 space-y-8">
+        <!-- Loading State -->
+        <div v-if="loading" class="flex flex-col items-center justify-center py-20">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
+          <p class="mt-4 text-text-secondary text-[15px]">Carregando dados...</p>
         </div>
-      </div>
 
-      <!-- Active Installments List -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Parcelas Ativas ({{ activeInstallments.length }})</h2>
-        <div v-if="activeInstallments.length === 0" class="text-center py-8 text-gray-500">
-          <p>Nenhuma parcela ativa encontrada</p>
+        <!-- Error State -->
+        <div v-else-if="error" class="border-l-[3px] border-l-accent-danger bg-background-card border border-border-base p-5 rounded-lg">
+          <h4 class="text-text-primary font-medium text-[15px]">Erro ao carregar dados</h4>
+          <p class="text-text-secondary text-[13px] mt-1 leading-relaxed">{{ error }}</p>
         </div>
-        <div v-else class="space-y-4">
-          <div
-            v-for="installment in activeInstallments"
-            :key="installment.key"
-            class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-          >
-            <div class="flex justify-between items-start">
-              <div class="flex-1">
-                <h3 class="font-semibold text-gray-900 text-lg">{{ installment.description }}</h3>
-                <div class="mt-2 flex flex-wrap gap-4 text-sm">
-                  <span class="text-gray-600">
-                    <span class="font-medium">Origem:</span> {{ installment.origin }}
-                  </span>
-                  <span class="text-gray-600">
-                    <span class="font-medium">Valor:</span> {{ formatCurrency(installment.amount) }}/mês
-                  </span>
-                </div>
-              </div>
-              <div class="text-right ml-4">
-                <div class="text-2xl font-bold text-primary-600">
-                  {{ installment.paid }}/{{ installment.total }}
-                </div>
-                <div class="text-xs text-gray-500 mt-1">
-                  {{ installment.remaining }} restantes
-                </div>
-                <div class="mt-2">
-                  <div class="w-32 bg-gray-200 rounded-full h-2">
-                    <div
-                      class="bg-primary-600 h-2 rounded-full transition-all"
-                      :style="{ width: `${(installment.paid / installment.total) * 100}%` }"
-                    ></div>
-                  </div>
-                </div>
-              </div>
+
+        <!-- Content -->
+        <template v-else>
+          <!-- Summary Cards -->
+          <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+                Parcelas Ativas
+              </p>
+              <p class="text-[32px] font-normal font-serif text-accent-info tracking-tight">
+                {{ activeInstallments.length }}
+              </p>
+              <p class="text-text-muted text-[13px]">Com parcelas futuras</p>
             </div>
-            <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div class="bg-gray-50 rounded p-2">
-                <span class="text-gray-600">Primeira parcela:</span>
-                <span class="font-medium text-gray-900 ml-1">{{ formatDate(installment.firstDate) }}</span>
-              </div>
-              <div class="bg-gray-50 rounded p-2">
-                <span class="text-gray-600">Última parcela:</span>
-                <span class="font-medium text-gray-900 ml-1">{{ formatDate(installment.lastDate) }}</span>
-              </div>
+            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+                Total Mês Atual
+              </p>
+              <p class="text-[32px] font-normal font-serif text-accent-primary tracking-tight">
+                {{ formatCurrency(currentMonthTotal) }}
+              </p>
+              <p class="text-text-muted text-[13px]">{{ formatMonthYear(currentMonth) }}</p>
             </div>
-          </div>
-        </div>
-      </div>
+            <div class="bg-background-card border border-accent-success/20 rounded-lg px-6 py-5 space-y-3 border-l-[3px] border-l-accent-success">
+              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+                Média Mensal
+              </p>
+              <p class="text-[32px] font-normal font-serif text-accent-success tracking-tight">
+                {{ formatCurrency(averageMonthlyTotal) }}
+              </p>
+              <p class="text-text-muted text-[13px]">Últimos 13 meses</p>
+            </div>
+          </section>
 
-      <!-- Monthly Breakdown -->
-      <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Detalhamento Mensal</h2>
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mês
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Qtd. Parcelas
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
-                </th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr
-                v-for="month in monthlyBreakdown"
-                :key="month.monthKey"
-                class="hover:bg-gray-50 transition-colors"
-                :class="{ 'bg-primary-50': month.monthKey === currentMonth }"
+          <!-- Chart -->
+          <section class="bg-background-card border border-border-base rounded-lg p-6">
+            <h2 class="text-[16px] font-medium text-text-primary mb-6 tracking-tight">Parcelas por Mês (6 meses atrás → 6 meses à frente)</h2>
+            <div class="h-96">
+              <Bar :data="chartData" :options="chartOptions" />
+            </div>
+          </section>
+
+          <!-- Active Installments List -->
+          <section class="bg-background-card border border-border-base rounded-lg p-6">
+            <h2 class="text-[16px] font-medium text-text-primary mb-6 tracking-tight">Parcelas Ativas ({{ activeInstallments.length }})</h2>
+            <div v-if="activeInstallments.length === 0" class="text-center py-12">
+              <p class="text-text-secondary text-[15px]">Nenhuma parcela ativa encontrada</p>
+            </div>
+            <div v-else class="space-y-4">
+              <div
+                v-for="installment in activeInstallments"
+                :key="installment.key"
+                class="border border-border-base rounded-lg p-5 hover:bg-background-hover transition-all duration-150 ease-out bg-background-section"
               >
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center">
-                    <span
-                      v-if="month.monthKey === currentMonth"
-                      class="mr-2 px-2 py-1 text-xs font-semibold rounded-full bg-primary-600 text-white"
-                    >
-                      Atual
-                    </span>
-                    <span class="text-sm font-medium text-gray-900">{{ formatMonthYear(month.monthKey) }}</span>
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <h3 class="font-medium text-text-primary text-[16px] mb-2">{{ installment.description }}</h3>
+                    <div class="flex flex-wrap gap-4 text-[13px]">
+                      <span class="text-text-secondary">
+                        <span class="font-medium">Origem:</span> {{ installment.origin }}
+                      </span>
+                      <span class="text-text-secondary">
+                        <span class="font-medium">Valor:</span> {{ formatCurrency(installment.amount) }}/mês
+                      </span>
+                    </div>
                   </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                    {{ month.count }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-lg font-bold text-primary-600">
-                    {{ formatCurrency(month.total) }}
+                  <div class="text-right ml-6">
+                    <div class="text-[24px] font-normal font-serif text-accent-primary">
+                      {{ installment.paid }}/{{ installment.total }}
+                    </div>
+                    <div class="text-[13px] text-text-muted mt-1">
+                      {{ installment.remaining }} restantes
+                    </div>
+                    <div class="mt-3">
+                      <div class="w-32 bg-background-page rounded-full h-2 border border-border-base">
+                        <div
+                          class="bg-accent-primary h-2 rounded-full transition-all duration-300 ease-out"
+                          :style="{ width: `${(installment.paid / installment.total) * 100}%` }"
+                        ></div>
+                      </div>
+                    </div>
                   </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-3 text-[13px]">
+                  <div class="bg-background-page rounded-md p-3 border border-border-base">
+                    <span class="text-text-secondary">Primeira parcela:</span>
+                    <span class="font-medium text-text-primary ml-2">{{ formatDate(installment.firstDate) }}</span>
+                  </div>
+                  <div class="bg-background-page rounded-md p-3 border border-border-base">
+                    <span class="text-text-secondary">Última parcela:</span>
+                    <span class="font-medium text-text-primary ml-2">{{ formatDate(installment.lastDate) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Monthly Breakdown -->
+          <section class="bg-background-card border border-border-base rounded-lg overflow-hidden">
+            <div class="px-6 py-4 bg-background-section border-b border-border-base">
+              <h2 class="text-[16px] font-medium text-text-primary tracking-tight">Detalhamento Mensal</h2>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-border-base">
+                <thead class="bg-background-section">
+                  <tr>
+                    <th class="px-6 py-4 text-left text-[13px] font-medium text-text-secondary uppercase tracking-wide">
+                      Mês
+                    </th>
+                    <th class="px-6 py-4 text-left text-[13px] font-medium text-text-secondary uppercase tracking-wide">
+                      Qtd. Parcelas
+                    </th>
+                    <th class="px-6 py-4 text-left text-[13px] font-medium text-text-secondary uppercase tracking-wide">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-background-card divide-y divide-border-base">
+                  <tr
+                    v-for="month in monthlyBreakdown"
+                    :key="month.monthKey"
+                    class="hover:bg-background-hover transition-all duration-150 ease-out"
+                    :class="{ 'bg-background-section': month.monthKey === currentMonth }"
+                  >
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <span
+                          v-if="month.monthKey === currentMonth"
+                          class="px-2 py-1 text-[11px] font-semibold rounded-md bg-accent-primary text-text-inverse uppercase tracking-wide"
+                        >
+                          Atual
+                        </span>
+                        <span class="text-[15px] font-medium text-text-primary">{{ formatMonthYear(month.monthKey) }}</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-3 py-1.5 inline-flex text-[13px] font-semibold rounded-md bg-accent-info/10 text-accent-info border border-accent-info/20">
+                        {{ month.count }}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-[16px] font-semibold text-accent-primary">
+                        {{ formatCurrency(month.total) }}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </template>
+      </main>
     </div>
-  </div>
+  </Sidemenu>
 </template>
 
 <script setup lang="ts">
@@ -403,6 +415,13 @@ const chartOptions = {
       display: false
     },
     tooltip: {
+      backgroundColor: '#1F1F1F',
+      titleColor: '#F3F3F3',
+      bodyColor: '#B0B0B0',
+      borderColor: '#2E2E2E',
+      borderWidth: 1,
+      padding: 12,
+      displayColors: false,
       callbacks: {
         label: (context: any) => {
           const value = context.parsed.y
@@ -412,11 +431,31 @@ const chartOptions = {
     }
   },
   scales: {
+    x: {
+      grid: {
+        display: false,
+        drawBorder: false,
+      },
+      ticks: {
+        color: '#B0B0B0',
+        font: {
+          size: 13
+        }
+      }
+    },
     y: {
       beginAtZero: true,
+      grid: {
+        color: '#2E2E2E',
+        drawBorder: false,
+      },
       ticks: {
+        color: '#B0B0B0',
+        font: {
+          size: 13
+        },
         callback: (value: any) => {
-          return `R$ ${value.toLocaleString('pt-BR')}`
+          return 'R$ ' + value.toLocaleString('pt-BR')
         }
       }
     }

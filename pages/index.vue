@@ -25,7 +25,7 @@
         </div>
 
         <!-- Error State -->
-        <div v-else-if="error" class="border-l-[3px] border-accent-danger bg-background-card border border-border-base p-5 rounded-lg">
+        <div v-else-if="error" class="border-l-[3px] border-l-accent-danger bg-background-card border border-border-base p-5 rounded-lg">
           <h4 class="text-text-primary font-medium text-[15px]">Erro ao carregar dados</h4>
           <p class="text-text-secondary text-[13px] mt-1 leading-relaxed">{{ error }}</p>
         </div>
