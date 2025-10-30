@@ -268,11 +268,6 @@ function processCategoriesData(transactions: Transaction[], includeTransactions:
 
   return {
     categories,
-    totals,
-    config: {
-      excludedCategories: EXCLUDED_CATEGORIES,
-      fixedCostCategories: CUSTOS_FIXOS_CATEGORIES,
-      committedExpenseCategories: GASTOS_COMPROMETIDOS_CATEGORIES
-    }
+    totals
   }
 }

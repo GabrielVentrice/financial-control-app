@@ -91,7 +91,7 @@ export interface CategoryTotals {
 export interface CategoriesResponse {
   categories: CategoryData[]
   totals: CategoryTotals
-  config: {
+  config?: {
     excludedCategories: string[]
     fixedCostCategories: string[]
     committedExpenseCategories: string[]

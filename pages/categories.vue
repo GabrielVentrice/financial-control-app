@@ -319,10 +319,38 @@ const gastosComprometidosTotal = computed(() => categoriesData.value?.totals.com
 const custosFixosCategoriesCount = computed(() => categoriesData.value?.totals.categoryCounts.fixedCosts || 0)
 const gastosComprometidosCategoriesCount = computed(() => categoriesData.value?.totals.categoryCounts.committedExpenses || 0)
 
-// Configuration from API response
-const EXCLUDED_CATEGORIES = computed(() => categoriesData.value?.config.excludedCategories || [])
-const CUSTOS_FIXOS_CATEGORIES = computed(() => categoriesData.value?.config.fixedCostCategories || [])
-const GASTOS_COMPROMETIDOS_CATEGORIES = computed(() => categoriesData.value?.config.committedExpenseCategories || [])
+// Configuration - these are now hardcoded since config is not returned from API
+const EXCLUDED_CATEGORIES = [
+  'Sem Categoria',
+  'Credit Account Juliana',
+  'Credit Account Gabriel',
+  'Bank Account Juliana',
+  'Bank Account Gabriel',
+  'Credit Card Juliana',
+  'Credit Card Gabriel',
+  'Adjustment'
+]
+
+const CUSTOS_FIXOS_CATEGORIES = [
+  'Rent',
+  'Subscriptions/Softwares',
+  'Insurance',
+  'Utilities',
+  'Business & Taxes',
+  'Medical'
+]
+
+const GASTOS_COMPROMETIDOS_CATEGORIES = [
+  'Installments/Financing',
+  'Financing',
+  'Utilities',
+  'Business & Taxes',
+  'Investments',
+  'Medical',
+  'Rent',
+  'Subscriptions/Softwares',
+  'Insurance'
+]
 
 // Methods
 const getCategoryIcon = (categoryName: string): string => {
@@ -510,8 +538,12 @@ onMounted(() => {
   refreshData()
 })
 
-// Watch for person filter changes
+// Watch for filter changes and refresh data automatically
 watch(selectedPerson, () => {
-  // Data will be automatically recomputed due to computed properties
+  refreshData()
+})
+
+watch(selectedMonth, () => {
+  refreshData()
 })
 </script>
