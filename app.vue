@@ -1,5 +1,3 @@
 <template>
-  <Sidemenu>
-    <NuxtPage />
-  </Sidemenu>
+  <NuxtPage />
 </template>

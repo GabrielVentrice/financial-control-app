@@ -1,195 +1,207 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-white shadow">
-      <div class="px-8 py-6">
-        <h1 class="text-3xl font-bold text-gray-800">Configuração de Orçamento</h1>
-        <p class="text-gray-600 mt-1">Defina orçamentos mensais separados para Juliana e Gabriel</p>
-      </div>
-    </div>
+  <Sidemenu>
+    <div class="bg-background-page text-text-primary min-h-screen">
+      <!-- Header -->
+      <header class="h-[72px] px-10 flex items-center justify-between border-b border-border-base">
+        <div>
+          <h1 class="text-[22px] font-medium">Configuração de Orçamento</h1>
+          <p class="text-[13px] text-text-secondary mt-0.5">Defina orçamentos mensais separados para Juliana e Gabriel</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            @click="loadData"
+            :disabled="loading"
+            class="px-[18px] py-[10px] bg-background-section hover:bg-background-hover text-text-primary rounded-md transition-all duration-200 ease-out font-medium text-[15px] disabled:opacity-40 disabled:cursor-not-allowed border border-border-base"
+          >
+            {{ loading ? 'Carregando...' : 'Atualizar' }}
+          </button>
+          <button
+            @click="saveBudgets"
+            :disabled="saving || !hasChanges"
+            class="px-[18px] py-[10px] bg-accent-success hover:bg-accent-success/90 text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-[15px] disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+          >
+            {{ saving ? 'Salvando...' : 'Salvar Orçamentos' }}
+          </button>
+        </div>
+      </header>
 
-    <!-- Month/Year Selector -->
-    <div class="px-8 py-4">
-      <div class="bg-white rounded-lg shadow px-6 py-3">
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-          <div class="flex items-center gap-3">
-            <label class="text-sm font-medium text-gray-700">
-              Período:
-            </label>
-            <input
-              v-model="selectedMonth"
-              type="month"
-              class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
+      <!-- Month Selector & Messages -->
+      <div class="px-10 py-4 border-b border-border-base space-y-3">
+        <div class="flex items-center gap-3">
+          <label class="text-[13px] font-medium text-text-secondary">
+            Período:
+          </label>
+          <input
+            v-model="selectedMonth"
+            type="month"
+            class="px-4 py-2 text-[15px] bg-background-input text-text-primary border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
+          />
+          <span class="text-[13px] text-text-muted">{{ formattedMonth }}</span>
+        </div>
 
-          <div class="flex items-center gap-3">
-            <button
-              @click="loadData"
-              :disabled="loading"
-              class="px-4 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400"
-            >
-              {{ loading ? 'Carregando...' : 'Atualizar' }}
-            </button>
+        <!-- Success Message -->
+        <div v-if="successMessage" class="border-l-[3px] border-accent-success bg-background-card p-4 rounded-lg">
+          <p class="text-text-primary text-[15px] font-medium">{{ successMessage }}</p>
+        </div>
 
-            <button
-              @click="saveBudgets"
-              :disabled="saving || !hasChanges"
-              class="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
-            >
-              {{ saving ? 'Salvando...' : 'Salvar Orçamentos' }}
-            </button>
-          </div>
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="border-l-[3px] border-accent-danger bg-background-card p-4 rounded-lg">
+          <p class="text-text-primary text-[15px] font-medium">{{ errorMessage }}</p>
         </div>
       </div>
 
-      <!-- Success/Error Messages -->
-      <div v-if="successMessage" class="mt-3 px-6 py-3 bg-green-50 border border-green-200 rounded-lg">
-        <p class="text-green-800 text-sm font-medium">{{ successMessage }}</p>
-      </div>
-
-      <div v-if="errorMessage" class="mt-3 px-6 py-3 bg-red-50 border border-red-200 rounded-lg">
-        <p class="text-red-800 text-sm font-medium">{{ errorMessage }}</p>
-      </div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="px-8 py-12 text-center">
-      <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
-      <p class="mt-4 text-gray-600">Carregando dados...</p>
-    </div>
-
-    <!-- Budget Configuration -->
-    <div v-else class="px-8 pb-8">
-      <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div class="bg-gradient-to-br from-purple-500 to-purple-700 rounded-lg shadow-lg p-6">
-          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Orçamento Juliana</p>
-          <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(totalBudgetJuliana) }}</p>
-          <p class="text-purple-100 text-xs mt-2">{{ categoriesWithBudgetJuliana }} categorias</p>
+      <!-- Content -->
+      <main class="max-w-[1280px] px-10 py-8 space-y-12">
+        <!-- Loading State -->
+        <div v-if="loading" class="flex flex-col items-center justify-center py-20">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
+          <p class="mt-4 text-text-secondary text-[15px]">Carregando dados...</p>
         </div>
 
-        <div class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg shadow-lg p-6">
-          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Orçamento Gabriel</p>
-          <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(totalBudgetGabriel) }}</p>
-          <p class="text-blue-100 text-xs mt-2">{{ categoriesWithBudgetGabriel }} categorias</p>
-        </div>
+        <!-- Content -->
+        <template v-else>
+          <!-- Summary Cards -->
+          <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+                Orçamento Juliana
+              </p>
+              <p class="text-[32px] font-normal font-serif text-accent-info">
+                {{ formatCurrency(totalBudgetJuliana) }}
+              </p>
+              <p class="text-text-muted text-[13px]">{{ categoriesWithBudgetJuliana }} categorias</p>
+            </div>
 
-        <div class="bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-lg p-6">
-          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Orçamento Total</p>
-          <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(totalBudget) }}</p>
-          <p class="text-green-100 text-xs mt-2">Para {{ formattedMonth }}</p>
-        </div>
+            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+                Orçamento Gabriel
+              </p>
+              <p class="text-[32px] font-normal font-serif text-accent-primary tracking-tight">
+                {{ formatCurrency(totalBudgetGabriel) }}
+              </p>
+              <p class="text-text-muted text-[13px] leading-relaxed">{{ categoriesWithBudgetGabriel }} categorias</p>
+            </div>
 
-        <div class="bg-gradient-to-br from-orange-500 to-orange-700 rounded-lg shadow-lg p-6">
-          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Categorias Configuradas</p>
-          <p class="text-4xl font-bold text-white mt-2">{{ categoriesWithBudget }}</p>
-          <p class="text-orange-100 text-xs mt-2">de {{ availableCategories.length }} categorias</p>
-        </div>
-      </div>
+            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+                Orçamento Total
+              </p>
+              <p class="text-[32px] font-normal font-serif text-accent-success tracking-tight">
+                {{ formatCurrency(totalBudget) }}
+              </p>
+              <p class="text-text-muted text-[13px] leading-relaxed">Para {{ formattedMonth }}</p>
+            </div>
 
-      <!-- Categories List with Budget Inputs -->
-      <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-gray-800">Orçamentos por Categoria</h2>
-            <div class="flex items-center gap-2 text-sm text-gray-600">
+            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+                Categorias Config.
+              </p>
+              <p class="text-[32px] font-normal font-serif text-accent-warning">
+                {{ categoriesWithBudget }}
+              </p>
+              <p class="text-text-muted text-[13px]">de {{ availableCategories.length }} categorias</p>
+            </div>
+          </section>
+
+          <!-- Budget Configuration -->
+          <section class="bg-background-card border border-border-base rounded-lg overflow-hidden">
+            <!-- Header with Search -->
+            <div class="px-6 py-4 bg-background-section border-b border-border-base flex items-center justify-between">
+              <h2 class="text-[16px] font-medium text-text-primary">Orçamentos por Categoria</h2>
               <input
                 v-model="searchQuery"
                 type="text"
                 placeholder="Buscar categoria..."
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                class="px-4 py-2 text-[15px] bg-background-input text-text-primary border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all w-64"
               />
             </div>
-          </div>
-        </div>
 
-        <!-- Table Header -->
-        <div class="px-6 py-3 bg-gray-100 border-b border-gray-200">
-          <div class="grid grid-cols-12 gap-4 items-center text-xs font-medium text-gray-600 uppercase">
-            <div class="col-span-5">Categoria</div>
-            <div class="col-span-3 text-center">Juliana</div>
-            <div class="col-span-3 text-center">Gabriel</div>
-            <div class="col-span-1 text-center">Total</div>
-          </div>
-        </div>
-
-        <!-- Categories -->
-        <div class="divide-y divide-gray-200">
-          <div
-            v-for="category in filteredCategories"
-            :key="category"
-            class="px-6 py-4 hover:bg-gray-50 transition-colors"
-          >
-            <div class="grid grid-cols-12 gap-4 items-center">
-              <!-- Category Name -->
-              <div class="col-span-5 flex items-center gap-3">
-                <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-200">
-                  <span class="text-xl">{{ getCategoryIcon(category) }}</span>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold text-gray-900 truncate">{{ category }}</p>
-                </div>
-              </div>
-
-              <!-- Juliana Input -->
-              <div class="col-span-3">
-                <div class="relative">
-                  <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">R$</span>
-                  <input
-                    v-model.number="budgetInputsJuliana[category]"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0,00"
-                    class="w-full pl-10 pr-3 py-2 text-sm border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    @input="markAsChanged"
-                  />
-                </div>
-              </div>
-
-              <!-- Gabriel Input -->
-              <div class="col-span-3">
-                <div class="relative">
-                  <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">R$</span>
-                  <input
-                    v-model.number="budgetInputsGabriel[category]"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0,00"
-                    class="w-full pl-10 pr-3 py-2 text-sm border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    @input="markAsChanged"
-                  />
-                </div>
-              </div>
-
-              <!-- Total -->
-              <div class="col-span-1 text-center">
-                <span class="text-sm font-semibold text-gray-700">
-                  {{ formatCurrencyShort(getCategoryTotal(category)) }}
-                </span>
+            <!-- Table Header -->
+            <div class="px-6 py-3 bg-background-section border-b border-border-base">
+              <div class="grid grid-cols-12 gap-4 items-center text-[13px] font-medium text-text-secondary uppercase tracking-wide">
+                <div class="col-span-5">Categoria</div>
+                <div class="col-span-3 text-center">Juliana</div>
+                <div class="col-span-3 text-center">Gabriel</div>
+                <div class="col-span-1 text-center">Total</div>
               </div>
             </div>
+
+            <!-- Categories List -->
+            <div class="divide-y divide-border-base">
+              <div
+                v-for="category in filteredCategories"
+                :key="category"
+                class="px-6 py-4 hover:bg-background-hover transition-colors"
+              >
+                <div class="grid grid-cols-12 gap-4 items-center">
+                  <!-- Category Name -->
+                  <div class="col-span-5 flex items-center gap-3">
+                    <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-md bg-background-section border border-border-base">
+                      <span class="text-xl">{{ getCategoryIcon(category) }}</span>
+                    </div>
+                    <p class="text-[15px] font-medium text-text-primary truncate">{{ category }}</p>
+                  </div>
+
+                  <!-- Juliana Input -->
+                  <div class="col-span-3">
+                    <div class="relative">
+                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted text-[13px]">R$</span>
+                      <input
+                        v-model.number="budgetInputsJuliana[category]"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        class="w-full pl-10 pr-3 py-2 text-[15px] bg-background-input text-text-primary border border-accent-info/30 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
+                        @input="markAsChanged"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Gabriel Input -->
+                  <div class="col-span-3">
+                    <div class="relative">
+                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted text-[13px]">R$</span>
+                      <input
+                        v-model.number="budgetInputsGabriel[category]"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        class="w-full pl-10 pr-3 py-2 text-[15px] bg-background-input text-text-primary border border-accent-primary/30 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary transition-all"
+                        @input="markAsChanged"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Total -->
+                  <div class="col-span-1 text-center">
+                    <span class="text-[13px] font-semibold text-text-primary">
+                      {{ formatCurrencyShort(getCategoryTotal(category)) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div v-if="filteredCategories.length === 0" class="text-center py-12">
+              <p class="text-text-secondary text-[15px]">
+                {{ searchQuery ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria disponível' }}
+              </p>
+            </div>
+          </section>
+
+          <!-- Info Note -->
+          <div class="border-l-[3px] border-accent-info bg-background-card p-5 rounded-lg">
+            <p class="text-[15px] text-text-primary">
+              <strong>Nota:</strong> Apenas categorias de gastos são exibidas aqui. Categorias de sistema (contas bancárias, cartões de crédito, etc.) são automaticamente excluídas.
+            </p>
           </div>
-        </div>
-
-        <!-- Empty State -->
-        <div v-if="filteredCategories.length === 0" class="text-center py-12">
-          <p class="text-gray-500">
-            {{ searchQuery ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria disponível' }}
-          </p>
-        </div>
-      </div>
-
-      <!-- Info about excluded categories -->
-      <div class="mt-6 px-6 py-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p class="text-sm text-blue-800">
-          <strong>Nota:</strong> Apenas categorias de gastos são exibidas aqui. Categorias de sistema (contas bancárias, cartões de crédito, etc.) são automaticamente excluídas.
-        </p>
-      </div>
+        </template>
+      </main>
     </div>
-  </div>
+  </Sidemenu>
 </template>
 
 <script setup lang="ts">
@@ -218,9 +230,8 @@ const selectedMonth = ref(getCurrentMonth())
 const availableCategories = ref<string[]>([])
 const budgetInputsJuliana = ref<Record<string, number>>({})
 const budgetInputsGabriel = ref<Record<string, number>>({})
-const existingBudgets = ref<BudgetsResponse | null>(null)
 
-// Excluded categories (same as in categories.vue)
+// Excluded categories
 const EXCLUDED_CATEGORIES = [
   'Sem Categoria',
   'Credit Account Juliana',
@@ -293,109 +304,44 @@ const getCategoryIcon = (categoryName: string): string => {
 
   if (name.includes('restaurante') || name.includes('comida') || name.includes('alimentação') ||
       name.includes('almoço') || name.includes('jantar') || name.includes('lanche') ||
-      name.includes('food') || name.includes('restaurant')) {
-    return '🍽️'
-  }
-
-  if (name.includes('mercado') || name.includes('supermercado') || name.includes('grocery')) {
-    return '🛒'
-  }
-
+      name.includes('food') || name.includes('restaurant')) return '🍽️'
+  if (name.includes('mercado') || name.includes('supermercado') || name.includes('grocery')) return '🛒'
   if (name.includes('uber') || name.includes('taxi') || name.includes('transporte') ||
-      name.includes('combustível') || name.includes('gasolina') || name.includes('transport')) {
-    return '🚗'
-  }
-
+      name.includes('combustível') || name.includes('gasolina') || name.includes('transport')) return '🚗'
   if (name.includes('saúde') || name.includes('farmácia') || name.includes('médico') ||
-      name.includes('hospital') || name.includes('health') || name.includes('pharmacy') || name.includes('medical')) {
-    return '⚕️'
-  }
-
+      name.includes('hospital') || name.includes('health') || name.includes('pharmacy') || name.includes('medical')) return '⚕️'
   if (name.includes('educação') || name.includes('escola') || name.includes('curso') ||
-      name.includes('livro') || name.includes('education')) {
-    return '📚'
-  }
-
+      name.includes('livro') || name.includes('education')) return '📚'
   if (name.includes('aluguel') || name.includes('condomínio') || name.includes('casa') ||
-      name.includes('rent') || name.includes('moradia')) {
-    return '🏠'
-  }
-
+      name.includes('rent') || name.includes('moradia')) return '🏠'
   if (name.includes('conta') || name.includes('luz') || name.includes('água') ||
       name.includes('internet') || name.includes('telefone') || name.includes('bill') ||
-      name.includes('utilities')) {
-    return '📄'
-  }
-
+      name.includes('utilities')) return '📄'
   if (name.includes('cinema') || name.includes('streaming') || name.includes('netflix') ||
-      name.includes('spotify') || name.includes('lazer') || name.includes('entertainment')) {
-    return '🎬'
-  }
-
+      name.includes('spotify') || name.includes('lazer') || name.includes('entertainment')) return '🎬'
   if (name.includes('roupa') || name.includes('vestuário') || name.includes('loja') ||
-      name.includes('clothes') || name.includes('fashion')) {
-    return '👕'
-  }
-
+      name.includes('clothes') || name.includes('fashion')) return '👕'
   if (name.includes('tecnologia') || name.includes('eletrônico') || name.includes('tech') ||
-      name.includes('computador') || name.includes('celular')) {
-    return '💻'
-  }
-
+      name.includes('computador') || name.includes('celular')) return '💻'
   if (name.includes('viagem') || name.includes('hotel') || name.includes('passagem') ||
-      name.includes('travel') || name.includes('flight')) {
-    return '✈️'
-  }
-
-  if (name.includes('pet') || name.includes('veterinário') || name.includes('animal')) {
-    return '🐾'
-  }
-
+      name.includes('travel') || name.includes('flight')) return '✈️'
+  if (name.includes('pet') || name.includes('veterinário') || name.includes('animal')) return '🐾'
   if (name.includes('beleza') || name.includes('salão') || name.includes('cabelo') ||
-      name.includes('beauty') || name.includes('cosmético')) {
-    return '💄'
-  }
-
+      name.includes('beauty') || name.includes('cosmético')) return '💄'
   if (name.includes('academia') || name.includes('esporte') || name.includes('fitness') ||
-      name.includes('gym')) {
-    return '💪'
-  }
-
+      name.includes('gym')) return '💪'
   if (name.includes('pagamento') || name.includes('transferência') || name.includes('pix') ||
-      name.includes('payment') || name.includes('transfer')) {
-    return '💳'
-  }
-
+      name.includes('payment') || name.includes('transfer')) return '💳'
   if (name.includes('investimento') || name.includes('poupança') || name.includes('invest') ||
-      name.includes('savings') || name.includes('investment')) {
-    return '📈'
-  }
-
+      name.includes('savings') || name.includes('investment')) return '📈'
   if (name.includes('bar') || name.includes('bebida') || name.includes('café') ||
-      name.includes('drink') || name.includes('coffee')) {
-    return '☕'
-  }
-
-  if (name.includes('presente') || name.includes('gift')) {
-    return '🎁'
-  }
-
+      name.includes('drink') || name.includes('coffee')) return '☕'
+  if (name.includes('presente') || name.includes('gift')) return '🎁'
   if (name.includes('installment') || name.includes('financing') ||
-      name.includes('parcela') || name.includes('parcelamento')) {
-    return '📅'
-  }
-
-  if (name.includes('business') || name.includes('tax') || name.includes('negócio')) {
-    return '💼'
-  }
-
-  if (name.includes('insurance') || name.includes('seguro')) {
-    return '🛡️'
-  }
-
-  if (name.includes('subscri') || name.includes('software') || name.includes('assinatura')) {
-    return '📱'
-  }
+      name.includes('parcela') || name.includes('parcelamento')) return '📅'
+  if (name.includes('business') || name.includes('tax') || name.includes('negócio')) return '💼'
+  if (name.includes('insurance') || name.includes('seguro')) return '🛡️'
+  if (name.includes('subscri') || name.includes('software') || name.includes('assinatura')) return '📱'
 
   return '💰'
 }
@@ -438,13 +384,11 @@ const loadData = async () => {
   clearMessages()
 
   try {
-    // Parse selected month
     const [year, month] = selectedMonth.value.split('-')
 
-    // Fetch all categories from transactions
+    // Fetch all categories
     const categoriesResponse = await $fetch<CategoriesResponse>(`/api/categories`)
 
-    // Filter out excluded categories
     const allCategories = categoriesResponse.categories
       .map(cat => cat.name)
       .filter(name => !EXCLUDED_CATEGORIES.some(excluded =>
@@ -454,12 +398,10 @@ const loadData = async () => {
 
     availableCategories.value = allCategories
 
-    // Fetch existing budgets for selected month/year
+    // Fetch existing budgets
     const budgetsResponse = await $fetch<BudgetsResponse>(
       `/api/budgets?month=${month}&year=${year}`
     )
-
-    existingBudgets.value = budgetsResponse
 
     // Initialize budget inputs
     const inputsJuliana: Record<string, number> = {}
@@ -480,13 +422,7 @@ const loadData = async () => {
     budgetInputsJuliana.value = inputsJuliana
     budgetInputsGabriel.value = inputsGabriel
     hasChanges.value = false
-
-    console.log('Loaded data:', {
-      categories: allCategories.length,
-      budgets: budgetsResponse.budgets.length,
-    })
   } catch (e: any) {
-    console.error('Error loading data:', e)
     errorMessage.value = e.data || 'Não foi possível carregar os dados. Tente novamente.'
   } finally {
     loading.value = false
@@ -500,7 +436,6 @@ const saveBudgets = async () => {
   try {
     const [year, month] = selectedMonth.value.split('-')
 
-    // Prepare budgets to save (only non-zero values)
     const budgetsToSave: BudgetInput[] = []
 
     for (const category of availableCategories.value) {
@@ -533,9 +468,6 @@ const saveBudgets = async () => {
       return
     }
 
-    console.log('Saving budgets:', budgetsToSave)
-
-    // Save to API
     await $fetch('/api/budgets', {
       method: 'POST',
       body: budgetsToSave,
@@ -544,12 +476,10 @@ const saveBudgets = async () => {
     successMessage.value = `${budgetsToSave.length} orçamento(s) salvos com sucesso!`
     hasChanges.value = false
 
-    // Reload data to get updated timestamps
     setTimeout(() => {
       loadData()
     }, 1000)
   } catch (e: any) {
-    console.error('Error saving budgets:', e)
     errorMessage.value = e.data?.message || e.data || 'Não foi possível salvar os orçamentos. Tente novamente.'
   } finally {
     saving.value = false
@@ -561,7 +491,6 @@ onMounted(() => {
   loadData()
 })
 
-// Watch for month changes
 watch(selectedMonth, () => {
   if (hasChanges.value) {
     if (confirm('Você tem alterações não salvas. Deseja realmente mudar o período sem salvar?')) {

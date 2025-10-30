@@ -1,23 +1,25 @@
 <template>
-  <div class="flex h-screen bg-gray-100">
+  <div class="flex h-screen bg-background-page">
     <!-- Sidebar -->
     <aside
       :class="[
-        'bg-gradient-to-b from-primary-800 to-primary-900 text-white transition-all duration-300 flex flex-col',
-        isOpen ? 'w-64' : 'w-20'
+        'bg-background-sidebar text-text-primary transition-all duration-300 flex flex-col',
+        isOpen ? 'w-[280px]' : 'w-20'
       ]"
     >
       <!-- Logo/Header -->
-      <div class="p-4 flex items-center justify-between border-b border-primary-700">
-        <h1 v-if="isOpen" class="text-xl font-bold truncate">Controle Financeiro</h1>
+      <div class="h-[72px] px-5 flex items-center justify-between border-b border-border-base">
+        <h1 v-if="isOpen" class="text-[22px] font-medium truncate">
+          Controle Financeiro
+        </h1>
         <button
           @click="toggleSidebar"
-          class="p-2 rounded-lg hover:bg-primary-700 transition-colors"
+          class="p-2 rounded-md hover:bg-background-hover transition-colors"
           :class="{ 'mx-auto': !isOpen }"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6"
+            class="h-5 w-5"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -26,33 +28,35 @@
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="2"
-              :d="isOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'"
+              :d="isOpen ? 'M4 6h16M4 12h16M4 18h16' : 'M4 6h16M4 12h16M4 18h16'"
             />
           </svg>
         </button>
       </div>
 
       <!-- Navigation -->
-      <nav class="flex-1 p-4 space-y-2">
+      <nav class="flex-1 p-5 space-y-2">
         <NuxtLink
           v-for="item in menuItems"
           :key="item.path"
           :to="item.path"
-          class="flex items-center gap-3 p-3 rounded-lg hover:bg-primary-700 transition-colors"
-          active-class="bg-primary-600"
+          class="flex items-center gap-3 h-11 px-3 rounded-md hover:bg-background-hover transition-all duration-150 ease-out text-text-secondary hover:text-text-primary"
+          active-class="bg-background-hover text-accent-primary font-medium"
         >
-          <component :is="item.icon" class="h-6 w-6 flex-shrink-0" />
-          <span v-if="isOpen" class="font-medium truncate">{{ item.label }}</span>
+          <component :is="item.icon" class="h-5 w-5 flex-shrink-0" />
+          <span v-if="isOpen" class="font-normal text-[15px] truncate">{{ item.label }}</span>
         </NuxtLink>
       </nav>
 
       <!-- Footer - Person Filter -->
-      <div class="p-4 border-t border-primary-700">
+      <div class="p-5 border-t border-border-base">
         <div v-if="isOpen" class="space-y-2">
-          <p class="text-xs text-primary-300 uppercase font-semibold">Filtrar por pessoa</p>
+          <p class="text-[13px] text-text-muted uppercase font-medium tracking-wide">
+            Filtrar por pessoa
+          </p>
           <select
             v-model="selectedPerson"
-            class="w-full px-3 py-2 bg-primary-700 text-white rounded-lg border border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            class="w-full px-4 py-2.5 bg-background-input text-text-primary text-[15px] rounded-md border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
           >
             <option value="Ambos">Ambos</option>
             <option value="Juliana">Juliana</option>
@@ -61,9 +65,9 @@
         </div>
         <div v-else class="flex justify-center">
           <div class="w-3 h-3 rounded-full" :class="{
-            'bg-purple-400': selectedPerson === 'Juliana',
-            'bg-blue-400': selectedPerson === 'Gabriel',
-            'bg-green-400': selectedPerson === 'Ambos'
+            'bg-accent-info': selectedPerson === 'Juliana',
+            'bg-accent-primary': selectedPerson === 'Gabriel',
+            'bg-accent-success': selectedPerson === 'Ambos'
           }"></div>
         </div>
       </div>
