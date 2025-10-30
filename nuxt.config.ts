@@ -25,5 +25,40 @@ export default defineNuxtConfig({
         { name: 'description', content: 'Sistema de controle financeiro integrado com Google Sheets' }
       ]
     }
+  },
+
+  // Vercel deployment optimizations
+  nitro: {
+    preset: 'vercel',
+
+    // Server assets - files accessible to server routes
+    serverAssets: [
+      {
+        baseName: 'docs',
+        dir: './server/assets/docs'
+      }
+    ],
+
+    // Vercel-specific configuration
+    vercel: {
+      config: {
+        maxDuration: 10, // Maximum execution time (seconds) for Hobby plan
+      }
+    },
+
+    // Production optimizations
+    minify: true,
+    sourceMap: false,
+
+    // Experimental features
+    experimental: {
+      openAPI: true
+    }
+  },
+
+  // Production build optimizations
+  sourcemap: {
+    server: false,
+    client: false
   }
 })
