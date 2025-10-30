@@ -123,6 +123,130 @@ export default defineEventHandler(async (event) => {
           }
         }
       },
+      "/api/categories": {
+        method: "GET",
+        description: "Get category analysis and spending breakdown with configurable exclusions and categorization rules",
+        parameters: {
+          person: {
+            type: "string",
+            required: false,
+            values: ["Juliana", "Gabriel", "Ambos"],
+            description: "Filter by person. 'Ambos' returns transactions from both people."
+          },
+          startDate: {
+            type: "string",
+            required: false,
+            format: "YYYY-MM-DD",
+            example: "2025-01-01",
+            description: "Start date for filtering transactions"
+          },
+          endDate: {
+            type: "string", 
+            required: false,
+            format: "YYYY-MM-DD",
+            example: "2025-01-31",
+            description: "End date for filtering transactions"
+          },
+          searchTerm: {
+            type: "string",
+            required: false,
+            example: "Netflix",
+            description: "Search term to filter transaction descriptions (case-insensitive)"
+          },
+          origin: {
+            type: "string",
+            required: false,
+            example: "Bank Account Gabriel",
+            description: "Filter by origin account/card"
+          },
+          destination: {
+            type: "string",
+            required: false,
+            example: "Groceries",
+            description: "Filter by destination category"
+          },
+          processInstallments: {
+            type: "boolean",
+            required: false,
+            default: true,
+            values: [true, false, "true", "false"],
+            description: "Whether to process and expand installments across months"
+          },
+          includeTransactions: {
+            type: "boolean",
+            required: false,
+            default: false,
+            values: [true, false, "true", "false"],
+            description: "Whether to include individual transactions in response"
+          }
+        },
+        responses: {
+          "200": {
+            description: "Success - Returns category analysis with totals and breakdowns",
+            schema: {
+              type: "object",
+              properties: {
+                categories: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string", description: "Category name" },
+                      count: { type: "number", description: "Number of transactions in category" },
+                      total: { type: "number", description: "Total amount spent in category" },
+                      percentage: { type: "number", description: "Percentage of total spending" },
+                      average: { type: "number", description: "Average transaction amount in category" },
+                      transactions: { 
+                        type: "array", 
+                        description: "Individual transactions (only when includeTransactions=true)",
+                        items: { type: "object", description: "Transaction object" }
+                      }
+                    }
+                  }
+                },
+                totals: {
+                  type: "object",
+                  properties: {
+                    variableCosts: { type: "number", description: "Total variable costs (non-recurring expenses)" },
+                    fixedCosts: { type: "number", description: "Total fixed costs (same amount every month)" },
+                    committedExpenses: { type: "number", description: "Total committed expenses (recurring but variable amounts)" },
+                    total: { type: "number", description: "Total amount of all expenses" },
+                    categoryCounts: {
+                      type: "object",
+                      properties: {
+                        fixedCosts: { type: "number", description: "Number of fixed cost categories" },
+                        committedExpenses: { type: "number", description: "Number of committed expense categories" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            description: "Bad Request - Invalid query parameters",
+            schema: {
+              type: "object",
+              properties: {
+                statusCode: { type: "number", example: 400 },
+                statusMessage: { type: "string", example: "Invalid query parameters" },
+                data: { type: "array", items: { type: "string" }, example: ["startDate must be in YYYY-MM-DD format"] }
+              }
+            }
+          },
+          "500": {
+            description: "Internal Server Error",
+            schema: {
+              type: "object",
+              properties: {
+                statusCode: { type: "number", example: 500 },
+                statusMessage: { type: "string", example: "Failed to process categories" },
+                data: { type: "string", example: "Unable to connect to Google Sheets" }
+              }
+            }
+          }
+        }
+      },
       "/api/health": {
         method: "GET",
         description: "API health check endpoint"
@@ -172,6 +296,26 @@ export default defineEventHandler(async (event) => {
         title: "Multiple filters example",
         url: `${baseUrl}/api/transactions?person=Juliana&startDate=2025-01-01&endDate=2025-03-31&searchTerm=restaurante&processInstallments=true`,
         description: "Complex filtering with multiple parameters"
+      },
+      {
+        title: "Category analysis for current month",
+        url: `${baseUrl}/api/categories`,
+        description: "Get spending breakdown by category"
+      },
+      {
+        title: "Gabriel's category analysis with transaction details",
+        url: `${baseUrl}/api/categories?person=Gabriel&startDate=2025-01-01&endDate=2025-01-31&includeTransactions=true`,
+        description: "Category analysis for specific person and period with individual transactions"
+      },
+      {
+        title: "Category analysis for specific period",
+        url: `${baseUrl}/api/categories?startDate=2025-01-01&endDate=2025-12-31`,
+        description: "Annual category spending analysis"
+      },
+      {
+        title: "Search categories by transaction pattern",
+        url: `${baseUrl}/api/categories?searchTerm=Netflix&includeTransactions=true`,
+        description: "Find categories containing specific transaction patterns"
       }
     ],
 
@@ -197,6 +341,27 @@ export default defineEventHandler(async (event) => {
       filtering: {
         description: "Advanced filtering capabilities with multiple parameter support",
         features: ["Date range filtering", "Person-based filtering", "Text search", "Category filtering"]
+      },
+      categoryClassification: {
+        description: "Automatic categorization of expenses into different types",
+        types: {
+          fixedCosts: {
+            description: "Same amount every month",
+            examples: ["Rent", "Subscriptions/Softwares", "Insurance"]
+          },
+          committedExpenses: {
+            description: "Recurring but variable amounts", 
+            examples: ["Utilities", "Financing", "Medical"]
+          },
+          variableCosts: {
+            description: "Non-recurring expenses",
+            examples: ["Groceries", "Entertainment", "Shopping"]
+          }
+        }
+      },
+      categoryExclusions: {
+        description: "System categories automatically excluded from analysis",
+        excludedCategories: ["Credit Account", "Bank Account", "Adjustment", "Sem Categoria"]
       }
     },
 
@@ -205,7 +370,10 @@ export default defineEventHandler(async (event) => {
       "Transaction listing with filters", 
       "Category-based spending analysis",
       "Installment timeline visualization",
-      "Fixed costs historical analysis"
+      "Fixed costs historical analysis",
+      "Monthly/yearly spending breakdowns by category",
+      "Budget planning and expense tracking",
+      "Financial goal monitoring and progress tracking"
     ],
 
     generatedAt: new Date().toISOString(),
