@@ -280,15 +280,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import type { Transaction } from '~/types/transaction'
+import type { CategoriesResponse } from '~/types/transaction'
 
 // Composables
 const { selectedPerson } = usePersonFilter()
-const { processInstallments } = useInstallments()
 
 // State
-const rawTransactions = ref<Transaction[]>([]) // Transações originais do Google Sheets
-const transactions = ref<Transaction[]>([]) // Transações processadas (com parcelas expandidas)
+const categoriesData = ref<CategoriesResponse | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const expandedCategory = ref<string | null>(null) // Categoria expandida para ver transações
@@ -303,74 +301,6 @@ const getCurrentMonth = () => {
 
 const selectedMonth = ref(getCurrentMonth())
 
-// ===== CONFIGURAÇÃO: Categorias Excluídas =====
-// Adicione aqui os nomes das categorias que NÃO devem aparecer na análise
-// A comparação é case-insensitive (não diferencia maiúsculas de minúsculas)
-const EXCLUDED_CATEGORIES = [
-  'Sem Categoria',
-  'Credit Account Juliana',
-  'Credit Account Gabriel',
-  'Bank Account Juliana',
-  'Bank Account Gabriel',
-  'Credit Card Juliana',
-  'Credit Card Gabriel',
-  'Adjustment'
-  // Adicione mais categorias aqui conforme necessário
-]
-
-// ===== CONFIGURAÇÃO: Categorias de Custos Fixos =====
-// Adicione aqui os nomes das categorias que têm o mesmo valor todo mês
-// A comparação usa includes e é case-insensitive
-const CUSTOS_FIXOS_CATEGORIES = [
-  'Rent',
-  'Subscriptions/Softwares',
-  'Insurance',
-  'Utilities',
-  'Business & Taxes',
-  'Medical',
-  // Adicione mais categorias aqui conforme necessário
-]
-
-// ===== CONFIGURAÇÃO: Categorias de Gastos Comprometidos =====
-// Adicione aqui os nomes das categorias que são recorrentes mas com valor variável
-// A comparação usa includes e é case-insensitive
-const GASTOS_COMPROMETIDOS_CATEGORIES = [
-  'Installments/Financing',
-  'Financing',
-  'Utilities',
-  'Business & Taxes',
-  'Investments',
-  'Medical',
-  'Rent',
-  'Subscriptions/Softwares',
-  'Insurance'
-  // Adicione mais categorias aqui conforme necessário
-]
-
-// Função auxiliar para verificar se uma categoria deve ser excluída
-const shouldExcludeCategory = (categoryName: string): boolean => {
-  const lowerCaseName = categoryName.toLowerCase()
-  return EXCLUDED_CATEGORIES.some(excluded =>
-    excluded.toLowerCase() === lowerCaseName
-  )
-}
-
-// Função auxiliar para verificar se uma categoria é de custo fixo (mesmo valor todo mês)
-const isCustoFixoCategory = (categoryName: string): boolean => {
-  const lowerCaseName = categoryName.toLowerCase()
-  return CUSTOS_FIXOS_CATEGORIES.some(fixed =>
-    lowerCaseName.includes(fixed.toLowerCase())
-  )
-}
-
-// Função auxiliar para verificar se uma categoria é de gasto comprometido (valor variável)
-const isGastoComprometidoCategory = (categoryName: string): boolean => {
-  const lowerCaseName = categoryName.toLowerCase()
-  return GASTOS_COMPROMETIDOS_CATEGORIES.some(comprometido =>
-    lowerCaseName.includes(comprometido.toLowerCase())
-  )
-}
-
 // Computed
 const formattedMonth = computed(() => {
   const [year, month] = selectedMonth.value.split('-')
@@ -378,135 +308,21 @@ const formattedMonth = computed(() => {
   return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 })
 
-const filteredTransactions = computed(() => {
-  let filtered = transactions.value
+const categories = computed(() => categoriesData.value?.categories || [])
+const totalAmount = computed(() => categoriesData.value?.totals.total || 0)
+const totalTransactions = computed(() => categories.value.reduce((sum, cat) => sum + cat.count, 0))
 
-  // Filter by person
-  if (selectedPerson.value !== 'Ambos') {
-    filtered = filtered.filter(transaction => {
-      return transaction.person === selectedPerson.value
-    })
-  }
+const variableCostsTotal = computed(() => categoriesData.value?.totals.variableCosts || 0)
+const custosFixosTotal = computed(() => categoriesData.value?.totals.fixedCosts || 0)
+const gastosComprometidosTotal = computed(() => categoriesData.value?.totals.committedExpenses || 0)
 
-  // Filter by month
-  const [year, month] = selectedMonth.value.split('-')
-  filtered = filtered.filter(t => {
-    const date = new Date(t.date)
-    return date.getFullYear() === parseInt(year) &&
-           date.getMonth() === parseInt(month) - 1
-  })
+const custosFixosCategoriesCount = computed(() => categoriesData.value?.totals.categoryCounts.fixedCosts || 0)
+const gastosComprometidosCategoriesCount = computed(() => categoriesData.value?.totals.categoryCounts.committedExpenses || 0)
 
-  return filtered
-})
-
-interface CategoryData {
-  name: string
-  count: number
-  total: number
-  percentage: number
-  average: number
-}
-
-const categories = computed(() => {
-  const categoryMap = new Map<string, { count: number; total: number }>()
-
-  filteredTransactions.value.forEach(transaction => {
-    const category = transaction.destination || 'Sem Categoria'
-    const existing = categoryMap.get(category) || { count: 0, total: 0 }
-
-    categoryMap.set(category, {
-      count: existing.count + 1,
-      total: existing.total + transaction.amount
-    })
-  })
-
-  const total = totalAmount.value
-  const result: CategoryData[] = []
-
-  categoryMap.forEach((data, name) => {
-    // Filtrar categorias excluídas
-    if (!shouldExcludeCategory(name)) {
-      result.push({
-        name,
-        count: data.count,
-        total: data.total,
-        percentage: total > 0 ? (data.total / total) * 100 : 0,
-        average: data.total / data.count
-      })
-    }
-  })
-
-  // Sort by total (descending)
-  return result.sort((a, b) => b.total - a.total)
-})
-
-// Computed para transações não excluídas (considera filtro de categorias excluídas)
-const nonExcludedTransactions = computed(() => {
-  return filteredTransactions.value.filter(t => {
-    const category = t.destination || 'Sem Categoria'
-    return !shouldExcludeCategory(category)
-  })
-})
-
-const totalTransactions = computed(() => nonExcludedTransactions.value.length)
-
-const totalAmount = computed(() => {
-  return nonExcludedTransactions.value.reduce((sum, t) => sum + t.amount, 0)
-})
-
-// Computed para calcular o total de custos fixos (mesmo valor todo mês)
-const custosFixosTotal = computed(() => {
-  return nonExcludedTransactions.value
-    .filter(t => {
-      const category = t.destination || 'Sem Categoria'
-      return isCustoFixoCategory(category)
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
-})
-
-// Computed para contar quantas categorias de custo fixo existem no período atual
-const custosFixosCategoriesCount = computed(() => {
-  const categoriesSet = new Set<string>()
-  nonExcludedTransactions.value.forEach(t => {
-    const category = t.destination || 'Sem Categoria'
-    if (isCustoFixoCategory(category)) {
-      categoriesSet.add(category)
-    }
-  })
-  return categoriesSet.size
-})
-
-// Computed para calcular o total de gastos comprometidos (valor variável)
-const gastosComprometidosTotal = computed(() => {
-  return nonExcludedTransactions.value
-    .filter(t => {
-      const category = t.destination || 'Sem Categoria'
-      return isGastoComprometidoCategory(category)
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
-})
-
-// Computed para contar quantas categorias de gasto comprometido existem no período atual
-const gastosComprometidosCategoriesCount = computed(() => {
-  const categoriesSet = new Set<string>()
-  nonExcludedTransactions.value.forEach(t => {
-    const category = t.destination || 'Sem Categoria'
-    if (isGastoComprometidoCategory(category)) {
-      categoriesSet.add(category)
-    }
-  })
-  return categoriesSet.size
-})
-
-// Computed para calcular o total de gastos variáveis (não fixos e não comprometidos)
-const variableCostsTotal = computed(() => {
-  return nonExcludedTransactions.value
-    .filter(t => {
-      const category = t.destination || 'Sem Categoria'
-      return !isCustoFixoCategory(category) && !isGastoComprometidoCategory(category)
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
-})
+// Configuration from API response
+const EXCLUDED_CATEGORIES = computed(() => categoriesData.value?.config.excludedCategories || [])
+const CUSTOS_FIXOS_CATEGORIES = computed(() => categoriesData.value?.config.fixedCostCategories || [])
+const GASTOS_COMPROMETIDOS_CATEGORIES = computed(() => categoriesData.value?.config.committedExpenseCategories || [])
 
 // Methods
 const getCategoryIcon = (categoryName: string): string => {
@@ -653,13 +469,9 @@ const toggleCategory = (categoryName: string) => {
   }
 }
 
-const getCategoryTransactions = (categoryName: string): Transaction[] => {
-  return nonExcludedTransactions.value
-    .filter(t => {
-      const category = t.destination || 'Sem Categoria'
-      return category === categoryName
-    })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+const getCategoryTransactions = (categoryName: string) => {
+  const category = categories.value.find(cat => cat.name === categoryName)
+  return category?.transactions || []
 }
 
 const refreshData = async () => {
@@ -667,15 +479,27 @@ const refreshData = async () => {
   error.value = null
 
   try {
-    const response = await $fetch<Transaction[]>('/api/transactions')
-    rawTransactions.value = response
-
-    // Processar e expandir parcelas ao longo dos meses
-    const processed = processInstallments(response)
-
-    transactions.value = processed
-  } catch (e) {
-    error.value = 'Não foi possível carregar os dados. Tente novamente.'
+    // Build query parameters for API
+    const params = new URLSearchParams()
+    
+    if (selectedPerson.value !== 'Ambos') {
+      params.append('person', selectedPerson.value)
+    }
+    
+    // Convert month to date range
+    const [year, month] = selectedMonth.value.split('-')
+    const startDate = `${year}-${month}-01`
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
+    const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`
+    
+    params.append('startDate', startDate)
+    params.append('endDate', endDate)
+    params.append('includeTransactions', 'true') // Include transactions for expanded view
+    
+    const response = await $fetch<CategoriesResponse>(`/api/categories?${params.toString()}`)
+    categoriesData.value = response
+  } catch (e: any) {
+    error.value = e.data || 'Não foi possível carregar os dados. Tente novamente.'
   } finally {
     loading.value = false
   }

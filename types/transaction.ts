@@ -66,3 +66,38 @@ export interface Alert {
   message: string
   amount?: number
 }
+
+// Categories API types
+export interface CategoryData {
+  name: string
+  count: number
+  total: number
+  percentage: number
+  average: number
+  transactions: Transaction[]
+}
+
+export interface CategoryTotals {
+  variableCosts: number
+  fixedCosts: number
+  committedExpenses: number
+  total: number
+  categoryCounts: {
+    fixedCosts: number
+    committedExpenses: number
+  }
+}
+
+export interface CategoriesResponse {
+  categories: CategoryData[]
+  totals: CategoryTotals
+  config: {
+    excludedCategories: string[]
+    fixedCostCategories: string[]
+    committedExpenseCategories: string[]
+  }
+}
+
+export interface CategoriesQueryParams extends TransactionQueryParams {
+  includeTransactions?: boolean | string // Whether to include individual transactions in response
+}
