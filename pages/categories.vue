@@ -101,9 +101,10 @@
     <div v-else class="px-8 pb-8">
       <!-- Summary Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-          <p class="text-gray-600 text-sm font-medium uppercase tracking-wide">Total de Categorias</p>
-          <p class="text-3xl font-bold text-gray-900 mt-2">{{ categories.length }}</p>
+        <div class="bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
+          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Gastos Variáveis</p>
+          <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(variableCostsTotal) }}</p>
+          <p class="text-green-100 text-xs mt-2">Gastos não fixos do mês</p>
         </div>
         <div class="bg-gradient-to-br from-orange-500 to-orange-700 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
           <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Custos Fixos</p>
@@ -285,7 +286,8 @@ const EXCLUDED_CATEGORIES = [
   'Bank Account Juliana',
   'Bank Account Gabriel',
   'Credit Card Juliana',
-  'Credit Card Gabriel'
+  'Credit Card Gabriel',
+  'Adjustment'
   // Adicione mais categorias aqui conforme necessário
 ]
 
@@ -300,7 +302,8 @@ const FIXED_COST_CATEGORIES = [
   'Utilities',
   'Business & Taxes',
   'Investments',
-  'Insurance'
+  'Insurance',
+  'Medical'
   // Adicione mais categorias aqui conforme necessário
 ]
 
@@ -424,6 +427,16 @@ const fixedCostsCategoriesCount = computed(() => {
     }
   })
   return categoriesSet.size
+})
+
+// Computed para calcular o total de gastos variáveis (não fixos)
+const variableCostsTotal = computed(() => {
+  return nonExcludedTransactions.value
+    .filter(t => {
+      const category = t.destination || 'Sem Categoria'
+      return !isFixedCostCategory(category)
+    })
+    .reduce((sum, t) => sum + t.amount, 0)
 })
 
 // Methods
