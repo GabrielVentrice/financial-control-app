@@ -48,6 +48,12 @@ module.exports = {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
         serif: ['Source Serif 4', 'Georgia', 'serif'],
       },
+      fontWeight: {
+        normal: '400',
+        medium: '500',
+        semibold: '600',
+        bold: '700',
+      },
       spacing: {
         xs: '4px',
         sm: '8px',
@@ -63,10 +69,20 @@ module.exports = {
         lg: '10px',
       },
       lineHeight: {
+        normal: '1.6',
         relaxed: '1.6',
+        tight: '1.4',
       },
       letterSpacing: {
         tight: '-0.01em',
+        normal: '0',
+      },
+      fontSize: {
+        '13': ['13px', { lineHeight: '1.6' }],
+        '15': ['15px', { lineHeight: '1.6' }],
+        '16': ['16px', { lineHeight: '1.6', letterSpacing: '-0.01em' }],
+        '18': ['18px', { lineHeight: '1.6', letterSpacing: '-0.01em' }],
+        '22': ['22px', { lineHeight: '1.4', letterSpacing: '-0.01em' }],
       },
     },
   },

@@ -70,7 +70,8 @@ const clearFilters = () => {
 
 <style scoped>
 .filters-container {
-  background: #f8f9fa;
+  background: #1A1A1A;
+  border: 1px solid #2A2A2A;
   padding: 20px;
   border-radius: 8px;
   margin-bottom: 20px;
@@ -89,20 +90,22 @@ const clearFilters = () => {
 .filter-group label {
   font-size: 0.9rem;
   font-weight: 500;
-  color: #495057;
+  color: #B0B0B0;
 }
 
 .filter-group input {
   padding: 8px 12px;
-  border: 1px solid #ced4da;
+  border: 1px solid #2A2A2A;
   border-radius: 4px;
   font-size: 1rem;
+  background: #1A1A1A;
+  color: #F3F3F3;
 }
 
 .filter-group input:focus {
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  border-color: #7ACBD8;
+  box-shadow: none;
 }
 
 .filter-actions {
@@ -112,9 +115,9 @@ const clearFilters = () => {
 
 .btn-clear {
   padding: 8px 16px;
-  background: #6c757d;
-  color: white;
-  border: none;
+  background: #2A2A2A;
+  color: #F3F3F3;
+  border: 1px solid #2A2A2A;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.9rem;
@@ -122,7 +125,7 @@ const clearFilters = () => {
 }
 
 .btn-clear:hover {
-  background: #5a6268;
+  background: #333333;
 }
 
 @media (max-width: 768px) {

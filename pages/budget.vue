@@ -4,21 +4,21 @@
       <!-- Header -->
       <header class="h-[72px] px-10 flex items-center justify-between border-b border-border-base">
         <div>
-          <h1 class="text-[22px] font-medium">Configuração de Orçamento</h1>
-          <p class="text-[13px] text-text-secondary mt-0.5">Defina orçamentos mensais separados para Juliana e Gabriel</p>
+          <h1 class="text-22 font-medium tracking-tight">Configuração de Orçamento</h1>
+          <p class="text-13 text-text-secondary mt-0.5 leading-normal">Defina orçamentos mensais separados para Juliana e Gabriel</p>
         </div>
         <div class="flex items-center gap-3">
           <button
             @click="loadData"
             :disabled="loading"
-            class="px-[18px] py-[10px] bg-background-section hover:bg-background-hover text-text-primary rounded-md transition-all duration-200 ease-out font-medium text-[15px] disabled:opacity-40 disabled:cursor-not-allowed border border-border-base"
+            class="px-[18px] py-[10px] bg-background-section hover:bg-background-hover text-text-primary rounded-md transition-all duration-200 ease-out font-medium text-15 disabled:opacity-40 disabled:cursor-not-allowed border border-border-base"
           >
             {{ loading ? 'Carregando...' : 'Atualizar' }}
           </button>
           <button
             @click="saveBudgets"
             :disabled="saving || !hasChanges"
-            class="px-[18px] py-[10px] bg-accent-success hover:bg-accent-success/90 text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-[15px] disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+            class="px-[18px] py-[10px] bg-accent-success hover:bg-accent-success/90 text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-15 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {{ saving ? 'Salvando...' : 'Salvar Orçamentos' }}
           </button>
@@ -28,25 +28,25 @@
       <!-- Month Selector & Messages -->
       <div class="px-10 py-4 border-b border-border-base space-y-3">
         <div class="flex items-center gap-3">
-          <label class="text-[13px] font-medium text-text-secondary">
+          <label class="text-13 font-medium text-text-secondary">
             Período:
           </label>
           <input
             v-model="selectedMonth"
             type="month"
-            class="px-4 py-2 text-[15px] bg-background-input text-text-primary border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
+            class="px-4 py-2 text-15 bg-background-input text-text-primary border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
           />
-          <span class="text-[13px] text-text-muted">{{ formattedMonth }}</span>
+          <span class="text-13 text-text-muted">{{ formattedMonth }}</span>
         </div>
 
         <!-- Success Message -->
         <div v-if="successMessage" class="border-l-[3px] border-accent-success bg-background-card p-4 rounded-lg">
-          <p class="text-text-primary text-[15px] font-medium">{{ successMessage }}</p>
+          <p class="text-text-primary text-15 font-medium">{{ successMessage }}</p>
         </div>
 
         <!-- Error Message -->
         <div v-if="errorMessage" class="border-l-[3px] border-accent-danger bg-background-card p-4 rounded-lg">
-          <p class="text-text-primary text-[15px] font-medium">{{ errorMessage }}</p>
+          <p class="text-text-primary text-15 font-medium">{{ errorMessage }}</p>
         </div>
       </div>
 
@@ -55,7 +55,7 @@
         <!-- Loading State -->
         <div v-if="loading" class="flex flex-col items-center justify-center py-20">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
-          <p class="mt-4 text-text-secondary text-[15px]">Carregando dados...</p>
+          <p class="mt-4 text-text-secondary text-15">Carregando dados...</p>
         </div>
 
         <!-- Content -->
@@ -63,43 +63,43 @@
           <!-- Summary Cards -->
           <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
-              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Orçamento Juliana
               </p>
               <p class="text-[32px] font-normal font-serif text-accent-info">
                 {{ formatCurrency(totalBudgetJuliana) }}
               </p>
-              <p class="text-text-muted text-[13px]">{{ categoriesWithBudgetJuliana }} categorias</p>
+              <p class="text-text-muted text-13 leading-normal">{{ categoriesWithBudgetJuliana }} categorias</p>
             </div>
 
             <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
-              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Orçamento Gabriel
               </p>
               <p class="text-[32px] font-normal font-serif text-accent-primary tracking-tight">
                 {{ formatCurrency(totalBudgetGabriel) }}
               </p>
-              <p class="text-text-muted text-[13px] leading-relaxed">{{ categoriesWithBudgetGabriel }} categorias</p>
+              <p class="text-text-muted text-13 leading-normal">{{ categoriesWithBudgetGabriel }} categorias</p>
             </div>
 
             <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
-              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Orçamento Total
               </p>
               <p class="text-[32px] font-normal font-serif text-accent-success tracking-tight">
                 {{ formatCurrency(totalBudget) }}
               </p>
-              <p class="text-text-muted text-[13px] leading-relaxed">Para {{ formattedMonth }}</p>
+              <p class="text-text-muted text-13 leading-normal">Para {{ formattedMonth }}</p>
             </div>
 
             <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
-              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Categorias Config.
               </p>
               <p class="text-[32px] font-normal font-serif text-accent-warning">
                 {{ categoriesWithBudget }}
               </p>
-              <p class="text-text-muted text-[13px]">de {{ availableCategories.length }} categorias</p>
+              <p class="text-text-muted text-13 leading-normal">de {{ availableCategories.length }} categorias</p>
             </div>
           </section>
 
@@ -107,18 +107,18 @@
           <section class="bg-background-card border border-border-base rounded-lg overflow-hidden">
             <!-- Header with Search -->
             <div class="px-6 py-4 bg-background-section border-b border-border-base flex items-center justify-between">
-              <h2 class="text-[16px] font-medium text-text-primary">Orçamentos por Categoria</h2>
+              <h2 class="text-16 font-medium text-text-primary tracking-tight">Orçamentos por Categoria</h2>
               <input
                 v-model="searchQuery"
                 type="text"
                 placeholder="Buscar categoria..."
-                class="px-4 py-2 text-[15px] bg-background-input text-text-primary border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all w-64"
+                class="px-4 py-2 text-15 bg-background-input text-text-primary border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all w-64"
               />
             </div>
 
             <!-- Table Header -->
             <div class="px-6 py-3 bg-background-section border-b border-border-base">
-              <div class="grid grid-cols-12 gap-4 items-center text-[13px] font-medium text-text-secondary uppercase tracking-wide">
+              <div class="grid grid-cols-12 gap-4 items-center text-13 font-medium text-text-secondary uppercase tracking-wide">
                 <div class="col-span-5">Categoria</div>
                 <div class="col-span-3 text-center">Juliana</div>
                 <div class="col-span-3 text-center">Gabriel</div>
@@ -139,20 +139,20 @@
                     <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-md bg-background-section border border-border-base">
                       <span class="text-xl">{{ getCategoryIcon(category) }}</span>
                     </div>
-                    <p class="text-[15px] font-medium text-text-primary truncate">{{ category }}</p>
+                    <p class="text-15 font-medium text-text-primary truncate">{{ category }}</p>
                   </div>
 
                   <!-- Juliana Input -->
                   <div class="col-span-3">
                     <div class="relative">
-                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted text-[13px]">R$</span>
+                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted text-13">R$</span>
                       <input
                         v-model.number="budgetInputsJuliana[category]"
                         type="number"
                         step="0.01"
                         min="0"
                         placeholder="0,00"
-                        class="w-full pl-10 pr-3 py-2 text-[15px] bg-background-input text-text-primary border border-accent-info/30 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
+                        class="w-full pl-10 pr-3 py-2 text-15 bg-background-input text-text-primary border border-accent-info/30 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
                         @input="markAsChanged"
                       />
                     </div>
@@ -161,14 +161,14 @@
                   <!-- Gabriel Input -->
                   <div class="col-span-3">
                     <div class="relative">
-                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted text-[13px]">R$</span>
+                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted text-13">R$</span>
                       <input
                         v-model.number="budgetInputsGabriel[category]"
                         type="number"
                         step="0.01"
                         min="0"
                         placeholder="0,00"
-                        class="w-full pl-10 pr-3 py-2 text-[15px] bg-background-input text-text-primary border border-accent-primary/30 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary transition-all"
+                        class="w-full pl-10 pr-3 py-2 text-15 bg-background-input text-text-primary border border-accent-primary/30 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary transition-all"
                         @input="markAsChanged"
                       />
                     </div>
@@ -176,7 +176,7 @@
 
                   <!-- Total -->
                   <div class="col-span-1 text-center">
-                    <span class="text-[13px] font-semibold text-text-primary">
+                    <span class="text-13 font-semibold text-text-primary">
                       {{ formatCurrencyShort(getCategoryTotal(category)) }}
                     </span>
                   </div>
@@ -186,7 +186,7 @@
 
             <!-- Empty State -->
             <div v-if="filteredCategories.length === 0" class="text-center py-12">
-              <p class="text-text-secondary text-[15px]">
+              <p class="text-text-secondary text-15">
                 {{ searchQuery ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria disponível' }}
               </p>
             </div>
@@ -194,7 +194,7 @@
 
           <!-- Info Note -->
           <div class="border-l-[3px] border-accent-info bg-background-card p-5 rounded-lg">
-            <p class="text-[15px] text-text-primary">
+            <p class="text-15 text-text-primary leading-normal">
               <strong>Nota:</strong> Apenas categorias de gastos são exibidas aqui. Categorias de sistema (contas bancárias, cartões de crédito, etc.) são automaticamente excluídas.
             </p>
           </div>

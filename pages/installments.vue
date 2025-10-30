@@ -4,13 +4,13 @@
       <!-- Header -->
       <header class="h-[72px] px-10 flex items-center justify-between border-b border-border-base">
         <div>
-          <h1 class="text-[22px] font-medium">Análise de Parcelas</h1>
-          <p class="text-[13px] text-text-secondary mt-0.5">Visualize parcelas passadas e futuras por período</p>
+          <h1 class="text-22 font-medium tracking-tight">Análise de Parcelas</h1>
+          <p class="text-13 text-text-secondary mt-0.5 leading-normal">Visualize parcelas passadas e futuras por período</p>
         </div>
         <button
           @click="refreshData"
           :disabled="loading"
-          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-[15px] disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-15 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {{ loading ? 'Atualizando...' : 'Atualizar' }}
         </button>
@@ -18,7 +18,7 @@
 
       <!-- Filter Info -->
       <div class="px-10 py-4 border-b border-border-base">
-        <div class="flex items-center gap-2 text-[13px]">
+        <div class="flex items-center gap-2 text-13">
           <span class="font-medium text-text-secondary">Pessoa:</span>
           <span class="px-3 py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20">
             {{ selectedPerson }}
@@ -31,13 +31,13 @@
         <!-- Loading State -->
         <div v-if="loading" class="flex flex-col items-center justify-center py-20">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
-          <p class="mt-4 text-text-secondary text-[15px]">Carregando dados...</p>
+          <p class="mt-4 text-text-secondary text-15">Carregando dados...</p>
         </div>
 
         <!-- Error State -->
         <div v-else-if="error" class="border-l-[3px] border-l-accent-danger bg-background-card border border-border-base p-5 rounded-lg">
-          <h4 class="text-text-primary font-medium text-[15px]">Erro ao carregar dados</h4>
-          <p class="text-text-secondary text-[13px] mt-1 leading-relaxed">{{ error }}</p>
+          <h4 class="text-text-primary font-medium text-15">Erro ao carregar dados</h4>
+          <p class="text-text-secondary text-13 mt-1 leading-normal">{{ error }}</p>
         </div>
 
         <!-- Content -->
@@ -45,37 +45,37 @@
           <!-- Summary Cards -->
           <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
-              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Parcelas Ativas
               </p>
               <p class="text-[32px] font-normal font-serif text-accent-info tracking-tight">
                 {{ activeInstallments.length }}
               </p>
-              <p class="text-text-muted text-[13px]">Com parcelas futuras</p>
+              <p class="text-text-muted text-13 leading-normal">Com parcelas futuras</p>
             </div>
             <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
-              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Total Mês Atual
               </p>
               <p class="text-[32px] font-normal font-serif text-accent-primary tracking-tight">
                 {{ formatCurrency(currentMonthTotal) }}
               </p>
-              <p class="text-text-muted text-[13px]">{{ formatMonthYear(currentMonth) }}</p>
+              <p class="text-text-muted text-13 leading-normal">{{ formatMonthYear(currentMonth) }}</p>
             </div>
             <div class="bg-background-card border border-accent-success/20 rounded-lg px-6 py-5 space-y-3 border-l-[3px] border-l-accent-success">
-              <p class="text-text-secondary text-[13px] font-medium uppercase tracking-wide">
+              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Média Mensal
               </p>
               <p class="text-[32px] font-normal font-serif text-accent-success tracking-tight">
                 {{ formatCurrency(averageMonthlyTotal) }}
               </p>
-              <p class="text-text-muted text-[13px]">Últimos 13 meses</p>
+              <p class="text-text-muted text-13 leading-normal">Últimos 13 meses</p>
             </div>
           </section>
 
           <!-- Chart -->
           <section class="bg-background-card border border-border-base rounded-lg p-6">
-            <h2 class="text-[16px] font-medium text-text-primary mb-6 tracking-tight">Parcelas por Mês (6 meses atrás → 6 meses à frente)</h2>
+            <h2 class="text-16 font-medium text-text-primary mb-6 tracking-tight">Parcelas por Mês (6 meses atrás → 6 meses à frente)</h2>
             <div class="h-96">
               <Bar :data="chartData" :options="chartOptions" />
             </div>
@@ -83,9 +83,9 @@
 
           <!-- Active Installments List -->
           <section class="bg-background-card border border-border-base rounded-lg p-6">
-            <h2 class="text-[16px] font-medium text-text-primary mb-6 tracking-tight">Parcelas Ativas ({{ activeInstallments.length }})</h2>
+            <h2 class="text-16 font-medium text-text-primary mb-6 tracking-tight">Parcelas Ativas ({{ activeInstallments.length }})</h2>
             <div v-if="activeInstallments.length === 0" class="text-center py-12">
-              <p class="text-text-secondary text-[15px]">Nenhuma parcela ativa encontrada</p>
+              <p class="text-text-secondary text-15">Nenhuma parcela ativa encontrada</p>
             </div>
             <div v-else class="space-y-4">
               <div
@@ -95,8 +95,8 @@
               >
                 <div class="flex justify-between items-start">
                   <div class="flex-1">
-                    <h3 class="font-medium text-text-primary text-[16px] mb-2">{{ installment.description }}</h3>
-                    <div class="flex flex-wrap gap-4 text-[13px]">
+                    <h3 class="font-medium text-text-primary text-16 mb-2 tracking-tight">{{ installment.description }}</h3>
+                    <div class="flex flex-wrap gap-4 text-13">
                       <span class="text-text-secondary">
                         <span class="font-medium">Origem:</span> {{ installment.origin }}
                       </span>
@@ -109,7 +109,7 @@
                     <div class="text-[24px] font-normal font-serif text-accent-primary">
                       {{ installment.paid }}/{{ installment.total }}
                     </div>
-                    <div class="text-[13px] text-text-muted mt-1">
+                    <div class="text-13 text-text-muted mt-1">
                       {{ installment.remaining }} restantes
                     </div>
                     <div class="mt-3">
@@ -122,7 +122,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="mt-4 grid grid-cols-2 gap-3 text-[13px]">
+                <div class="mt-4 grid grid-cols-2 gap-3 text-13">
                   <div class="bg-background-page rounded-md p-3 border border-border-base">
                     <span class="text-text-secondary">Primeira parcela:</span>
                     <span class="font-medium text-text-primary ml-2">{{ formatDate(installment.firstDate) }}</span>
@@ -139,19 +139,19 @@
           <!-- Monthly Breakdown -->
           <section class="bg-background-card border border-border-base rounded-lg overflow-hidden">
             <div class="px-6 py-4 bg-background-section border-b border-border-base">
-              <h2 class="text-[16px] font-medium text-text-primary tracking-tight">Detalhamento Mensal</h2>
+              <h2 class="text-16 font-medium text-text-primary tracking-tight">Detalhamento Mensal</h2>
             </div>
             <div class="overflow-x-auto">
               <table class="min-w-full divide-y divide-border-base">
                 <thead class="bg-background-section">
                   <tr>
-                    <th class="px-6 py-4 text-left text-[13px] font-medium text-text-secondary uppercase tracking-wide">
+                    <th class="px-6 py-4 text-left text-13 font-medium text-text-secondary uppercase tracking-wide">
                       Mês
                     </th>
-                    <th class="px-6 py-4 text-left text-[13px] font-medium text-text-secondary uppercase tracking-wide">
+                    <th class="px-6 py-4 text-left text-13 font-medium text-text-secondary uppercase tracking-wide">
                       Qtd. Parcelas
                     </th>
-                    <th class="px-6 py-4 text-left text-[13px] font-medium text-text-secondary uppercase tracking-wide">
+                    <th class="px-6 py-4 text-left text-13 font-medium text-text-secondary uppercase tracking-wide">
                       Total
                     </th>
                   </tr>
@@ -171,16 +171,16 @@
                         >
                           Atual
                         </span>
-                        <span class="text-[15px] font-medium text-text-primary">{{ formatMonthYear(month.monthKey) }}</span>
+                        <span class="text-15 font-medium text-text-primary">{{ formatMonthYear(month.monthKey) }}</span>
                       </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="px-3 py-1.5 inline-flex text-[13px] font-semibold rounded-md bg-accent-info/10 text-accent-info border border-accent-info/20">
+                      <span class="px-3 py-1.5 inline-flex text-13 font-semibold rounded-md bg-accent-info/10 text-accent-info border border-accent-info/20">
                         {{ month.count }}
                       </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="text-[16px] font-semibold text-accent-primary">
+                      <div class="text-16 font-semibold text-accent-primary">
                         {{ formatCurrency(month.total) }}
                       </div>
                     </td>

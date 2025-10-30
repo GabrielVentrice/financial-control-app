@@ -44,16 +44,16 @@ const formatDate = (dateString: string) => {
 
 <style scoped>
 .transaction-card {
-  background: white;
-  border: 1px solid #e1e8ed;
+  background: #1A1A1A;
+  border: 1px solid #2A2A2A;
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 12px;
-  transition: box-shadow 0.2s;
+  transition: background-color 0.2s;
 }
 
 .transaction-card:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: #2A2A2A;
 }
 
 .transaction-header {
@@ -64,19 +64,19 @@ const formatDate = (dateString: string) => {
 }
 
 .transaction-date {
-  color: #657786;
+  color: #B0B0B0;
   font-size: 0.9rem;
 }
 
 .transaction-amount {
   font-weight: 600;
   font-size: 1.1rem;
-  color: #27ae60;
+  color: #3DD68C;
 }
 
 .transaction-description {
   font-size: 1rem;
-  color: #14171a;
+  color: #F3F3F3;
   margin-bottom: 12px;
   font-weight: 500;
 }
@@ -94,11 +94,11 @@ const formatDate = (dateString: string) => {
 }
 
 .detail .label {
-  color: #657786;
+  color: #B0B0B0;
   font-weight: 500;
 }
 
 .detail .value {
-  color: #14171a;
+  color: #F3F3F3;
 }
 </style>
