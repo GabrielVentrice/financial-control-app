@@ -61,15 +61,36 @@
         </details>
       </div>
 
-      <!-- Fixed Cost Categories Info -->
-      <div v-if="FIXED_COST_CATEGORIES.length > 0" class="mt-3 px-6 py-2 bg-orange-50 border border-orange-200 rounded-lg">
+      <!-- Fixed Costs Categories Info -->
+      <div v-if="CUSTOS_FIXOS_CATEGORIES.length > 0" class="mt-3 px-6 py-2 bg-blue-50 border border-blue-200 rounded-lg">
         <details class="text-sm">
-          <summary class="cursor-pointer text-orange-800 font-medium hover:text-orange-900">
-            📌 {{ FIXED_COST_CATEGORIES.length }} categoria(s) configurada(s) como custo fixo
+          <summary class="cursor-pointer text-blue-800 font-medium hover:text-blue-900">
+            💵 {{ CUSTOS_FIXOS_CATEGORIES.length }} categoria(s) configurada(s) como custo fixo (mesmo valor)
           </summary>
           <div class="mt-2 flex flex-wrap gap-2">
             <span
-              v-for="category in FIXED_COST_CATEGORIES"
+              v-for="category in CUSTOS_FIXOS_CATEGORIES"
+              :key="category"
+              class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full border border-blue-300"
+            >
+              {{ category }}
+            </span>
+          </div>
+          <p class="mt-2 text-xs text-blue-700">
+            Para modificar, edite CUSTOS_FIXOS_CATEGORIES em pages/categories.vue
+          </p>
+        </details>
+      </div>
+
+      <!-- Committed Expenses Categories Info -->
+      <div v-if="GASTOS_COMPROMETIDOS_CATEGORIES.length > 0" class="mt-3 px-6 py-2 bg-orange-50 border border-orange-200 rounded-lg">
+        <details class="text-sm">
+          <summary class="cursor-pointer text-orange-800 font-medium hover:text-orange-900">
+            📌 {{ GASTOS_COMPROMETIDOS_CATEGORIES.length }} categoria(s) configurada(s) como gasto comprometido (valor variável)
+          </summary>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <span
+              v-for="category in GASTOS_COMPROMETIDOS_CATEGORIES"
               :key="category"
               class="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full border border-orange-300"
             >
@@ -77,7 +98,7 @@
             </span>
           </div>
           <p class="mt-2 text-xs text-orange-700">
-            Para modificar, edite FIXED_COST_CATEGORIES em pages/categories.vue
+            Para modificar, edite GASTOS_COMPROMETIDOS_CATEGORIES em pages/categories.vue
           </p>
         </details>
       </div>
@@ -100,20 +121,26 @@
     <!-- Categories Grid -->
     <div v-else class="px-8 pb-8">
       <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <div class="bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
           <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Gastos Variáveis</p>
           <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(variableCostsTotal) }}</p>
-          <p class="text-green-100 text-xs mt-2">Gastos não fixos do mês</p>
+          <p class="text-green-100 text-xs mt-2">Gastos não recorrentes</p>
+        </div>
+        <div class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
+          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Custos Fixos</p>
+          <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(custosFixosTotal) }}</p>
+          <p class="text-blue-100 text-xs mt-2">{{ custosFixosCategoriesCount }} {{ custosFixosCategoriesCount === 1 ? 'categoria' : 'categorias' }} • Mesmo valor</p>
         </div>
         <div class="bg-gradient-to-br from-orange-500 to-orange-700 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
-          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Custos Fixos</p>
-          <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(fixedCostsTotal) }}</p>
-          <p class="text-orange-100 text-xs mt-2">{{ fixedCostsCategoriesCount }} {{ fixedCostsCategoriesCount === 1 ? 'categoria' : 'categorias' }}</p>
+          <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Gastos Comprometidos</p>
+          <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(gastosComprometidosTotal) }}</p>
+          <p class="text-orange-100 text-xs mt-2">{{ gastosComprometidosCategoriesCount }} {{ gastosComprometidosCategoriesCount === 1 ? 'categoria' : 'categorias' }} • Valor variável</p>
         </div>
         <div class="bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
           <p class="text-white text-sm font-medium uppercase tracking-wide opacity-90">Gasto Total</p>
           <p class="text-4xl font-bold text-white mt-2">{{ formatCurrency(totalAmount) }}</p>
+          <p class="text-primary-100 text-xs mt-2">Soma de todos os gastos</p>
         </div>
       </div>
 
@@ -292,18 +319,31 @@ const EXCLUDED_CATEGORIES = [
 ]
 
 // ===== CONFIGURAÇÃO: Categorias de Custos Fixos =====
-// Adicione aqui os nomes das categorias que devem ser consideradas como custos fixos
+// Adicione aqui os nomes das categorias que têm o mesmo valor todo mês
 // A comparação usa includes e é case-insensitive
-const FIXED_COST_CATEGORIES = [
-  'Installments/Financing',
+const CUSTOS_FIXOS_CATEGORIES = [
   'Rent',
-  'Financing',
   'Subscriptions/Softwares',
+  'Insurance',
+  'Utilities',
+  'Business & Taxes',
+  'Medical',
+  // Adicione mais categorias aqui conforme necessário
+]
+
+// ===== CONFIGURAÇÃO: Categorias de Gastos Comprometidos =====
+// Adicione aqui os nomes das categorias que são recorrentes mas com valor variável
+// A comparação usa includes e é case-insensitive
+const GASTOS_COMPROMETIDOS_CATEGORIES = [
+  'Installments/Financing',
+  'Financing',
   'Utilities',
   'Business & Taxes',
   'Investments',
-  'Insurance',
-  'Medical'
+  'Medical',
+  'Rent',
+  'Subscriptions/Softwares',
+  'Insurance'
   // Adicione mais categorias aqui conforme necessário
 ]
 
@@ -315,11 +355,19 @@ const shouldExcludeCategory = (categoryName: string): boolean => {
   )
 }
 
-// Função auxiliar para verificar se uma categoria é de custo fixo
-const isFixedCostCategory = (categoryName: string): boolean => {
+// Função auxiliar para verificar se uma categoria é de custo fixo (mesmo valor todo mês)
+const isCustoFixoCategory = (categoryName: string): boolean => {
   const lowerCaseName = categoryName.toLowerCase()
-  return FIXED_COST_CATEGORIES.some(fixed =>
+  return CUSTOS_FIXOS_CATEGORIES.some(fixed =>
     lowerCaseName.includes(fixed.toLowerCase())
+  )
+}
+
+// Função auxiliar para verificar se uma categoria é de gasto comprometido (valor variável)
+const isGastoComprometidoCategory = (categoryName: string): boolean => {
+  const lowerCaseName = categoryName.toLowerCase()
+  return GASTOS_COMPROMETIDOS_CATEGORIES.some(comprometido =>
+    lowerCaseName.includes(comprometido.toLowerCase())
   )
 }
 
@@ -407,34 +455,56 @@ const totalAmount = computed(() => {
   return nonExcludedTransactions.value.reduce((sum, t) => sum + t.amount, 0)
 })
 
-// Computed para calcular o total de custos fixos
-const fixedCostsTotal = computed(() => {
+// Computed para calcular o total de custos fixos (mesmo valor todo mês)
+const custosFixosTotal = computed(() => {
   return nonExcludedTransactions.value
     .filter(t => {
       const category = t.destination || 'Sem Categoria'
-      return isFixedCostCategory(category)
+      return isCustoFixoCategory(category)
     })
     .reduce((sum, t) => sum + t.amount, 0)
 })
 
 // Computed para contar quantas categorias de custo fixo existem no período atual
-const fixedCostsCategoriesCount = computed(() => {
+const custosFixosCategoriesCount = computed(() => {
   const categoriesSet = new Set<string>()
   nonExcludedTransactions.value.forEach(t => {
     const category = t.destination || 'Sem Categoria'
-    if (isFixedCostCategory(category)) {
+    if (isCustoFixoCategory(category)) {
       categoriesSet.add(category)
     }
   })
   return categoriesSet.size
 })
 
-// Computed para calcular o total de gastos variáveis (não fixos)
+// Computed para calcular o total de gastos comprometidos (valor variável)
+const gastosComprometidosTotal = computed(() => {
+  return nonExcludedTransactions.value
+    .filter(t => {
+      const category = t.destination || 'Sem Categoria'
+      return isGastoComprometidoCategory(category)
+    })
+    .reduce((sum, t) => sum + t.amount, 0)
+})
+
+// Computed para contar quantas categorias de gasto comprometido existem no período atual
+const gastosComprometidosCategoriesCount = computed(() => {
+  const categoriesSet = new Set<string>()
+  nonExcludedTransactions.value.forEach(t => {
+    const category = t.destination || 'Sem Categoria'
+    if (isGastoComprometidoCategory(category)) {
+      categoriesSet.add(category)
+    }
+  })
+  return categoriesSet.size
+})
+
+// Computed para calcular o total de gastos variáveis (não fixos e não comprometidos)
 const variableCostsTotal = computed(() => {
   return nonExcludedTransactions.value
     .filter(t => {
       const category = t.destination || 'Sem Categoria'
-      return !isFixedCostCategory(category)
+      return !isCustoFixoCategory(category) && !isGastoComprometidoCategory(category)
     })
     .reduce((sum, t) => sum + t.amount, 0)
 })
