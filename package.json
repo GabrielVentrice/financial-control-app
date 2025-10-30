@@ -8,10 +8,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "docs:check": "node scripts/update-docs.mjs check",
-    "docs:generate": "node scripts/update-docs.mjs generate",
-    "docs:update": "node scripts/update-docs.mjs update"
+    "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "chart.js": "^4.5.1",

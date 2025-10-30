@@ -48,18 +48,12 @@ financial-control-app/
 │   └── fixed-costs.vue            # Fixed costs historical analysis (last 6 months)
 ├── server/
 │   ├── api/
-│   │   ├── transactions.get.ts   # API endpoint with query parameter support
-│   │   └── docs/
-│   │       ├── API_ARCHITECTURE.md # Detailed API architecture documentation
-│   │       ├── architecture.get.ts # Returns API_ARCHITECTURE.md for AI consumption
-│   │       └── generate.get.ts    # Generates dynamic API documentation
+│   │   └── transactions.get.ts   # API endpoint with OpenAPI metadata
 │   └── utils/
 │       ├── googleSheets.ts        # Google Sheets data fetching
 │       ├── personIdentifier.ts    # Person identification logic
 │       ├── installmentProcessor.ts # Installment processing and expansion
 │       └── transactionFilters.ts  # Server-side filtering logic
-├── scripts/
-│   └── update-docs.mjs            # Documentation maintenance script
 └── types/
     └── transaction.ts             # TypeScript type definitions and interfaces
 ```
@@ -164,10 +158,10 @@ The fixed costs page provides historical analysis of recurring expenses:
 ## Important Files
 
 ### Configuration
-- [nuxt.config.ts](nuxt.config.ts): Nuxt app configuration, runtime config for Google credentials
+- [nuxt.config.ts](nuxt.config.ts): Nuxt app configuration, runtime config for Google credentials, OpenAPI settings
 - [tailwind.config.js](tailwind.config.js): Custom theme colors (primary blue palette)
 - `.env`: Environment variables (NUXT_PUBLIC_GOOGLE_SPREADSHEET_ID, NUXT_GOOGLE_CLIENT_EMAIL, NUXT_GOOGLE_PRIVATE_KEY)
-- [server/api/docs/API_ARCHITECTURE.md](server/api/docs/API_ARCHITECTURE.md): **Detailed documentation** of the server-side API architecture
+- `/_openapi.json`: **OpenAPI 3.1 specification** - Auto-generated API documentation for AI agents and tools
 
 ### Server-Side Logic (NEW Architecture)
 - [server/api/transactions.get.ts](server/api/transactions.get.ts): Main API endpoint with query parameter support and processing orchestration
@@ -245,13 +239,41 @@ The system expects specific column names starting at A1. If your sheet has diffe
 - [server/api/transactions.get.ts](server/api/transactions.get.ts): Data parsing logic
 - [types/transaction.ts](types/transaction.ts): Transaction interface
 
-## API Endpoints
+## API Documentation
 
-### GET /api/transactions
+### OpenAPI Specification
+
+The API is fully documented using **OpenAPI 3.1** specification, accessible at `/_openapi.json`. This endpoint provides machine-readable API documentation designed for:
+
+- **AI Agents & LLMs**: Complete context for code generation and understanding
+- **API Tools**: Postman, Insomnia, Swagger UI, and other API clients
+- **Automated Testing**: Generate test suites from specification
+- **Client Generation**: Auto-generate TypeScript/JavaScript clients
+
+**Accessing the OpenAPI Spec:**
+```bash
+# Get OpenAPI specification
+curl http://localhost:3000/_openapi.json
+
+# Or visit in browser
+open http://localhost:3000/_openapi.json
+```
+
+**Interactive Documentation:**
+
+Nitro provides built-in documentation viewers:
+- **Swagger UI**: Visit `/_swagger` for interactive API documentation
+- **Scalar UI**: Visit `/_scalar` for modern API documentation interface
+
+### Main Endpoints
+
+#### GET /api/transactions
 
 **Main endpoint with server-side processing and filtering support.**
 
-**Supported Query Parameters:**
+All parameters, request/response schemas, examples, and detailed descriptions are available in the OpenAPI specification at `/_openapi.json`.
+
+**Quick Reference - Supported Query Parameters:**
 - `person` - Filter by Juliana/Gabriel/Ambos
 - `startDate` - Start date in YYYY-MM-DD format
 - `endDate` - End date in YYYY-MM-DD format
@@ -275,189 +297,67 @@ GET /api/transactions?searchTerm=Netflix
 GET /api/transactions?processInstallments=false
 ```
 
-**Response:**
-- Returns array of Transaction objects with `person` field populated
-- All processing (person identification, installments, filtering) done server-side
-- Input validation returns 400 error with clear error messages
+**For complete documentation including:**
+- Full parameter descriptions with enums and formats
+- Request/response schemas with all fields
+- Example payloads for different scenarios
+- Error response formats and codes
+- Processing pipeline details
 
-**See [server/api/docs/API_ARCHITECTURE.md](server/api/docs/API_ARCHITECTURE.md) for complete documentation.**
-
-### GET /api/docs/architecture
-
-**Documentation API for AI consumption.**
-
-This endpoint returns the complete API architecture documentation in Markdown format, designed to be consumed by AI agents and automated tools.
-
-**Example Request:**
-```bash
-# Get full API documentation
-GET /api/docs/architecture
-
-# Using curl
-curl http://localhost:3000/api/docs/architecture
-```
-
-**Response:**
-- Content-Type: text/markdown
-- Body: Complete server/api/docs/API_ARCHITECTURE.md content in Markdown format
-
-**Use Cases:**
-- AI agents needing to understand the API structure
-- Automated documentation tooling
-- Integration with external documentation systems
-- LLM context for code generation
-
-### GET /api/docs/generate
-
-**Dynamic documentation generation endpoint.**
-
-Generates API documentation dynamically based on the current codebase structure. This endpoint scans the server files and generates metadata about endpoints, utilities, and types.
-
-**Example Request:**
-```bash
-# Generate documentation metadata
-GET /api/docs/generate
-
-# Using curl
-curl http://localhost:3000/api/docs/generate
-```
-
-**Response:**
-- Content-Type: application/json
-- Body: Documentation metadata including endpoints, utilities, types, and generated markdown
-
-**Response Structure:**
-```typescript
-{
-  generatedAt: string,           // ISO timestamp
-  endpoints: Array<{             // Discovered API endpoints
-    method: string,
-    path: string,
-    file: string,
-    description: string,
-    queryParams: string[]
-  }>,
-  utilities: Array<{             // Server utilities
-    file: string,
-    path: string,
-    functions: string[]
-  }>,
-  types: {                       // Type definitions
-    interfaces: Array<{
-      name: string,
-      fields: string[]
-    }>
-  },
-  architecture: {                // Architecture layers
-    layers: Array<{
-      name: string,
-      location: string,
-      description: string
-    }>
-  },
-  markdown: string               // Generated markdown documentation
-}
-```
-
-**Use Cases:**
-- Verifying documentation is up to date
-- Generating API reference automatically
-- Discovering all available endpoints
-- Auditing codebase structure
+**See `/_openapi.json` for the complete OpenAPI 3.1 specification.**
 
 ## Maintaining API Documentation
 
-The project includes tools to help keep server/api/docs/API_ARCHITECTURE.md up to date:
+The API documentation is **automatically generated** from OpenAPI metadata defined in the endpoint handlers. No manual documentation maintenance is required.
 
-### Documentation Scripts
+### How It Works
 
-**Check documentation status:**
-```bash
-npm run docs:check
-```
-Validates that server/api/docs/API_ARCHITECTURE.md exists and contains all expected sections (endpoints, architecture, examples).
+1. **OpenAPI Metadata**: Each endpoint includes `defineRouteMeta()` with OpenAPI specification
+2. **Auto-Generation**: Nitro automatically generates `/openapi.json` from endpoint metadata
+3. **Always Up-to-Date**: Documentation stays synchronized with code automatically
 
-**Generate documentation preview:**
-```bash
-npm run docs:generate
-```
-Starts dev server, generates documentation dynamically from code, and displays a preview. Use this to verify if server/api/docs/API_ARCHITECTURE.md needs updates.
+### Updating API Documentation
 
-**Update documentation (manual):**
-```bash
-npm run docs:update
-```
-Currently displays instructions for manual update. The generated documentation can be used as a reference, but server/api/docs/API_ARCHITECTURE.md should be manually curated for best quality.
+When you add or modify API endpoints:
 
-### When to Update Documentation
+1. **Add/Update OpenAPI Metadata** in the endpoint handler:
+   ```typescript
+   export default defineEventHandler(async (event) => {
+     defineRouteMeta({
+       openAPI: {
+         summary: 'Your endpoint summary',
+         description: 'Detailed description with examples',
+         tags: ['Category'],
+         parameters: [ /* parameter definitions */ ],
+         responses: { /* response schemas */ }
+       }
+     })
+     // ... endpoint logic
+   })
+   ```
 
-Update [server/api/docs/API_ARCHITECTURE.md](server/api/docs/API_ARCHITECTURE.md) whenever you:
+2. **Test the Documentation**:
+   ```bash
+   # Start dev server
+   npm run dev
 
-1. **Add new API endpoints** (`server/api/**/*.ts`)
-   - Document the endpoint path and HTTP method
-   - List all query parameters
-   - Provide example requests
-   - Describe response structure
+   # View OpenAPI spec
+   curl http://localhost:3000/_openapi.json
 
-2. **Add new server utilities** (`server/utils/**/*.ts`)
-   - Document exported functions
-   - Describe purpose and usage
-   - Update architecture layers if needed
+   # Or use interactive docs
+   open http://localhost:3000/_swagger
+   open http://localhost:3000/_scalar
+   ```
 
-3. **Modify TransactionQueryParams** (`types/transaction.ts`)
-   - Update parameter table
-   - Add examples showing new parameters
-   - Document validation rules
+3. **Commit Changes**: The OpenAPI spec is generated at runtime, no files to commit
 
-4. **Change data flow or architecture**
-   - Update architecture diagrams
-   - Revise data flow section
-   - Update migration examples if relevant
+### Best Practices
 
-### Best Practices for Documentation
-
-1. **Keep it synchronized**: Run `npm run docs:check` before committing changes
-2. **Use examples**: Always include curl and TypeScript examples
-3. **Be specific**: Document actual behavior, not intended behavior
-4. **Version changes**: Note when features were added or changed
-5. **Test examples**: Verify all code examples actually work
-6. **AI-friendly format**: Use clear structure and markdown formatting for LLM consumption
-
-### Documentation Workflow
-
-**Recommended workflow when making API changes:**
-
-```bash
-# 1. Make your code changes
-# Edit server/api/transactions.get.ts, etc.
-
-# 2. Check current documentation status
-npm run docs:check
-
-# 3. Generate updated documentation preview
-npm run docs:generate
-
-# 4. Review generated documentation
-# Compare with server/api/docs/API_ARCHITECTURE.md
-
-# 5. Manually update server/api/docs/API_ARCHITECTURE.md
-# Use generated docs as reference but keep manual quality
-
-# 6. Verify documentation is complete
-npm run docs:check
-
-# 7. Commit both code and documentation
-git add server/
-git commit -m "feat: add new API endpoint with documentation"
-```
-
-### Automation (Future)
-
-Future enhancements could include:
-- Git pre-commit hook to validate documentation
-- Automated documentation generation from JSDoc comments
-- CI/CD check to ensure documentation is synchronized
-- Automatic changelog generation from git commits
+1. **Be Descriptive**: Write clear summaries and descriptions for AI agents
+2. **Include Examples**: Add example values for parameters and responses
+3. **Document All Fields**: Define complete schemas with all properties
+4. **Use Tags**: Organize endpoints into logical categories
+5. **Test**: Verify the OpenAPI spec renders correctly in Swagger/Scalar UI
 
 ## State Management
 
@@ -637,9 +537,12 @@ await fetchTransactions({ person: 'Gabriel' })
 
 ## Additional Resources
 
-- **[server/api/docs/API_ARCHITECTURE.md](server/api/docs/API_ARCHITECTURE.md)**: Complete API documentation and examples
+- **`/_openapi.json`**: Complete OpenAPI 3.1 specification for AI agents and API tools
+- **`/_swagger`**: Interactive Swagger UI documentation
+- **`/_scalar`**: Modern Scalar UI documentation interface
 - [README.md](README.md): Full setup guide and feature documentation
 - [CONFIGURACAO.md](CONFIGURACAO.md): Portuguese configuration guide with detailed filter setup
 - [Nuxt 3 Documentation](https://nuxt.com/docs)
+- [Nitro OpenAPI Documentation](https://nitro.unjs.io/guide/openapi)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [Google Sheets API Documentation](https://developers.google.com/sheets/api)

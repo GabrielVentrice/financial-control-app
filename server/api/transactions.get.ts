@@ -5,18 +5,55 @@ import { processInstallments } from '../utils/installmentProcessor'
 import { applyFilters, validateQueryParams } from '../utils/transactionFilters'
 
 /**
- * Transactions API Endpoint
+ * Get financial transactions from Google Sheets
  *
- * Supports the following query parameters:
- * - person: Filter by Juliana/Gabriel/Ambos
- * - startDate: Filter by start date (YYYY-MM-DD format)
- * - endDate: Filter by end date (YYYY-MM-DD format)
- * - processInstallments: Whether to expand installments (default: true)
- * - searchTerm: Search in transaction descriptions
- * - origin: Filter by origin (account/card)
- * - destination: Filter by destination (category)
+ * Fetches financial transactions with advanced filtering and processing capabilities.
  *
- * Example: /api/transactions?person=Gabriel&startDate=2025-01-01&endDate=2025-01-31
+ * Processing Pipeline:
+ * 1. Fetches raw data from Google Sheets
+ * 2. Enriches transactions with person identification (Juliana/Gabriel)
+ * 3. Processes and expands installments across months (optional)
+ * 4. Applies filters based on query parameters
+ *
+ * Person Identification:
+ * - Automatically identifies person based on Origin field patterns
+ * - Patterns are case-insensitive and use substring matching
+ * - Configured in server/utils/personIdentifier.ts
+ *
+ * Installment Processing:
+ * - Parses installment format (e.g., "Netflix 01/12")
+ * - Expands recurring payments across months
+ * - Groups related installments by series
+ * - Can be disabled with processInstallments=false
+ *
+ * Use Cases:
+ * - Dashboard analytics and insights
+ * - Transaction listing with filters
+ * - Category-based spending analysis
+ * - Installment timeline visualization
+ * - Fixed costs historical analysis
+ *
+ * @param person - Filter by person: "Juliana", "Gabriel", or "Ambos" (both)
+ * @param startDate - Start date for filtering transactions (YYYY-MM-DD format), example: 2025-01-01
+ * @param endDate - End date for filtering transactions (YYYY-MM-DD format), example: 2025-01-31
+ * @param searchTerm - Search term to filter transaction descriptions (case-insensitive), example: Netflix
+ * @param origin - Filter by origin account/card, example: Bank Account Gabriel
+ * @param destination - Filter by destination category, example: Groceries
+ * @param processInstallments - Whether to process and expand installments across months (default: true)
+ *
+ * @returns Array of Transaction objects with person field populated
+ *
+ * @example
+ * // Get all transactions
+ * GET /api/transactions
+ *
+ * @example
+ * // Get Gabriel's transactions for January 2025
+ * GET /api/transactions?person=Gabriel&startDate=2025-01-01&endDate=2025-01-31
+ *
+ * @example
+ * // Search for Netflix transactions
+ * GET /api/transactions?searchTerm=Netflix
  */
 export default defineEventHandler(async (event) => {
   try {

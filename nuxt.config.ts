@@ -31,31 +31,11 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'vercel',
 
-    // Server assets - files accessible to server routes
-    serverAssets: [
-      {
-        baseName: 'docs',
-        dir: './server/assets/docs'
-      }
-    ],
-
-    // Vercel-specific configuration
-    vercel: {
-      config: {
-        maxDuration: 10, // Maximum execution time (seconds) for Hobby plan
-      }
-    },
-
     // Production optimizations
     minify: true,
     sourceMap: false,
 
-    // Rollup configuration to ensure markdown files are copied
-    rollupConfig: {
-      external: ['API_ARCHITECTURE.md']
-    },
-
-    // Experimental features
+    // OpenAPI configuration for API documentation
     experimental: {
       openAPI: true
     }
