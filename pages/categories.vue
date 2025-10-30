@@ -283,7 +283,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import type { Transaction } from '~/types/transaction'
 
 // Composables
-const { selectedPerson, identifyPerson } = usePersonFilter()
+const { selectedPerson } = usePersonFilter()
 const { processInstallments } = useInstallments()
 
 // State
@@ -384,8 +384,7 @@ const filteredTransactions = computed(() => {
   // Filter by person
   if (selectedPerson.value !== 'Ambos') {
     filtered = filtered.filter(transaction => {
-      const person = identifyPerson(transaction.origin)
-      return person === selectedPerson.value
+      return transaction.person === selectedPerson.value
     })
   }
 

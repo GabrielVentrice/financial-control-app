@@ -6,6 +6,11 @@ export type PersonType = 'Juliana' | 'Gabriel' | 'Ambos'
 // Global state for person filter
 const selectedPerson = ref<PersonType>('Ambos')
 
+/**
+ * Composable for managing person filter state
+ * Person identification and filtering is now done server-side
+ * This composable only manages the UI state
+ */
 export const usePersonFilter = () => {
   const setPersonFilter = (person: PersonType) => {
     console.log('🔄 Mudando filtro de pessoa para:', person)
@@ -14,49 +19,8 @@ export const usePersonFilter = () => {
   }
 
   /**
-   * Identifies which person a transaction belongs to based on the Origin field
-   * You should customize the patterns below to match your actual account/card names
-   */
-  const identifyPerson = (origin: string): PersonType | null => {
-    const originLower = origin.toLowerCase()
-
-    // Define patterns for Juliana's accounts/cards
-    const julianaPatterns = [
-      'juliana',
-      'cartao juliana',
-      'conta juliana',
-      'Credit Card Juliana',
-      'Bank Account Juliana',
-      // Add more patterns as needed
-    ]
-
-    // Define patterns for Gabriel's accounts/cards
-    const gabrielPatterns = [
-      'gabriel',
-      'cartao gabriel',
-      'conta gabriel',
-      'Bank Account Gabriel',
-      'Credit Card Gabriel',
-
-      // Add more patterns as needed
-    ]
-
-    // Check if origin matches Juliana's patterns
-    if (julianaPatterns.some(pattern => originLower.includes(pattern))) {
-      return 'Juliana'
-    }
-
-    // Check if origin matches Gabriel's patterns
-    if (gabrielPatterns.some(pattern => originLower.includes(pattern))) {
-      return 'Gabriel'
-    }
-
-    // Return null if no match (transaction won't be assigned to anyone)
-    return null
-  }
-
-  /**
-   * Filters transactions based on the selected person
+   * @deprecated Use server-side filtering instead via fetchTransactions({ person: 'Gabriel' })
+   * Kept for backward compatibility with existing code
    */
   const filterTransactionsByPerson = (transactions: Transaction[]): Transaction[] => {
     if (selectedPerson.value === 'Ambos') {
@@ -64,15 +28,13 @@ export const usePersonFilter = () => {
     }
 
     return transactions.filter(transaction => {
-      const person = identifyPerson(transaction.origin)
-      return person === selectedPerson.value
+      return transaction.person === selectedPerson.value
     })
   }
 
   return {
     selectedPerson: computed(() => selectedPerson.value),
     setPersonFilter,
-    identifyPerson,
     filterTransactionsByPerson,
   }
 }

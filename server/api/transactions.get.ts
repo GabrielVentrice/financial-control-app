@@ -1,63 +1,71 @@
-import { google } from 'googleapis'
-import type { Transaction, SheetRow } from '~/types/transaction'
+import type { Transaction, TransactionQueryParams } from '~/types/transaction'
+import { fetchTransactionsFromGoogleSheets } from '../utils/googleSheets'
+import { enrichTransactionsWithPerson } from '../utils/personIdentifier'
+import { processInstallments } from '../utils/installmentProcessor'
+import { applyFilters, validateQueryParams } from '../utils/transactionFilters'
 
+/**
+ * Transactions API Endpoint
+ *
+ * Supports the following query parameters:
+ * - person: Filter by Juliana/Gabriel/Ambos
+ * - startDate: Filter by start date (YYYY-MM-DD format)
+ * - endDate: Filter by end date (YYYY-MM-DD format)
+ * - processInstallments: Whether to expand installments (default: true)
+ * - searchTerm: Search in transaction descriptions
+ * - origin: Filter by origin (account/card)
+ * - destination: Filter by destination (category)
+ *
+ * Example: /api/transactions?person=Gabriel&startDate=2025-01-01&endDate=2025-01-31
+ */
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig()
-
   try {
-    // Configurar autenticação com Google Sheets
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: config.googleClientEmail,
-        private_key: config.googlePrivateKey?.replace(/\\n/g, '\n'),
-      },
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-    })
+    // Parse query parameters
+    const query = getQuery(event) as TransactionQueryParams
 
-    const sheets = google.sheets({ version: 'v4', auth })
-    const spreadsheetId = config.public.googleSpreadsheetId
-
-    // Buscar dados da planilha
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'A1:H', // Todas as colunas de A até H
-    })
-
-    const rows = response.data.values
-
-    if (!rows || rows.length === 0) {
-      return []
+    // Validate query parameters
+    const validation = validateQueryParams(query)
+    if (!validation.valid) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid query parameters',
+        data: validation.errors,
+      })
     }
 
-    // Primeira linha contém os headers
-    const headers = rows[0]
-    const dataRows = rows.slice(1)
+    console.log('[API] Fetching transactions with params:', query)
 
-    // Transformar rows em objetos Transaction
-    const transactions: Transaction[] = dataRows.map((row) => {
-      const rowData: any = {}
-      headers.forEach((header: string, index: number) => {
-        rowData[header] = row[index] || ''
-      })
+    // STEP 1: Fetch raw data from Google Sheets
+    let transactions = await fetchTransactionsFromGoogleSheets()
+    console.log('[API] Fetched transactions from Google Sheets:', transactions.length)
 
-      return {
-        transactionId: rowData['Transaction Id'] || '',
-        date: rowData['Date'] || '',
-        origin: rowData['Origin'] || '',
-        destination: rowData['Destination'] || '',
-        description: rowData['Description'] || '',
-        amount: parseFloat(rowData['Amount']) || 0,
-        recordedAt: rowData['Recorded at'] || '',
-        remoteId: rowData['Remote Id'] || '',
-      }
-    })
+    // STEP 2: Enrich with person identification
+    transactions = enrichTransactionsWithPerson(transactions)
+    console.log('[API] Enriched transactions with person data')
+
+    // STEP 3: Process installments if requested (default: true)
+    const shouldProcessInstallments = query.processInstallments !== 'false' && query.processInstallments !== false
+    if (shouldProcessInstallments) {
+      transactions = processInstallments(transactions)
+      console.log('[API] Processed installments. New count:', transactions.length)
+    }
+
+    // STEP 4: Apply all filters
+    transactions = applyFilters(transactions, query)
+    console.log('[API] Applied filters. Final count:', transactions.length)
 
     return transactions
   } catch (error: any) {
-    console.error('Erro ao buscar transações:', error)
+    // If error is already a Nitro error, re-throw it
+    if (error.statusCode) {
+      throw error
+    }
+
+    // Otherwise, create a new error
+    console.error('[API] Error processing transactions:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: 'Erro ao buscar transações do Google Sheets',
+      statusMessage: 'Failed to process transactions',
       data: error.message,
     })
   }

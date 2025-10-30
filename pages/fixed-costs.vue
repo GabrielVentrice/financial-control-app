@@ -208,7 +208,7 @@ import type { Transaction } from '~/types/transaction'
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 // Composables
-const { selectedPerson, identifyPerson } = usePersonFilter()
+const { selectedPerson } = usePersonFilter()
 const { processInstallments } = useInstallments()
 
 // State
@@ -270,8 +270,7 @@ const filteredTransactions = computed(() => {
 
   if (selectedPerson.value !== 'Ambos') {
     filtered = filtered.filter(transaction => {
-      const person = identifyPerson(transaction.origin)
-      return person === selectedPerson.value
+      return transaction.person === selectedPerson.value
     })
   }
 

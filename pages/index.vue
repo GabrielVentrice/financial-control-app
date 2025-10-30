@@ -312,7 +312,7 @@ const {
   fetchTransactions,
 } = useTransactions()
 
-const { selectedPerson, identifyPerson } = usePersonFilter()
+const { selectedPerson } = usePersonFilter()
 
 const {
   getCurrentMonthStats,
@@ -328,8 +328,7 @@ const filteredTransactions = computed(() => {
 
   if (selectedPerson.value !== 'Ambos') {
     filtered = filtered.filter(transaction => {
-      const person = identifyPerson(transaction.origin)
-      return person === selectedPerson.value
+      return transaction.person === selectedPerson.value
     })
   }
 

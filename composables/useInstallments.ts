@@ -1,11 +1,10 @@
-import type { Transaction } from '~/types/transaction'
+import type { Transaction, InstallmentInfo } from '~/types/transaction'
 
-interface InstallmentInfo {
-  current: number
-  total: number
-  description: string
-}
-
+/**
+ * Composable for installment-related utilities
+ * Installment processing is now done server-side by default
+ * These functions are kept for client-side re-processing if needed
+ */
 export const useInstallments = () => {
   /**
    * Parseia a descrição da transação para extrair informações da parcela
