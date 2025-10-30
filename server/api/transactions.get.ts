@@ -9,29 +9,31 @@ import { applyFilters, validateQueryParams } from '../utils/transactionFilters'
  *
  * Fetches financial transactions with advanced filtering and processing capabilities.
  *
- * Processing Pipeline:
+ * 📊 **Processing Pipeline:**
  * 1. Fetches raw data from Google Sheets
  * 2. Enriches transactions with person identification (Juliana/Gabriel)
  * 3. Processes and expands installments across months (optional)
  * 4. Applies filters based on query parameters
  *
- * Person Identification:
+ * 👤 **Person Identification:**
  * - Automatically identifies person based on Origin field patterns
  * - Patterns are case-insensitive and use substring matching
  * - Configured in server/utils/personIdentifier.ts
  *
- * Installment Processing:
+ * 💳 **Installment Processing:**
  * - Parses installment format (e.g., "Netflix 01/12")
  * - Expands recurring payments across months
  * - Groups related installments by series
  * - Can be disabled with processInstallments=false
  *
- * Use Cases:
+ * 🎯 **Use Cases:**
  * - Dashboard analytics and insights
  * - Transaction listing with filters
  * - Category-based spending analysis
  * - Installment timeline visualization
  * - Fixed costs historical analysis
+ *
+ * 📖 **Full Documentation:** GET /api/docs (HTML) or /api/docs/json (JSON)
  *
  * @param person - Filter by person: "Juliana", "Gabriel", or "Ambos" (both)
  * @param startDate - Start date for filtering transactions (YYYY-MM-DD format), example: 2025-01-01
@@ -54,6 +56,14 @@ import { applyFilters, validateQueryParams } from '../utils/transactionFilters'
  * @example
  * // Search for Netflix transactions
  * GET /api/transactions?searchTerm=Netflix
+ *
+ * @example
+ * // Multiple filters with complex query
+ * GET /api/transactions?person=Ambos&startDate=2025-01-01&endDate=2025-12-31&searchTerm=supermercado&processInstallments=true
+ *
+ * @example
+ * // Filter by category and origin
+ * GET /api/transactions?destination=Groceries&origin=Credit Card Juliana
  */
 export default defineEventHandler(async (event) => {
   try {
