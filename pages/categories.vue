@@ -2,37 +2,50 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-10 flex items-center justify-between border-b border-border-base">
-        <div>
-          <h1 class="text-22 font-medium tracking-tight">Gastos por Categoria</h1>
-          <p class="text-13 text-text-secondary mt-0.5 leading-normal">Análise de despesas organizadas por categoria</p>
+      <header class="h-[72px] px-4 sm:px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
+        <div class="min-w-0 flex-1 flex items-center gap-3">
+          <!-- Mobile Menu Button -->
+          <button
+            @click="toggleMobileMenu"
+            class="lg:hidden p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          
+          <div class="min-w-0 flex-1">
+            <h1 class="text-18 sm:text-20 lg:text-22 font-medium tracking-tight truncate">Gastos por Categoria</h1>
+            <p class="text-13 text-text-secondary mt-0.5 leading-normal hidden sm:block">Análise de despesas organizadas por categoria</p>
+          </div>
         </div>
         <button
           @click="refreshData"
           :disabled="loading"
-          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-15 disabled:opacity-40 disabled:cursor-not-allowed"
+          class="px-3 py-2 sm:px-[18px] sm:py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-13 sm:text-15 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
         >
-          {{ loading ? 'Atualizando...' : 'Atualizar' }}
+          <span class="hidden sm:inline">{{ loading ? 'Atualizando...' : 'Atualizar' }}</span>
+          <span class="sm:hidden">🔄</span>
         </button>
       </header>
 
       <!-- Filters -->
-      <div class="px-10 py-4 border-b border-border-base">
-        <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div class="px-4 sm:px-6 lg:px-10 py-4 border-b border-border-base">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div class="flex items-center gap-3">
-            <label class="text-13 font-medium text-text-secondary">
+            <label class="text-13 font-medium text-text-secondary whitespace-nowrap">
               Mês:
             </label>
             <input
               v-model="selectedMonth"
               type="month"
-              class="px-4 py-2 text-15 bg-background-input text-text-primary border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
+              class="px-3 sm:px-4 py-2 text-14 sm:text-15 bg-background-input text-text-primary border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
             />
           </div>
 
           <div class="flex items-center gap-2 text-13">
-            <span class="font-medium text-text-secondary">Pessoa:</span>
-            <span class="px-3 py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20">
+            <span class="font-medium text-text-secondary whitespace-nowrap">Pessoa:</span>
+            <span class="px-2 sm:px-3 py-1 sm:py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20 text-12 sm:text-13">
               {{ selectedPerson }}
             </span>
           </div>
@@ -40,7 +53,7 @@
       </div>
 
       <!-- Content -->
-      <main class="max-w-[1280px] px-10 py-8 space-y-12">
+      <main class="max-w-[1280px] px-4 sm:px-6 lg:px-10 py-6 lg:py-8 space-y-8 lg:space-y-12">
         <!-- Loading State -->
         <div v-if="loading" class="flex flex-col items-center justify-center py-20">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
@@ -56,22 +69,22 @@
         <!-- Content -->
         <template v-else>
           <!-- Summary Cards -->
-          <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+          <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
               <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Gastos Variáveis
               </p>
-              <p class="text-[32px] font-normal font-serif text-accent-success">
+              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-success break-all">
                 {{ formatCurrency(variableCostsTotal) }}
               </p>
               <p class="text-text-muted text-13 leading-normal">Gastos não recorrentes</p>
             </div>
 
-            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
               <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Custos Fixos
               </p>
-              <p class="text-[32px] font-normal font-serif text-accent-info tracking-tight">
+              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-info tracking-tight break-all">
                 {{ formatCurrency(custosFixosTotal) }}
               </p>
               <p class="text-text-muted text-13 leading-normal">
@@ -79,11 +92,11 @@
               </p>
             </div>
 
-            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
               <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Gastos Comprometidos
               </p>
-              <p class="text-[32px] font-normal font-serif text-accent-warning tracking-tight">
+              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-warning tracking-tight break-all">
                 {{ formatCurrency(gastosComprometidosTotal) }}
               </p>
               <p class="text-text-muted text-13 leading-normal">
@@ -91,11 +104,11 @@
               </p>
             </div>
 
-            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
               <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Gasto Total
               </p>
-              <p class="text-[32px] font-normal font-serif text-accent-primary">
+              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-primary break-all">
                 {{ formatCurrency(totalAmount) }}
               </p>
               <p class="text-text-muted text-13 leading-normal">{{ totalTransactions }} transações</p>
@@ -104,8 +117,8 @@
 
           <!-- Categories List -->
           <section class="bg-background-card border border-border-base rounded-lg overflow-hidden">
-            <!-- Table Header -->
-            <div class="px-6 py-4 bg-background-section border-b border-border-base">
+            <!-- Desktop Table Header -->
+            <div class="hidden lg:block px-6 py-4 bg-background-section border-b border-border-base">
               <div class="grid grid-cols-12 gap-4 items-center text-13 font-medium text-text-secondary uppercase tracking-wide">
                 <div class="col-span-5">Categoria</div>
                 <div class="col-span-2">Transações</div>
@@ -115,13 +128,18 @@
               </div>
             </div>
 
+            <!-- Mobile Header -->
+            <div class="lg:hidden px-4 py-3 bg-background-section border-b border-border-base">
+              <h3 class="text-15 font-medium text-text-primary">Categorias de Gastos</h3>
+            </div>
+
             <!-- Categories -->
             <div class="divide-y divide-border-base">
               <template v-for="category in categories" :key="category.name">
-                <!-- Category Row -->
+                <!-- Desktop Category Row -->
                 <div
                   @click="toggleCategory(category.name)"
-                  class="px-6 py-4 hover:bg-background-hover transition-all cursor-pointer"
+                  class="hidden lg:block px-6 py-4 hover:bg-background-hover transition-all cursor-pointer"
                   :class="{ 'bg-background-section': expandedCategory === category.name }"
                 >
                   <div class="grid grid-cols-12 gap-4 items-center">
@@ -183,28 +201,82 @@
                   </div>
                 </div>
 
+                <!-- Mobile Category Card -->
+                <div
+                  @click="toggleCategory(category.name)"
+                  class="lg:hidden px-4 py-4 hover:bg-background-hover transition-all cursor-pointer"
+                  :class="{ 'bg-background-section': expandedCategory === category.name }"
+                >
+                  <div class="space-y-3">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-md bg-background-section border border-border-base">
+                          <span class="text-lg">{{ getCategoryIcon(category.name) }}</span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <p class="text-15 font-medium text-text-primary truncate">{{ category.name }}</p>
+                          <div class="flex items-center gap-3 text-13 text-text-muted">
+                            <span>{{ category.count }} transações</span>
+                            <span>{{ category.percentage.toFixed(1) }}%</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-15 font-semibold text-text-primary whitespace-nowrap">
+                          {{ formatCurrency(category.total) }}
+                        </p>
+                        <p class="text-13 text-text-muted">
+                          {{ formatCurrency(category.average) }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Progress bar -->
+                    <div class="w-full bg-background-section rounded-full h-2">
+                      <div
+                        class="bg-accent-primary h-2 rounded-full transition-all duration-300"
+                        :style="{ width: `${category.percentage}%` }"
+                      ></div>
+                    </div>
+
+                    <!-- Expand indicator -->
+                    <div class="flex items-center justify-center">
+                      <svg
+                        class="h-4 w-4 text-text-muted transition-transform duration-150"
+                        :class="{ 'rotate-180': expandedCategory === category.name }"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Expanded Transactions -->
                 <div v-if="expandedCategory === category.name" class="bg-background-section">
-                  <div class="px-6 py-4">
-                    <h4 class="text-15 font-medium text-text-primary mb-4">
+                  <div class="px-4 sm:px-6 py-4">
+                    <h4 class="text-14 sm:text-15 font-medium text-text-primary mb-3 sm:mb-4">
                       Transações de {{ category.name }} ({{ getCategoryTransactions(category.name).length }})
                     </h4>
-                    <div class="bg-background-page rounded-lg border border-border-base p-4 max-h-96 overflow-y-auto">
-                      <div class="space-y-3">
+                    <div class="bg-background-page rounded-lg border border-border-base p-3 sm:p-4 max-h-80 sm:max-h-96 overflow-y-auto">
+                      <div class="space-y-2 sm:space-y-3">
                         <div
                           v-for="transaction in getCategoryTransactions(category.name)"
                           :key="transaction.transactionId"
-                          class="flex items-center justify-between py-3 border-b border-divider last:border-0"
+                          class="flex items-start justify-between gap-3 py-2 sm:py-3 border-b border-divider last:border-0"
                         >
-                          <div class="flex-1 space-y-1">
-                            <p class="text-15 text-text-primary">{{ transaction.description }}</p>
-                            <div class="flex items-center gap-3 text-13 text-text-muted">
+                          <div class="flex-1 min-w-0 space-y-1">
+                            <p class="text-14 sm:text-15 text-text-primary truncate">{{ transaction.description }}</p>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-12 sm:text-13 text-text-muted">
                               <span>{{ formatDate(transaction.date) }}</span>
-                              <span>•</span>
-                              <span>{{ transaction.origin }}</span>
+                              <span class="hidden sm:inline">•</span>
+                              <span class="truncate">{{ transaction.origin }}</span>
                             </div>
                           </div>
-                          <p class="text-15 font-semibold text-accent-primary ml-4">
+                          <p class="text-14 sm:text-15 font-semibold text-accent-primary whitespace-nowrap">
                             {{ formatCurrency(transaction.amount) }}
                           </p>
                         </div>
@@ -232,6 +304,7 @@ import type { CategoriesResponse } from '~/types/transaction'
 
 // Composables
 const { selectedPerson } = usePersonFilter()
+const { toggleMobileMenu } = useMobileMenu()
 
 // State
 const categoriesData = ref<CategoriesResponse | null>(null)

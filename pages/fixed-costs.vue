@@ -2,31 +2,44 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-10 flex items-center justify-between border-b border-border-base">
-        <div>
-          <h1 class="text-22 font-medium tracking-tight">Histórico de Custos Fixos</h1>
-          <p class="text-13 text-text-secondary mt-0.5 leading-normal">Análise dos últimos 6 meses de custos fixos</p>
+      <header class="h-[72px] px-4 sm:px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
+        <div class="min-w-0 flex-1 flex items-center gap-3">
+          <!-- Mobile Menu Button -->
+          <button
+            @click="toggleMobileMenu"
+            class="lg:hidden p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          
+          <div class="min-w-0 flex-1">
+            <h1 class="text-18 sm:text-20 lg:text-22 font-medium tracking-tight truncate">Histórico de Custos Fixos</h1>
+            <p class="text-13 text-text-secondary mt-0.5 leading-normal hidden sm:block">Análise dos últimos 6 meses de custos fixos</p>
+          </div>
         </div>
         <button
           @click="refreshData"
           :disabled="loading"
-          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-15 disabled:opacity-40 disabled:cursor-not-allowed"
+          class="px-3 py-2 sm:px-[18px] sm:py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-13 sm:text-15 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
         >
-          {{ loading ? 'Atualizando...' : 'Atualizar' }}
+          <span class="hidden sm:inline">{{ loading ? 'Atualizando...' : 'Atualizar' }}</span>
+          <span class="sm:hidden">🔄</span>
         </button>
       </header>
 
       <!-- Filter Info -->
-      <div class="px-10 py-4 border-b border-border-base">
+      <div class="px-4 sm:px-6 lg:px-10 py-4 border-b border-border-base">
         <div class="flex items-center gap-2 text-13 mb-4">
-          <span class="font-medium text-text-secondary">Pessoa:</span>
-          <span class="px-3 py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20">
+          <span class="font-medium text-text-secondary whitespace-nowrap">Pessoa:</span>
+          <span class="px-2 sm:px-3 py-1 sm:py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20 text-12 sm:text-13">
             {{ selectedPerson }}
           </span>
         </div>
 
         <!-- Fixed Cost Categories Info -->
-        <div v-if="FIXED_COST_CATEGORIES.length > 0" class="border-l-[3px] border-l-accent-warning bg-background-card border border-border-base p-4 rounded-lg">
+        <div v-if="FIXED_COST_CATEGORIES.length > 0" class="border-l-[3px] border-l-accent-warning bg-background-card border border-border-base p-3 sm:p-4 rounded-lg">
           <details class="text-13">
             <summary class="cursor-pointer text-text-primary font-medium hover:text-accent-primary transition-colors">
               📌 {{ FIXED_COST_CATEGORIES.length }} categoria(s) configurada(s) como custo fixo
@@ -35,12 +48,12 @@
               <span
                 v-for="category in FIXED_COST_CATEGORIES"
                 :key="category"
-                class="px-2 py-1 bg-accent-warning/10 text-accent-warning text-[11px] rounded-md border border-accent-warning/20 font-medium uppercase tracking-wide"
+                class="px-2 py-1 bg-accent-warning/10 text-accent-warning text-[10px] sm:text-[11px] rounded-md border border-accent-warning/20 font-medium uppercase tracking-wide"
               >
                 {{ category }}
               </span>
             </div>
-            <p class="mt-3 text-[11px] text-text-muted leading-normal">
+            <p class="mt-3 text-[10px] sm:text-[11px] text-text-muted leading-normal">
               Para modificar, edite FIXED_COST_CATEGORIES em pages/fixed-costs.vue
             </p>
           </details>
@@ -48,7 +61,7 @@
       </div>
 
       <!-- Content -->
-      <main class="max-w-[1280px] px-10 py-8 space-y-8">
+      <main class="max-w-[1280px] px-4 sm:px-6 lg:px-10 py-6 lg:py-8 space-y-6 lg:space-y-8">
         <!-- Loading State -->
         <div v-if="loading" class="flex flex-col items-center justify-center py-20">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
@@ -64,32 +77,32 @@
         <!-- Content -->
         <template v-else>
           <!-- Summary Cards -->
-          <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-background-card border border-accent-warning/20 rounded-lg px-6 py-5 space-y-3 border-l-[3px] border-l-accent-warning">
+          <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="bg-background-card border border-accent-warning/20 rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3 border-l-[3px] border-l-accent-warning sm:col-span-2 lg:col-span-1">
               <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Custo Fixo Atual
               </p>
-              <p class="text-[32px] font-normal font-serif text-accent-warning tracking-tight">
+              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-warning tracking-tight break-all">
                 {{ formatCurrency(currentMonthTotal) }}
               </p>
               <p class="text-text-muted text-13 leading-normal">{{ currentMonthLabel }}</p>
             </div>
 
-            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
               <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Média Mensal
               </p>
-              <p class="text-[32px] font-normal font-serif text-accent-info tracking-tight">
+              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-info tracking-tight break-all">
                 {{ formatCurrency(averageMonthlyTotal) }}
               </p>
               <p class="text-text-muted text-13 leading-normal">Últimos 6 meses</p>
             </div>
 
-            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
               <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Categorias Ativas
               </p>
-              <p class="text-[32px] font-normal font-serif text-accent-primary tracking-tight">
+              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-primary tracking-tight">
                 {{ activeCategoriesCount }}
               </p>
               <p class="text-text-muted text-13 leading-normal">Com gastos no período</p>
@@ -97,9 +110,9 @@
           </section>
 
           <!-- Chart -->
-          <section class="bg-background-card border border-border-base rounded-lg p-6">
-            <h2 class="text-16 font-medium text-text-primary mb-6 tracking-tight">Evolução dos Custos Fixos</h2>
-            <div class="h-80">
+          <section class="bg-background-card border border-border-base rounded-lg p-4 sm:p-6">
+            <h2 class="text-15 sm:text-16 font-medium text-text-primary mb-4 sm:mb-6 tracking-tight">Evolução dos Custos Fixos</h2>
+            <div class="h-64 sm:h-72 lg:h-80">
               <Bar
                 v-if="chartData"
                 :data="chartData"
@@ -110,12 +123,13 @@
 
           <!-- Detailed Table -->
           <section class="bg-background-card border border-border-base rounded-lg overflow-hidden">
-            <div class="px-6 py-4 bg-background-section border-b border-border-base">
-              <h2 class="text-16 font-medium text-text-primary tracking-tight">Detalhamento por Categoria</h2>
-              <p class="text-13 text-text-secondary mt-1 leading-normal">Gastos mensais por categoria de custo fixo</p>
+            <div class="px-4 sm:px-6 py-3 sm:py-4 bg-background-section border-b border-border-base">
+              <h2 class="text-15 sm:text-16 font-medium text-text-primary tracking-tight">Detalhamento por Categoria</h2>
+              <p class="text-13 text-text-secondary mt-1 leading-normal hidden sm:block">Gastos mensais por categoria de custo fixo</p>
             </div>
 
-            <div class="overflow-x-auto">
+            <!-- Desktop Table -->
+            <div class="hidden lg:block overflow-x-auto">
               <table class="min-w-full divide-y divide-border-base">
                 <thead class="bg-background-section">
                   <tr>
@@ -188,9 +202,64 @@
               </table>
             </div>
 
+            <!-- Mobile Cards -->
+            <div class="lg:hidden divide-y divide-border-base">
+              <div
+                v-for="category in categoryBreakdown"
+                :key="category.name"
+                class="p-4 space-y-3"
+              >
+                <!-- Header -->
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <span class="text-lg">{{ getCategoryIcon(category.name) }}</span>
+                    <div class="min-w-0 flex-1">
+                      <h3 class="text-15 font-medium text-text-primary truncate">{{ category.name }}</h3>
+                      <div class="flex items-center gap-3 text-13 text-text-muted">
+                        <span>Total: {{ formatCurrency(category.total) }}</span>
+                        <span>Média: {{ formatCurrency(category.average) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Monthly Values -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-13">
+                  <div
+                    v-for="(month, index) in monthLabels"
+                    :key="month"
+                    class="flex justify-between p-2 bg-background-section rounded-md"
+                  >
+                    <span class="text-text-secondary">{{ month }}:</span>
+                    <span
+                      :class="getCellClass(category.monthlyTotals[last6Months[index]])"
+                      class="font-medium"
+                    >
+                      {{ formatCurrency(category.monthlyTotals[last6Months[index]] || 0) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mobile Total -->
+              <div class="p-4 bg-background-hover space-y-3">
+                <h3 class="text-15 font-semibold text-text-primary">TOTAL GERAL</h3>
+                <div class="grid grid-cols-2 gap-4 text-14">
+                  <div class="text-right">
+                    <span class="text-text-secondary">Total: </span>
+                    <span class="font-semibold text-accent-primary">{{ formatCurrency(grandTotal) }}</span>
+                  </div>
+                  <div class="text-right">
+                    <span class="text-text-secondary">Média: </span>
+                    <span class="font-semibold text-accent-primary">{{ formatCurrency(averageMonthlyTotal) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Empty State -->
-            <div v-if="categoryBreakdown.length === 0" class="text-center py-12">
-              <p class="text-text-secondary text-15">Nenhum custo fixo encontrado nos últimos 6 meses</p>
+            <div v-if="categoryBreakdown.length === 0" class="text-center py-8 sm:py-12">
+              <p class="text-text-secondary text-14 sm:text-15">Nenhum custo fixo encontrado nos últimos 6 meses</p>
             </div>
           </section>
         </template>
@@ -219,6 +288,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 // Composables
 const { selectedPerson } = usePersonFilter()
+const { toggleMobileMenu } = useMobileMenu()
 const { processInstallments } = useInstallments()
 
 // State

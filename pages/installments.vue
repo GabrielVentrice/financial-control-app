@@ -2,32 +2,45 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-10 flex items-center justify-between border-b border-border-base">
-        <div>
-          <h1 class="text-22 font-medium tracking-tight">Análise de Parcelas</h1>
-          <p class="text-13 text-text-secondary mt-0.5 leading-normal">Visualize parcelas passadas e futuras por período</p>
+      <header class="h-[72px] px-4 sm:px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
+        <div class="min-w-0 flex-1 flex items-center gap-3">
+          <!-- Mobile Menu Button -->
+          <button
+            @click="toggleMobileMenu"
+            class="lg:hidden p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          
+          <div class="min-w-0 flex-1">
+            <h1 class="text-18 sm:text-20 lg:text-22 font-medium tracking-tight truncate">Análise de Parcelas</h1>
+            <p class="text-13 text-text-secondary mt-0.5 leading-normal hidden sm:block">Visualize parcelas passadas e futuras por período</p>
+          </div>
         </div>
         <button
           @click="refreshData"
           :disabled="loading"
-          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-15 disabled:opacity-40 disabled:cursor-not-allowed"
+          class="px-3 py-2 sm:px-[18px] sm:py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-13 sm:text-15 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
         >
-          {{ loading ? 'Atualizando...' : 'Atualizar' }}
+          <span class="hidden sm:inline">{{ loading ? 'Atualizando...' : 'Atualizar' }}</span>
+          <span class="sm:hidden">🔄</span>
         </button>
       </header>
 
       <!-- Filter Info -->
-      <div class="px-10 py-4 border-b border-border-base">
+      <div class="px-4 sm:px-6 lg:px-10 py-4 border-b border-border-base">
         <div class="flex items-center gap-2 text-13">
-          <span class="font-medium text-text-secondary">Pessoa:</span>
-          <span class="px-3 py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20">
+          <span class="font-medium text-text-secondary whitespace-nowrap">Pessoa:</span>
+          <span class="px-2 sm:px-3 py-1 sm:py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20 text-12 sm:text-13">
             {{ selectedPerson }}
           </span>
         </div>
       </div>
 
       <!-- Content -->
-      <main class="max-w-[1280px] px-10 py-8 space-y-8">
+      <main class="max-w-[1280px] px-4 sm:px-6 lg:px-10 py-6 lg:py-8 space-y-6 lg:space-y-8">
         <!-- Loading State -->
         <div v-if="loading" class="flex flex-col items-center justify-center py-20">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
@@ -43,30 +56,30 @@
         <!-- Content -->
         <template v-else>
           <!-- Summary Cards -->
-          <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+          <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:col-span-2 lg:col-span-1">
               <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Parcelas Ativas
               </p>
-              <p class="text-[32px] font-normal font-serif text-accent-info tracking-tight">
+              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-info tracking-tight">
                 {{ activeInstallments.length }}
               </p>
               <p class="text-text-muted text-13 leading-normal">Com parcelas futuras</p>
             </div>
-            <div class="bg-background-card border border-border-base rounded-lg px-6 py-5 space-y-3">
+            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
               <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Total Mês Atual
               </p>
-              <p class="text-[32px] font-normal font-serif text-accent-primary tracking-tight">
+              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-primary tracking-tight break-all">
                 {{ formatCurrency(currentMonthTotal) }}
               </p>
               <p class="text-text-muted text-13 leading-normal">{{ formatMonthYear(currentMonth) }}</p>
             </div>
-            <div class="bg-background-card border border-accent-success/20 rounded-lg px-6 py-5 space-y-3 border-l-[3px] border-l-accent-success">
+            <div class="bg-background-card border border-accent-success/20 rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3 border-l-[3px] border-l-accent-success">
               <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
                 Média Mensal
               </p>
-              <p class="text-[32px] font-normal font-serif text-accent-success tracking-tight">
+              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-success tracking-tight break-all">
                 {{ formatCurrency(averageMonthlyTotal) }}
               </p>
               <p class="text-text-muted text-13 leading-normal">Últimos 13 meses</p>
@@ -74,29 +87,30 @@
           </section>
 
           <!-- Chart -->
-          <section class="bg-background-card border border-border-base rounded-lg p-6">
-            <h2 class="text-16 font-medium text-text-primary mb-6 tracking-tight">Parcelas por Mês (6 meses atrás → 6 meses à frente)</h2>
-            <div class="h-96">
+          <section class="bg-background-card border border-border-base rounded-lg p-4 sm:p-6">
+            <h2 class="text-15 sm:text-16 font-medium text-text-primary mb-4 sm:mb-6 tracking-tight">Parcelas por Mês</h2>
+            <p class="text-13 text-text-muted mb-4 hidden sm:block">6 meses atrás → 6 meses à frente</p>
+            <div class="h-64 sm:h-80 lg:h-96">
               <Bar :data="chartData" :options="chartOptions" />
             </div>
           </section>
 
           <!-- Active Installments List -->
-          <section class="bg-background-card border border-border-base rounded-lg p-6">
-            <h2 class="text-16 font-medium text-text-primary mb-6 tracking-tight">Parcelas Ativas ({{ activeInstallments.length }})</h2>
-            <div v-if="activeInstallments.length === 0" class="text-center py-12">
-              <p class="text-text-secondary text-15">Nenhuma parcela ativa encontrada</p>
+          <section class="bg-background-card border border-border-base rounded-lg p-4 sm:p-6">
+            <h2 class="text-15 sm:text-16 font-medium text-text-primary mb-4 sm:mb-6 tracking-tight">Parcelas Ativas ({{ activeInstallments.length }})</h2>
+            <div v-if="activeInstallments.length === 0" class="text-center py-8 sm:py-12">
+              <p class="text-text-secondary text-14 sm:text-15">Nenhuma parcela ativa encontrada</p>
             </div>
-            <div v-else class="space-y-4">
+            <div v-else class="space-y-3 sm:space-y-4">
               <div
                 v-for="installment in activeInstallments"
                 :key="installment.key"
-                class="border border-border-base rounded-lg p-5 hover:bg-background-hover transition-all duration-150 ease-out bg-background-section"
+                class="border border-border-base rounded-lg p-4 sm:p-5 hover:bg-background-hover transition-all duration-150 ease-out bg-background-section"
               >
-                <div class="flex justify-between items-start">
-                  <div class="flex-1">
-                    <h3 class="font-medium text-text-primary text-16 mb-2 tracking-tight">{{ installment.description }}</h3>
-                    <div class="flex flex-wrap gap-4 text-13">
+                <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                  <div class="flex-1 min-w-0">
+                    <h3 class="font-medium text-text-primary text-15 sm:text-16 mb-2 tracking-tight truncate">{{ installment.description }}</h3>
+                    <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-13">
                       <span class="text-text-secondary">
                         <span class="font-medium">Origem:</span> {{ installment.origin }}
                       </span>
@@ -105,15 +119,15 @@
                       </span>
                     </div>
                   </div>
-                  <div class="text-right ml-6">
-                    <div class="text-[24px] font-normal font-serif text-accent-primary">
+                  <div class="text-left lg:text-right lg:ml-6">
+                    <div class="text-[20px] sm:text-[24px] font-normal font-serif text-accent-primary">
                       {{ installment.paid }}/{{ installment.total }}
                     </div>
                     <div class="text-13 text-text-muted mt-1">
                       {{ installment.remaining }} restantes
                     </div>
                     <div class="mt-3">
-                      <div class="w-32 bg-background-page rounded-full h-2 border border-border-base">
+                      <div class="w-full lg:w-32 bg-background-page rounded-full h-2 border border-border-base">
                         <div
                           class="bg-accent-primary h-2 rounded-full transition-all duration-300 ease-out"
                           :style="{ width: `${(installment.paid / installment.total) * 100}%` }"
@@ -122,14 +136,18 @@
                     </div>
                   </div>
                 </div>
-                <div class="mt-4 grid grid-cols-2 gap-3 text-13">
+                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-13">
                   <div class="bg-background-page rounded-md p-3 border border-border-base">
-                    <span class="text-text-secondary">Primeira parcela:</span>
-                    <span class="font-medium text-text-primary ml-2">{{ formatDate(installment.firstDate) }}</span>
+                    <div class="flex flex-col sm:flex-row sm:items-center">
+                      <span class="text-text-secondary">Primeira parcela:</span>
+                      <span class="font-medium text-text-primary sm:ml-2">{{ formatDate(installment.firstDate) }}</span>
+                    </div>
                   </div>
                   <div class="bg-background-page rounded-md p-3 border border-border-base">
-                    <span class="text-text-secondary">Última parcela:</span>
-                    <span class="font-medium text-text-primary ml-2">{{ formatDate(installment.lastDate) }}</span>
+                    <div class="flex flex-col sm:flex-row sm:items-center">
+                      <span class="text-text-secondary">Última parcela:</span>
+                      <span class="font-medium text-text-primary sm:ml-2">{{ formatDate(installment.lastDate) }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -138,10 +156,12 @@
 
           <!-- Monthly Breakdown -->
           <section class="bg-background-card border border-border-base rounded-lg overflow-hidden">
-            <div class="px-6 py-4 bg-background-section border-b border-border-base">
-              <h2 class="text-16 font-medium text-text-primary tracking-tight">Detalhamento Mensal</h2>
+            <div class="px-4 sm:px-6 py-3 sm:py-4 bg-background-section border-b border-border-base">
+              <h2 class="text-15 sm:text-16 font-medium text-text-primary tracking-tight">Detalhamento Mensal</h2>
             </div>
-            <div class="overflow-x-auto">
+            
+            <!-- Desktop Table -->
+            <div class="hidden lg:block overflow-x-auto">
               <table class="min-w-full divide-y divide-border-base">
                 <thead class="bg-background-section">
                   <tr>
@@ -188,6 +208,37 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Mobile Cards -->
+            <div class="lg:hidden divide-y divide-border-base">
+              <div
+                v-for="month in monthlyBreakdown"
+                :key="month.monthKey"
+                class="p-4 space-y-3"
+                :class="{ 'bg-background-section': month.monthKey === currentMonth }"
+              >
+                <div class="flex justify-between items-start">
+                  <div class="flex items-center gap-2">
+                    <span
+                      v-if="month.monthKey === currentMonth"
+                      class="px-2 py-1 text-[10px] font-semibold rounded-md bg-accent-primary text-text-inverse uppercase tracking-wide"
+                    >
+                      Atual
+                    </span>
+                    <span class="text-15 font-medium text-text-primary">{{ formatMonthYear(month.monthKey) }}</span>
+                  </div>
+                  <div class="text-15 font-semibold text-accent-primary">
+                    {{ formatCurrency(month.total) }}
+                  </div>
+                </div>
+                <div class="flex justify-between items-center text-13">
+                  <span class="text-text-secondary">Parcelas:</span>
+                  <span class="px-2 py-1 bg-accent-info/10 text-accent-info rounded-md font-semibold border border-accent-info/20">
+                    {{ month.count }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </section>
         </template>
       </main>
@@ -214,6 +265,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 // Composables
 const { selectedPerson } = usePersonFilter()
+const { toggleMobileMenu } = useMobileMenu()
 const { processInstallments, parseInstallment, isInstallmentTransaction } = useInstallments()
 
 // State

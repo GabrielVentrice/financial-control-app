@@ -1,21 +1,32 @@
 <template>
   <div class="flex h-screen bg-background-page">
+    <!-- Mobile overlay -->
+        <!-- Overlay para mobile -->
+    <div 
+      v-if="isMobile && sidebarOpen"
+      class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+      @click="closeSidebar"
+    ></div>
+    
     <!-- Sidebar -->
-    <aside
+    <aside 
       :class="[
-        'bg-background-sidebar text-text-primary transition-all duration-300 flex flex-col',
-        isOpen ? 'w-[280px]' : 'w-20'
+        'fixed lg:static inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 ease-in-out',
+        'bg-slate-900 border-r border-slate-700',
+        isMobile 
+          ? (sidebarOpen ? 'w-80 translate-x-0' : 'w-80 -translate-x-full')
+          : (sidebarOpen ? 'w-80' : 'w-16')
       ]"
     >
       <!-- Logo/Header -->
       <div class="h-[72px] px-5 flex items-center justify-between border-b border-border-base">
-        <h1 v-if="isOpen" class="text-[22px] font-medium truncate">
+        <h1 v-if="isOpen || isMobile" class="text-[18px] lg:text-[22px] font-medium truncate">
           Controle Financeiro
         </h1>
         <button
           @click="toggleSidebar"
           class="p-2 rounded-md hover:bg-background-hover transition-colors"
-          :class="{ 'mx-auto': !isOpen }"
+          :class="{ 'mx-auto': !isOpen && !isMobile }"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -28,7 +39,7 @@
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="2"
-              :d="isOpen ? 'M4 6h16M4 12h16M4 18h16' : 'M4 6h16M4 12h16M4 18h16'"
+              :d="isOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'"
             />
           </svg>
         </button>
@@ -40,17 +51,18 @@
           v-for="item in menuItems"
           :key="item.path"
           :to="item.path"
+          @click="handleNavigation"
           class="flex items-center gap-3 h-11 px-3 rounded-md hover:bg-background-hover transition-all duration-150 ease-out text-text-secondary hover:text-text-primary"
           active-class="bg-background-hover text-accent-primary font-medium"
         >
           <component :is="item.icon" class="h-5 w-5 flex-shrink-0" />
-          <span v-if="isOpen" class="font-normal text-[15px] truncate">{{ item.label }}</span>
+          <span v-if="sidebarOpen" class="font-normal text-[15px] truncate">{{ item.label }}</span>
         </NuxtLink>
       </nav>
 
       <!-- Footer - Person Filter -->
       <div class="p-5 border-t border-border-base">
-        <div v-if="isOpen" class="space-y-2">
+        <div v-if="sidebarOpen" class="space-y-2">
           <p class="text-[13px] text-text-muted uppercase font-medium tracking-wide">
             Filtrar por pessoa
           </p>
@@ -74,18 +86,20 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-auto">
+    <main class="flex-1 overflow-auto lg:overflow-visible">
       <slot />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, defineComponent, h, computed } from 'vue'
+import { ref, defineComponent, h, computed, onMounted, onUnmounted } from 'vue'
 import type { PersonType } from '~/composables/usePersonFilter'
 
 const isOpen = ref(true)
+const isMobile = ref(false)
 const { selectedPerson: globalSelectedPerson, setPersonFilter } = usePersonFilter()
+const { toggleMobileMenu, closeMobileMenu, isMobileMenuOpen } = useMobileMenu()
 
 // Criar computed com get/set para funcionar com v-model
 const selectedPerson = computed({
@@ -95,9 +109,52 @@ const selectedPerson = computed({
   }
 })
 
-const toggleSidebar = () => {
-  isOpen.value = !isOpen.value
+// Detectar tamanho da tela
+const checkScreenSize = () => {
+  if (process.client) {
+    isMobile.value = window.innerWidth < 1024
+    if (isMobile.value) {
+      isOpen.value = false
+    }
+  }
 }
+
+const toggleSidebar = () => {
+  if (isMobile.value) {
+    toggleMobileMenu()
+  } else {
+    isOpen.value = !isOpen.value
+  }
+}
+
+const closeSidebar = () => {
+  if (isMobile.value) {
+    closeMobileMenu()
+  }
+}
+
+const handleNavigation = () => {
+  if (isMobile.value) {
+    closeMobileMenu()
+  }
+}
+
+// Use mobile menu state for mobile
+const sidebarOpen = computed(() => {
+  return isMobile.value ? isMobileMenuOpen.value : isOpen.value
+})
+
+// Lifecycle
+onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
+})
+
+onUnmounted(() => {
+  if (process.client) {
+    window.removeEventListener('resize', checkScreenSize)
+  }
+})
 
 // SVG Icons as functional components
 const HomeIcon = defineComponent({
