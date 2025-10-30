@@ -1,0 +1,110 @@
+{
+  "theme": {
+    "mode": "dark",
+    "background": {
+      "primary": "#1C1C1C",
+      "secondary": "#2A2A2A",
+      "sidebar": "#111111",
+      "surface": "#181818",
+      "hover": "#242424",
+      "border": "#2E2E2E"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#C8C8C8",
+      "muted": "#9E9E9E",
+      "accent": "#E96A4A",
+      "link": "#E96A4A"
+    },
+    "accent": {
+      "primary": "#E96A4A",
+      "primaryHover": "#FF7B5F",
+      "focus": "#FF8C73"
+    },
+    "font": {
+      "family": "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      "size": {
+        "xs": "12px",
+        "sm": "14px",
+        "base": "16px",
+        "lg": "18px",
+        "xl": "20px",
+        "xxl": "24px"
+      },
+      "weight": {
+        "regular": 400,
+        "medium": 500,
+        "semibold": 600,
+        "bold": 700
+      },
+      "lineHeight": {
+        "tight": 1.2,
+        "normal": 1.5,
+        "relaxed": 1.7
+      }
+    },
+    "spacing": {
+      "xxs": "4px",
+      "xs": "8px",
+      "sm": "12px",
+      "md": "16px",
+      "lg": "24px",
+      "xl": "32px",
+      "xxl": "48px"
+    },
+    "radius": {
+      "sm": "4px",
+      "md": "6px",
+      "lg": "10px",
+      "xl": "16px"
+    },
+    "shadow": {
+      "sm": "0 1px 2px rgba(0,0,0,0.2)",
+      "md": "0 2px 6px rgba(0,0,0,0.25)",
+      "lg": "0 4px 12px rgba(0,0,0,0.3)"
+    }
+  },
+  "layout": {
+    "sidebar": {
+      "width": "260px",
+      "padding": "16px",
+      "gap": "12px"
+    },
+    "content": {
+      "maxWidth": "1280px",
+      "padding": "40px 48px",
+      "gap": "24px"
+    },
+    "searchBar": {
+      "height": "48px",
+      "borderRadius": "8px",
+      "background": "#2A2A2A",
+      "placeholderColor": "#9E9E9E"
+    },
+    "chatItem": {
+      "height": "72px",
+      "padding": "16px",
+      "background": "#1E1E1E",
+      "backgroundHover": "#242424",
+      "borderRadius": "8px",
+      "titleColor": "#FFFFFF",
+      "subtitleColor": "#9E9E9E"
+    },
+    "button": {
+      "primary": {
+        "background": "#E96A4A",
+        "textColor": "#FFFFFF",
+        "hoverBackground": "#FF7B5F",
+        "borderRadius": "8px",
+        "padding": "10px 16px"
+      },
+      "secondary": {
+        "background": "#2A2A2A",
+        "textColor": "#FFFFFF",
+        "hoverBackground": "#333333",
+        "borderRadius": "8px",
+        "padding": "10px 16px"
+      }
+    }
+  }
+}

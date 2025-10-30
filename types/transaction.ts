@@ -101,3 +101,52 @@ export interface CategoriesResponse {
 export interface CategoriesQueryParams extends TransactionQueryParams {
   includeTransactions?: boolean | string // Whether to include individual transactions in response
 }
+
+// Budget types
+export interface Budget {
+  id: string // Unique identifier (category-month-year-person)
+  category: string // Category name (from destination field)
+  person: 'Juliana' | 'Gabriel' // Person the budget belongs to
+  month: number // Month (1-12)
+  year: number // Year (YYYY)
+  amount: number // Budget amount
+  createdAt?: string // Creation timestamp
+  updatedAt?: string // Last update timestamp
+}
+
+export interface BudgetSheetRow {
+  'Category': string
+  'Person': string // Juliana or Gabriel
+  'Month': string // MM format
+  'Year': string // YYYY format
+  'Amount': string
+  'Created At': string
+  'Updated At': string
+}
+
+export interface BudgetQueryParams {
+  category?: string // Filter by category
+  person?: 'Juliana' | 'Gabriel' // Filter by person
+  month?: string // Filter by month (MM or M)
+  year?: string // Filter by year (YYYY)
+  startDate?: string // Start date for filtering (YYYY-MM-DD)
+  endDate?: string // End date for filtering (YYYY-MM-DD)
+}
+
+export interface BudgetInput {
+  category: string
+  person: 'Juliana' | 'Gabriel' // Person the budget belongs to
+  month: number // 1-12
+  year: number // YYYY
+  amount: number
+}
+
+export interface BudgetsResponse {
+  budgets: Budget[]
+  totalBudgeted: number
+  totalByPerson: {
+    Juliana: number
+    Gabriel: number
+  }
+  categories: string[] // List of categories with budgets
+}

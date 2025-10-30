@@ -40,68 +40,11 @@
         </div>
       </div>
 
-      <!-- Excluded Categories Info -->
-      <div v-if="EXCLUDED_CATEGORIES.length > 0" class="mt-3 px-6 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <details class="text-sm">
-          <summary class="cursor-pointer text-yellow-800 font-medium hover:text-yellow-900">
-            ⚠️ {{ EXCLUDED_CATEGORIES.length }} categoria(s) excluída(s) da análise
-          </summary>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <span
-              v-for="category in EXCLUDED_CATEGORIES"
-              :key="category"
-              class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full border border-yellow-300"
-            >
-              {{ category }}
-            </span>
-          </div>
-          <p class="mt-2 text-xs text-yellow-700">
-            Para modificar, edite EXCLUDED_CATEGORIES em pages/categories.vue
-          </p>
-        </details>
-      </div>
+     
 
-      <!-- Fixed Costs Categories Info -->
-      <div v-if="CUSTOS_FIXOS_CATEGORIES.length > 0" class="mt-3 px-6 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-        <details class="text-sm">
-          <summary class="cursor-pointer text-blue-800 font-medium hover:text-blue-900">
-            💵 {{ CUSTOS_FIXOS_CATEGORIES.length }} categoria(s) configurada(s) como custo fixo (mesmo valor)
-          </summary>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <span
-              v-for="category in CUSTOS_FIXOS_CATEGORIES"
-              :key="category"
-              class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full border border-blue-300"
-            >
-              {{ category }}
-            </span>
-          </div>
-          <p class="mt-2 text-xs text-blue-700">
-            Para modificar, edite CUSTOS_FIXOS_CATEGORIES em pages/categories.vue
-          </p>
-        </details>
-      </div>
+    
 
-      <!-- Committed Expenses Categories Info -->
-      <div v-if="GASTOS_COMPROMETIDOS_CATEGORIES.length > 0" class="mt-3 px-6 py-2 bg-orange-50 border border-orange-200 rounded-lg">
-        <details class="text-sm">
-          <summary class="cursor-pointer text-orange-800 font-medium hover:text-orange-900">
-            📌 {{ GASTOS_COMPROMETIDOS_CATEGORIES.length }} categoria(s) configurada(s) como gasto comprometido (valor variável)
-          </summary>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <span
-              v-for="category in GASTOS_COMPROMETIDOS_CATEGORIES"
-              :key="category"
-              class="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full border border-orange-300"
-            >
-              {{ category }}
-            </span>
-          </div>
-          <p class="mt-2 text-xs text-orange-700">
-            Para modificar, edite GASTOS_COMPROMETIDOS_CATEGORIES em pages/categories.vue
-          </p>
-        </details>
-      </div>
+     
     </div>
 
     <!-- Loading State -->

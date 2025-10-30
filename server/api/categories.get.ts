@@ -140,20 +140,16 @@ function processCategoriesData(transactions: Transaction[], includeTransactions:
     'Insurance',
     'Utilities',
     'Business & Taxes',
-    'Medical'
+    'Medical',
+    'Cleaning Services'
   ]
 
   // Configuration - Categories that are recurring but with variable amounts
   const GASTOS_COMPROMETIDOS_CATEGORIES = [
+    ...CUSTOS_FIXOS_CATEGORIES,
     'Installments/Financing',
     'Financing',
-    'Utilities',
-    'Business & Taxes',
     'Investments',
-    'Medical',
-    'Rent',
-    'Subscriptions/Softwares',
-    'Insurance'
   ]
 
   // Helper functions
