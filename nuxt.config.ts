@@ -50,6 +50,11 @@ export default defineNuxtConfig({
     minify: true,
     sourceMap: false,
 
+    // Rollup configuration to ensure markdown files are copied
+    rollupConfig: {
+      external: ['API_ARCHITECTURE.md']
+    },
+
     // Experimental features
     experimental: {
       openAPI: true

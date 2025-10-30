@@ -15,12 +15,14 @@ Complete guide for deploying your Nuxt 3 Financial Control App to Vercel Hobby p
 Your project is now configured with:
 
 - `nuxt.config.ts` - Vercel optimizations and Nitro configuration (includes preset, server assets, etc.)
-- `vercel.json` - Vercel deployment configuration (includes API_ARCHITECTURE.md)
 - `/server/api/health.get.ts` - Health check endpoint
-- `/server/assets/docs/` - Server-side markdown files (API_ARCHITECTURE.md)
+- `/server/api/docs/architecture.get.ts` - API documentation endpoint (uses `readFileSync` for build-time inclusion)
+- `/server/assets/docs/` - Server-side markdown files (API_ARCHITECTURE.md copy)
 - `.env.example` - Environment variable template
 
 **Note**: `nitro.config.ts` is NOT used with Nuxt 3. All Nitro configuration is in `nuxt.config.ts` under the `nitro` key.
+
+**Build Behavior**: Files read with `readFileSync` in server routes are automatically included in the Vercel build by Nitro.
 
 ## Step-by-Step Deployment
 
@@ -238,27 +240,29 @@ Check that all `config` fields return `true`.
 **Problem**: API_ARCHITECTURE.md not found in Vercel deployment
 
 **Solution Applied**:
-1. File is now read at startup using `readFileSync` with fallback paths
-2. `vercel.json` includes the file in `includeFiles` array
-3. File exists in both project root and `server/assets/docs/`
+1. File is read at module initialization using `readFileSync` with fallback paths
+2. Nitro automatically detects `readFileSync` usage and bundles the file into build
+3. File content is embedded as `.vercel/output/functions/__fallback.func/chunks/raw/API_ARCHITECTURE.mjs`
+4. No additional configuration needed - works automatically!
 
-**If still failing**:
+**Root Cause Fixed**:
+- Original code tried to read file at runtime from `/var/task/API_ARCHITECTURE.md` (doesn't exist in Vercel)
+- New code reads file at build time and embeds content in the bundle
+- Fallback paths handle both development (from root) and production (from server/assets)
+
+**Verification**:
 ```bash
-# Check if file is in your git repository
-git ls-files | grep API_ARCHITECTURE.md
+# Build locally to verify file inclusion
+npm run build
 
-# If not, add it
-git add API_ARCHITECTURE.md
-git commit -m "Include API_ARCHITECTURE.md in deployment"
-git push
-```
+# Check if file was bundled
+ls .vercel/output/functions/__fallback.func/chunks/raw/
 
-**Verify deployment**:
-```bash
+# After deploying, test endpoint
 curl https://your-app.vercel.app/api/docs/architecture
 ```
 
-Should return the full markdown documentation, not a 500 error.
+Should return the full markdown documentation content.
 
 ## Monitoring and Logs
 
