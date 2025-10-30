@@ -2,7 +2,16 @@
 
 ## Project Overview
 
-This is a **Nuxt 3** financial control application that integrates with Google Sheets to provide transaction management, analytics, and filtering capabilities. The app reads financial transaction data from a Google Sheets spreadsheet and provides a web interface for visualization, filtering, and analysis.
+This is a **Nuxt 3** financial control application that integrates with Google Sheets to provide comprehensive transaction management, analytics, and filtering capabilities. The app reads financial transaction data from a Google Sheets spreadsheet and provides a web interface for visualization, filtering, and analysis.
+
+**Key capabilities:**
+- Real-time transaction viewing and filtering
+- Person-based expense tracking (Juliana/Gabriel)
+- Smart financial alerts and insights
+- Installment payment tracking and forecasting
+- Fixed costs analysis and trends
+- Category-based spending analysis
+- Interactive charts and visualizations
 
 ## Tech Stack
 
@@ -17,30 +26,31 @@ This is a **Nuxt 3** financial control application that integrates with Google S
 
 ```
 financial-control-app/
-├── app.vue                      # Root component
-├── nuxt.config.ts              # Nuxt configuration
-├── tailwind.config.js          # Tailwind CSS configuration
-├── package.json                # Dependencies
-├── .env                        # Environment variables (git-ignored)
+├── app.vue                          # Root component
+├── nuxt.config.ts                  # Nuxt configuration
+├── tailwind.config.js              # Tailwind CSS configuration
+├── package.json                    # Dependencies
+├── .env                            # Environment variables (git-ignored)
 ├── components/
-│   ├── Sidemenu.vue           # Navigation sidebar with global person filter
-│   ├── TransactionCard.vue    # Card display for transactions
-│   └── TransactionFilters.vue # Filter controls for transactions
+│   ├── Sidemenu.vue               # Navigation sidebar with global person filter
+│   ├── TransactionCard.vue        # Card display for transactions
+│   └── TransactionFilters.vue     # Filter controls for transactions
 ├── composables/
-│   ├── usePersonFilter.ts     # Global person filter logic (Juliana/Gabriel)
-│   └── useTransactions.ts     # Transaction data fetching and filtering
-├── layouts/
-│   └── default.vue            # Default layout with sidemenu
+│   ├── usePersonFilter.ts         # Global person filter logic (Juliana/Gabriel)
+│   ├── useTransactions.ts         # Transaction data fetching and filtering
+│   ├── useInstallments.ts         # Installment parsing and processing logic
+│   └── useDashboardAnalytics.ts   # Dashboard analytics and insights
 ├── pages/
-│   ├── index.vue              # Dashboard overview
-│   ├── transactions.vue       # Full transaction list with advanced filters
-│   ├── categories.vue         # Category-based spending analysis
-│   └── installments.vue       # Installment analysis with timeline chart
+│   ├── index.vue                  # Dashboard overview with analytics
+│   ├── transactions.vue           # Full transaction list with advanced filters
+│   ├── categories.vue             # Category-based spending analysis
+│   ├── installments.vue           # Installment analysis with timeline chart
+│   └── fixed-costs.vue            # Fixed costs historical analysis (last 6 months)
 ├── server/
 │   └── api/
-│       └── transactions.get.ts # API endpoint for fetching Google Sheets data
+│       └── transactions.get.ts   # API endpoint for fetching Google Sheets data
 └── types/
-    └── transaction.ts         # TypeScript type definitions
+    └── transaction.ts             # TypeScript type definitions
 ```
 
 ## Key Features
@@ -58,10 +68,11 @@ financial-control-app/
 - Patterns are case-insensitive and use `includes()` matching
 
 ### 3. Pages
-- **Dashboard (`/`)**: Overview with search and totals
-- **Categories (`/categories`)**: Spending analysis by category (Destination), monthly filtering
+- **Dashboard (`/`)**: Financial overview with analytics, alerts, monthly stats, top spending categories, and upcoming expenses
 - **Transactions (`/transactions`)**: Full list with date range, description, and person filters
+- **Categories (`/categories`)**: Spending analysis by category (Destination), monthly filtering
 - **Installments (`/installments`)**: Timeline analysis of installments with 13-month chart (6 months back, current, 6 months ahead), active installments tracking, and monthly breakdown
+- **Fixed Costs (`/fixed-costs`)**: Historical analysis of fixed costs over the last 6 months with chart visualization and category breakdown
 
 ### 4. Installments Feature
 The installments page provides comprehensive analysis of recurring payments:
@@ -87,6 +98,56 @@ The installments page provides comprehensive analysis of recurring payments:
 - Automatically identifies installments by `Installments/Financing` category
 - Parses installment format (e.g., "Netflix 01/12") to track series
 
+### 5. Dashboard Analytics
+The dashboard provides intelligent financial insights and alerts:
+
+**Features:**
+- **Monthly Stats Cards**: Current month income, expenses, balance, and transaction count
+- **Smart Alerts**: Automatic warnings for:
+  - Spending 20% above previous month
+  - High value transactions (over R$ 1,000)
+  - Negative balance
+  - Low transaction count (possible missing data)
+- **Top Categories**: Shows top 5 spending categories for current month with percentage breakdown
+- **Upcoming Expenses**: Lists scheduled expenses for the next 30 days
+- **Monthly Forecast**: Projects income and expenses based on current patterns
+
+**Technical Details:**
+- Uses `useDashboardAnalytics()` composable for all calculations
+- Automatically identifies income (destination = bank account) vs expenses (origin = bank account/credit card)
+- Alert system helps identify spending patterns and potential issues
+- All analytics are real-time based on filtered transaction data
+
+### 6. Fixed Costs Feature
+The fixed costs page provides historical analysis of recurring expenses:
+
+**Features:**
+- **6-Month Historical View**: Shows trends over last 6 months including current month
+- **Summary Cards**:
+  - Current Month Total: Total fixed costs for current month
+  - Average Monthly Total: Average across 6-month period
+  - Active Categories: Number of categories with expenses in the period
+- **Evolution Chart**: Bar chart visualizing monthly fixed cost trends
+- **Category Breakdown Table**: Detailed monthly view per category with totals and averages
+- **Configurable Categories**: Easily customize which categories are considered "fixed costs"
+
+**Configured Fixed Cost Categories:**
+- Installments/Financing
+- Rent
+- Financing
+- Subscriptions/Softwares
+- Utilities
+- Business & Taxes
+- Investments
+- Insurance
+- Medical
+
+**Technical Details:**
+- Fixed cost categories configurable in `FIXED_COST_CATEGORIES` array at top of [pages/fixed-costs.vue](pages/fixed-costs.vue)
+- Uses Chart.js for visualization
+- Category matching is case-insensitive and uses `includes()` for flexible pattern matching
+- Processes installments via `useInstallments()` composable to expand recurring payments
+
 ## Important Files
 
 ### Configuration
@@ -98,9 +159,16 @@ The installments page provides comprehensive analysis of recurring payments:
 - [composables/usePersonFilter.ts](composables/usePersonFilter.ts): Person identification patterns and global filter state
 - [composables/useTransactions.ts](composables/useTransactions.ts): Transaction fetching, filtering helpers
 - [composables/useInstallments.ts](composables/useInstallments.ts): Installment parsing, processing, and expansion across months
+- [composables/useDashboardAnalytics.ts](composables/useDashboardAnalytics.ts): Dashboard analytics, alerts, forecasts, and insights
 - [server/api/transactions.get.ts](server/api/transactions.get.ts): Server API endpoint that connects to Google Sheets
 - [types/transaction.ts](types/transaction.ts): TypeScript interfaces for Transaction type
-- [pages/installments.vue](pages/installments.vue): Installments timeline and analysis page
+
+### Key Pages
+- [pages/index.vue](pages/index.vue): Dashboard with analytics and insights
+- [pages/transactions.vue](pages/transactions.vue): Full transaction list with filters
+- [pages/categories.vue](pages/categories.vue): Category-based spending analysis
+- [pages/installments.vue](pages/installments.vue): Installments timeline and analysis
+- [pages/fixed-costs.vue](pages/fixed-costs.vue): Fixed costs historical analysis (6 months)
 
 ## Development Workflow
 
@@ -164,23 +232,33 @@ The system expects specific column names starting at A1. If your sheet has diffe
 
 ## Design Patterns
 
-- **Composables**: Reusable logic for transactions and person filtering
+- **Composables**: Reusable logic for transactions, person filtering, installments, and analytics
+- **Component-Based Navigation**: Each page includes the Sidemenu component for navigation (no layout wrapper)
 - **Server API Routes**: Secure Google Sheets access (credentials never exposed to client)
 - **Tailwind Utility Classes**: All styling via Tailwind
-- **TypeScript**: Full type safety with Transaction interface
+- **TypeScript**: Full type safety with Transaction interface and typed composables
 
 ## Common Tasks
 
 ### Adding a New Page
-1. Create file in `pages/` directory
-2. Add link to [components/Sidemenu.vue](components/Sidemenu.vue)
-3. Use `usePersonFilter()` for global person filtering
-4. Use `useTransactions()` for data fetching
+1. Create file in `pages/` directory (Nuxt will automatically create the route)
+2. Add Sidemenu component to the page for navigation
+3. Add navigation link in [components/Sidemenu.vue](components/Sidemenu.vue)
+4. Use `usePersonFilter()` for global person filtering
+5. Use `useTransactions()` for data fetching
+6. Use `useInstallments()` if working with installment data
+7. Use `useDashboardAnalytics()` for analytics features
 
 ### Adding a New Filter
 1. Update [types/transaction.ts](types/transaction.ts) if needed
 2. Add filter function to [composables/useTransactions.ts](composables/useTransactions.ts)
 3. Add UI controls to relevant page component
+
+### Customizing Fixed Cost Categories
+1. Open [pages/fixed-costs.vue](pages/fixed-costs.vue)
+2. Edit the `FIXED_COST_CATEGORIES` array near the top of the script section
+3. Add or remove category names (matching is case-insensitive and uses `includes()`)
+4. Save and refresh the page
 
 ### Modifying Google Sheets Integration
 1. Update [server/api/transactions.get.ts](server/api/transactions.get.ts) for data fetching
