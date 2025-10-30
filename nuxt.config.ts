@@ -38,7 +38,8 @@ export default defineNuxtConfig({
     // OpenAPI configuration for API documentation
     experimental: {
       openAPI: true
-    }
+    },
+    openAPI: {route: '/api/docs'}
   },
 
   // Production build optimizations
