@@ -31,7 +31,6 @@ financial-control-app/
 ├── tailwind.config.js              # Tailwind CSS configuration
 ├── package.json                    # Dependencies
 ├── .env                            # Environment variables (git-ignored)
-├── API_ARCHITECTURE.md             # Detailed API architecture documentation
 ├── components/
 │   ├── Sidemenu.vue               # Navigation sidebar with global person filter
 │   ├── TransactionCard.vue        # Card display for transactions
@@ -51,6 +50,7 @@ financial-control-app/
 │   ├── api/
 │   │   ├── transactions.get.ts   # API endpoint with query parameter support
 │   │   └── docs/
+│   │       ├── API_ARCHITECTURE.md # Detailed API architecture documentation
 │   │       ├── architecture.get.ts # Returns API_ARCHITECTURE.md for AI consumption
 │   │       └── generate.get.ts    # Generates dynamic API documentation
 │   └── utils/
@@ -167,7 +167,7 @@ The fixed costs page provides historical analysis of recurring expenses:
 - [nuxt.config.ts](nuxt.config.ts): Nuxt app configuration, runtime config for Google credentials
 - [tailwind.config.js](tailwind.config.js): Custom theme colors (primary blue palette)
 - `.env`: Environment variables (NUXT_PUBLIC_GOOGLE_SPREADSHEET_ID, NUXT_GOOGLE_CLIENT_EMAIL, NUXT_GOOGLE_PRIVATE_KEY)
-- [API_ARCHITECTURE.md](API_ARCHITECTURE.md): **Detailed documentation** of the server-side API architecture
+- [server/api/docs/API_ARCHITECTURE.md](server/api/docs/API_ARCHITECTURE.md): **Detailed documentation** of the server-side API architecture
 
 ### Server-Side Logic (NEW Architecture)
 - [server/api/transactions.get.ts](server/api/transactions.get.ts): Main API endpoint with query parameter support and processing orchestration
@@ -280,7 +280,7 @@ GET /api/transactions?processInstallments=false
 - All processing (person identification, installments, filtering) done server-side
 - Input validation returns 400 error with clear error messages
 
-**See [API_ARCHITECTURE.md](API_ARCHITECTURE.md) for complete documentation.**
+**See [server/api/docs/API_ARCHITECTURE.md](server/api/docs/API_ARCHITECTURE.md) for complete documentation.**
 
 ### GET /api/docs/architecture
 
@@ -299,7 +299,7 @@ curl http://localhost:3000/api/docs/architecture
 
 **Response:**
 - Content-Type: text/markdown
-- Body: Complete API_ARCHITECTURE.md content in Markdown format
+- Body: Complete server/api/docs/API_ARCHITECTURE.md content in Markdown format
 
 **Use Cases:**
 - AI agents needing to understand the API structure
@@ -367,7 +367,7 @@ curl http://localhost:3000/api/docs/generate
 
 ## Maintaining API Documentation
 
-The project includes tools to help keep API_ARCHITECTURE.md up to date:
+The project includes tools to help keep server/api/docs/API_ARCHITECTURE.md up to date:
 
 ### Documentation Scripts
 
@@ -375,23 +375,23 @@ The project includes tools to help keep API_ARCHITECTURE.md up to date:
 ```bash
 npm run docs:check
 ```
-Validates that API_ARCHITECTURE.md exists and contains all expected sections (endpoints, architecture, examples).
+Validates that server/api/docs/API_ARCHITECTURE.md exists and contains all expected sections (endpoints, architecture, examples).
 
 **Generate documentation preview:**
 ```bash
 npm run docs:generate
 ```
-Starts dev server, generates documentation dynamically from code, and displays a preview. Use this to verify if API_ARCHITECTURE.md needs updates.
+Starts dev server, generates documentation dynamically from code, and displays a preview. Use this to verify if server/api/docs/API_ARCHITECTURE.md needs updates.
 
 **Update documentation (manual):**
 ```bash
 npm run docs:update
 ```
-Currently displays instructions for manual update. The generated documentation can be used as a reference, but API_ARCHITECTURE.md should be manually curated for best quality.
+Currently displays instructions for manual update. The generated documentation can be used as a reference, but server/api/docs/API_ARCHITECTURE.md should be manually curated for best quality.
 
 ### When to Update Documentation
 
-Update [API_ARCHITECTURE.md](API_ARCHITECTURE.md) whenever you:
+Update [server/api/docs/API_ARCHITECTURE.md](server/api/docs/API_ARCHITECTURE.md) whenever you:
 
 1. **Add new API endpoints** (`server/api/**/*.ts`)
    - Document the endpoint path and HTTP method
@@ -438,16 +438,16 @@ npm run docs:check
 npm run docs:generate
 
 # 4. Review generated documentation
-# Compare with API_ARCHITECTURE.md
+# Compare with server/api/docs/API_ARCHITECTURE.md
 
-# 5. Manually update API_ARCHITECTURE.md
+# 5. Manually update server/api/docs/API_ARCHITECTURE.md
 # Use generated docs as reference but keep manual quality
 
 # 6. Verify documentation is complete
 npm run docs:check
 
 # 7. Commit both code and documentation
-git add server/ API_ARCHITECTURE.md
+git add server/
 git commit -m "feat: add new API endpoint with documentation"
 ```
 
@@ -637,7 +637,7 @@ await fetchTransactions({ person: 'Gabriel' })
 
 ## Additional Resources
 
-- **[API_ARCHITECTURE.md](API_ARCHITECTURE.md)**: Complete API documentation and examples
+- **[server/api/docs/API_ARCHITECTURE.md](server/api/docs/API_ARCHITECTURE.md)**: Complete API documentation and examples
 - [README.md](README.md): Full setup guide and feature documentation
 - [CONFIGURACAO.md](CONFIGURACAO.md): Portuguese configuration guide with detailed filter setup
 - [Nuxt 3 Documentation](https://nuxt.com/docs)
