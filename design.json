@@ -1,110 +1,125 @@
 {
-  "theme": {
-    "mode": "dark",
-    "background": {
-      "primary": "#1C1C1C",
-      "secondary": "#2A2A2A",
-      "sidebar": "#111111",
-      "surface": "#181818",
-      "hover": "#242424",
-      "border": "#2E2E2E"
-    },
-    "text": {
-      "primary": "#FFFFFF",
-      "secondary": "#C8C8C8",
-      "muted": "#9E9E9E",
-      "accent": "#E96A4A",
-      "link": "#E96A4A"
-    },
-    "accent": {
-      "primary": "#E96A4A",
-      "primaryHover": "#FF7B5F",
-      "focus": "#FF8C73"
-    },
-    "font": {
-      "family": "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      "size": {
-        "xs": "12px",
-        "sm": "14px",
-        "base": "16px",
-        "lg": "18px",
-        "xl": "20px",
-        "xxl": "24px"
-      },
-      "weight": {
-        "regular": 400,
-        "medium": 500,
-        "semibold": 600,
-        "bold": 700
-      },
-      "lineHeight": {
-        "tight": 1.2,
-        "normal": 1.5,
-        "relaxed": 1.7
-      }
-    },
-    "spacing": {
-      "xxs": "4px",
-      "xs": "8px",
-      "sm": "12px",
-      "md": "16px",
-      "lg": "24px",
-      "xl": "32px",
-      "xxl": "48px"
-    },
-    "radius": {
-      "sm": "4px",
-      "md": "6px",
-      "lg": "10px",
-      "xl": "16px"
-    },
-    "shadow": {
-      "sm": "0 1px 2px rgba(0,0,0,0.2)",
-      "md": "0 2px 6px rgba(0,0,0,0.25)",
-      "lg": "0 4px 12px rgba(0,0,0,0.3)"
-    }
+  "$schema": "https://design.tokens/v1",
+  "meta": {
+    "name": "claude-inspired-dashboard",
+    "version": "1.1.0",
+    "description": "Minimalista, escuro e limpo. Inspirado no design do Claude.ai, aplicado a dashboards financeiros."
   },
+
+  "colors": {
+    "background/page": "#0C0C0C",
+    "background/sidebar": "#1A1A1A",
+    "background/card": "#1F1F1F",
+    "background/section": "#222222",
+    "background/hover": "#2A2A2A",
+    "background/input": "#1F1F1F",
+
+    "border/base": "#2E2E2E",
+    "border/subtle": "#393939",
+    "divider": "#333333",
+
+    "text/primary": "#F3F3F3",
+    "text/secondary": "#B0B0B0",
+    "text/muted": "#777777",
+    "text/inverse": "#0A0A0A",
+
+    "accent/primary": "#FF7A45",
+    "accent/primary/hover": "#FF8C5E",
+    "accent/info": "#7ACBD8",
+    "accent/warning": "#D1B892",
+    "accent/success": "#3DD68C",
+    "accent/danger": "#E34D4D",
+
+    "chart/positive": "#3DD68C",
+    "chart/negative": "#E34D4D",
+    "chart/neutral": "#D1B892"
+  },
+
+  "typography": {
+    "fontFamily/sans": "Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+    "fontFamily/serif": "'Source Serif 4', Georgia, serif",
+
+    "display/size": 40,
+    "display/weight": 400,
+    "heading/size": 22,
+    "heading/weight": 500,
+    "subheading/size": 16,
+    "body/size": 15,
+    "body/weight": 400,
+    "muted/size": 13
+  },
+
+  "radii": {
+    "sm": 6,
+    "md": 10,
+    "lg": 16
+  },
+
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+
   "layout": {
+    "sidebar/width": 280,
+    "sidebar/padding": 20,
+    "content/maxWidth": 1280,
+    "content/paddingX": 40,
+    "content/paddingY": 32,
+    "card/padding": 20,
+    "card/gap": 16,
+    "header/height": 72
+  },
+
+  "components": {
     "sidebar": {
-      "width": "260px",
-      "padding": "16px",
-      "gap": "12px"
+      "bg": "{colors.background/sidebar}",
+      "text": "{colors.text/primary}",
+      "textSecondary": "{colors.text/secondary}",
+      "itemHeight": 44,
+      "activeBg": "{colors.background/hover}",
+      "activeBorder": "{colors.accent/primary}",
+      "radius": "{radii.md}",
+      "gap": "{spacing.md}"
     },
-    "content": {
-      "maxWidth": "1280px",
-      "padding": "40px 48px",
-      "gap": "24px"
+
+    "header": {
+      "bg": "{colors.background/page}",
+      "text": "{colors.text/primary}",
+      "height": "{layout.header/height}",
+      "paddingX": "{layout.content/paddingX}"
     },
-    "searchBar": {
-      "height": "48px",
-      "borderRadius": "8px",
-      "background": "#2A2A2A",
-      "placeholderColor": "#9E9E9E"
+
+    "card": {
+      "bg": "{colors.background/card}",
+      "border": "{colors.border/subtle}",
+      "radius": "{radii.lg}",
+      "padding": "{layout.card/padding}",
+      "gap": "{layout.card/gap}"
     },
-    "chatItem": {
-      "height": "72px",
-      "padding": "16px",
-      "background": "#1E1E1E",
-      "backgroundHover": "#242424",
-      "borderRadius": "8px",
-      "titleColor": "#FFFFFF",
-      "subtitleColor": "#9E9E9E"
+
+    "button/primary": {
+      "bg": "{colors.accent/primary}",
+      "bgHover": "{colors.accent/primary/hover}",
+      "text": "{colors.text/inverse}",
+      "radius": "{radii.md}",
+      "paddingX": 18,
+      "paddingY": 10,
+      "weight": 600
     },
-    "button": {
-      "primary": {
-        "background": "#E96A4A",
-        "textColor": "#FFFFFF",
-        "hoverBackground": "#FF7B5F",
-        "borderRadius": "8px",
-        "padding": "10px 16px"
-      },
-      "secondary": {
-        "background": "#2A2A2A",
-        "textColor": "#FFFFFF",
-        "hoverBackground": "#333333",
-        "borderRadius": "8px",
-        "padding": "10px 16px"
-      }
+
+    "input": {
+      "bg": "{colors.background/input}",
+      "border": "{colors.border/subtle}",
+      "radius": "{radii.md}",
+      "height": 48,
+      "paddingX": 16,
+      "placeholder": "{colors.text/muted}"
     }
   }
 }
