@@ -1,8 +1,8 @@
 import { google } from 'googleapis'
 import type { Budget, BudgetSheetRow, BudgetInput } from '~/types/transaction'
 
-const BUDGET_SHEET_NAME = 'Budgets' // Nome da aba na planilha do Google Sheets
-const BUDGET_RANGE = `${BUDGET_SHEET_NAME}!A1:G` // Colunas A até G
+const BUDGET_SHEET_NAME = 'Budgets_v2' // Nome da aba na planilha do Google Sheets
+const BUDGET_RANGE = `${BUDGET_SHEET_NAME}!A1:G` // Colunas A até G (Category, Person, Month, Year, Amount, Created At, Updated At)
 
 /**
  * Creates Google Sheets authentication client with read/write permissions
@@ -97,7 +97,16 @@ export async function fetchBudgetsFromGoogleSheets(): Promise<Budget[]> {
 }
 
 /**
- * Ensures the Budgets sheet exists and has the correct headers
+ * Ensures the Budgets_v2 sheet exists and has the correct headers
+ *
+ * Sheet Structure (7 columns):
+ * A: Category (e.g., "Food", "Transportation")
+ * B: Person ("Juliana" or "Gabriel")
+ * C: Month (1-12)
+ * D: Year (e.g., 2025)
+ * E: Amount (e.g., 1500.00)
+ * F: Created At (ISO timestamp)
+ * G: Updated At (ISO timestamp)
  */
 async function ensureBudgetSheetExists(): Promise<void> {
   const config = useRuntimeConfig()
@@ -105,7 +114,7 @@ async function ensureBudgetSheetExists(): Promise<void> {
   const spreadsheetId = config.public.googleSpreadsheetId
 
   try {
-    // Get spreadsheet metadata to check if Budgets sheet exists
+    // Get spreadsheet metadata to check if Budgets_v2 sheet exists
     const metadata = await sheets.spreadsheets.get({
       spreadsheetId,
     })
@@ -115,9 +124,9 @@ async function ensureBudgetSheetExists(): Promise<void> {
     )
 
     if (!budgetSheet) {
-      console.log('[Budgets] Creating Budgets sheet...')
+      console.log(`[Budgets] Creating ${BUDGET_SHEET_NAME} sheet with correct structure...`)
 
-      // Create the Budgets sheet
+      // Create the Budgets_v2 sheet
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId,
         requestBody: {
@@ -137,7 +146,7 @@ async function ensureBudgetSheetExists(): Promise<void> {
         },
       })
 
-      // Add headers
+      // Add headers with correct structure
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range: `${BUDGET_SHEET_NAME}!A1:G1`,
@@ -147,7 +156,9 @@ async function ensureBudgetSheetExists(): Promise<void> {
         },
       })
 
-      console.log('[Budgets] Budgets sheet created successfully')
+      console.log(`[Budgets] ✅ ${BUDGET_SHEET_NAME} sheet created successfully with structure: Category | Person | Month | Year | Amount | Created At | Updated At`)
+    } else {
+      console.log(`[Budgets] ℹ️  ${BUDGET_SHEET_NAME} sheet already exists`)
     }
   } catch (error: any) {
     console.error('[Budgets] Error ensuring budget sheet exists:', error)
@@ -160,9 +171,12 @@ async function ensureBudgetSheetExists(): Promise<void> {
 }
 
 /**
- * Saves or updates budgets in Google Sheets
- * If a budget for the same category/month/year exists, it will be updated
- * Otherwise, a new budget will be created
+ * Saves or updates budgets in Google Sheets (Budgets_v2 sheet)
+ *
+ * If a budget for the same Category/Person/Month/Year exists, it will be updated.
+ * Otherwise, a new budget will be created.
+ *
+ * Row Structure: Category | Person | Month | Year | Amount | Created At | Updated At
  */
 export async function saveBudgetsToGoogleSheets(budgets: BudgetInput[]): Promise<Budget[]> {
   const config = useRuntimeConfig()
@@ -186,6 +200,8 @@ export async function saveBudgetsToGoogleSheets(budgets: BudgetInput[]): Promise
     const allRows = response.data.values || [['Category', 'Person', 'Month', 'Year', 'Amount', 'Created At', 'Updated At']]
     const timestamp = new Date().toISOString()
 
+    console.log(`[Budgets] Found ${allRows.length - 1} existing rows in sheet`)
+
     // Process each budget input
     const savedBudgets: Budget[] = []
 
@@ -194,14 +210,18 @@ export async function saveBudgetsToGoogleSheets(budgets: BudgetInput[]): Promise
         .toLowerCase()
         .replace(/\s+/g, '-')
 
-      // Check if budget already exists
+      // Check if budget already exists (Category, Person, Month, Year)
       const existingIndex = allRows.findIndex((row, index) => {
         if (index === 0) return false // Skip header row
         const category = row[0] || ''
         const person = row[1] || ''
         const month = parseInt(row[2]) || 0
         const year = parseInt(row[3]) || 0
-        return category === budgetInput.category && person === budgetInput.person && month === budgetInput.month && year === budgetInput.year
+
+        return category === budgetInput.category &&
+               person === budgetInput.person &&
+               month === budgetInput.month &&
+               year === budgetInput.year
       })
 
       if (existingIndex > 0) {
@@ -313,14 +333,18 @@ export async function deleteBudgetFromGoogleSheets(category: string, person: 'Ju
 
     const allRows = response.data.values || []
 
-    // Find the row index
+    // Find the row index (Category, Person, Month, Year)
     const rowIndex = allRows.findIndex((row, index) => {
       if (index === 0) return false // Skip header
       const rowCategory = row[0] || ''
       const rowPerson = row[1] || ''
       const rowMonth = parseInt(row[2]) || 0
       const rowYear = parseInt(row[3]) || 0
-      return rowCategory === category && rowPerson === person && rowMonth === month && rowYear === year
+
+      return rowCategory === category &&
+             rowPerson === person &&
+             rowMonth === month &&
+             rowYear === year
     })
 
     if (rowIndex <= 0) {

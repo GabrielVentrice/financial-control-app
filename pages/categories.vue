@@ -1,130 +1,111 @@
 <template>
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
-      <!-- Header -->
-      <PageHeader
-        title="Gastos por Categoria"
-        subtitle="Análise de despesas organizadas por categoria"
-      >
-        <template #actions>
-          <BaseButton @click="refreshData" :loading="loading">
-            Atualizar
-          </BaseButton>
-        </template>
-      </PageHeader>
+      <!-- Compact Header -->
+      <header class="h-14 px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
+        <div class="flex items-baseline gap-3">
+          <h1 class="text-[18px] font-medium tracking-tight">Categorias</h1>
+          <span class="px-2 py-0.5 text-[11px] font-medium bg-accent-primary/10 text-accent-primary rounded border border-accent-primary/20">
+            {{ selectedPerson }}
+          </span>
+        </div>
+        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading">
+          Atualizar
+        </BaseButton>
+      </header>
 
-      <!-- Filters -->
-      <div class="px-6 lg:px-10 py-6 border-b border-border-base">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div class="flex items-center gap-3">
-            <label class="text-13 font-medium text-text-secondary whitespace-nowrap">
-              Mês:
-            </label>
-            <input
-              v-model="selectedMonth"
-              type="month"
-              class="px-3 sm:px-4 py-2 text-14 sm:text-15 bg-background-input text-text-primary border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
-            />
-          </div>
-
-          <div class="flex items-center gap-2 text-13">
-            <span class="font-medium text-text-secondary whitespace-nowrap">Pessoa:</span>
-            <span class="px-2 sm:px-3 py-1 sm:py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20 text-12 sm:text-13">
-              {{ selectedPerson }}
-            </span>
-          </div>
+      <!-- Compact Month Filter -->
+      <div class="px-6 lg:px-10 py-3 border-b border-border-base bg-background-card">
+        <div class="max-w-[1400px] mx-auto flex items-center gap-2">
+          <label class="text-[11px] font-medium text-text-muted uppercase tracking-wide">
+            Mês
+          </label>
+          <input
+            v-model="selectedMonth"
+            type="month"
+            class="px-3 py-1.5 text-[13px] bg-background-input text-text-primary border border-border-subtle rounded focus:outline-none focus:ring-1 focus:ring-accent-info transition-all"
+          />
+          <span class="text-[11px] text-text-muted ml-2">{{ formattedMonth }}</span>
         </div>
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-8 space-y-8">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-5 space-y-4">
         <!-- Loading State -->
-        <LoadingState v-if="loading" message="Carregando categorias..." />
+        <LoadingState v-if="loading" message="Carregando..." />
 
         <!-- Error State -->
         <ErrorState v-else-if="error" :message="error" />
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Cards -->
-          <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
-              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
-                Gastos Variáveis
-              </p>
-              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-success break-all">
-                {{ formatCurrency(variableCostsTotal) }}
-              </p>
-              <p class="text-text-muted text-13 leading-normal">Gastos não recorrentes</p>
-            </div>
+          <!-- Summary - DENSE 4 cards -->
+          <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <DenseStatCard
+              label="Variáveis"
+              :value="variableCostsTotal"
+              format="currency"
+              value-color="success"
+              :secondary-stat="{ label: 'Não recorrentes', value: '' }"
+            />
 
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
-              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
-                Custos Fixos
-              </p>
-              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-info tracking-tight break-all">
-                {{ formatCurrency(custosFixosTotal) }}
-              </p>
-              <p class="text-text-muted text-13 leading-normal">
-                {{ custosFixosCategoriesCount }} {{ custosFixosCategoriesCount === 1 ? 'categoria' : 'categorias' }}
-              </p>
-            </div>
+            <DenseStatCard
+              label="Fixos"
+              :value="custosFixosTotal"
+              format="currency"
+              value-color="info"
+              :secondary-stat="{ label: 'Categorias', value: custosFixosCategoriesCount }"
+            />
 
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
-              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
-                Gastos Comprometidos
-              </p>
-              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-warning tracking-tight break-all">
-                {{ formatCurrency(gastosComprometidosTotal) }}
-              </p>
-              <p class="text-text-muted text-13 leading-normal">
-                {{ gastosComprometidosCategoriesCount }} {{ gastosComprometidosCategoriesCount === 1 ? 'categoria' : 'categorias' }}
-              </p>
-            </div>
+            <DenseStatCard
+              label="Comprometidos"
+              :value="gastosComprometidosTotal"
+              format="currency"
+              value-color="warning"
+              :secondary-stat="{ label: 'Categorias', value: gastosComprometidosCategoriesCount }"
+            />
 
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
-              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
-                Gasto Total
-              </p>
-              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-primary break-all">
-                {{ formatCurrency(totalAmount) }}
-              </p>
-              <p class="text-text-muted text-13 leading-normal">{{ totalTransactions }} transações</p>
-            </div>
+            <DenseStatCard
+              label="Total"
+              :value="totalAmount"
+              format="currency"
+              value-color="primary"
+              :secondary-stat="{ label: 'Transações', value: totalTransactions }"
+            />
           </section>
 
-          <!-- Categories List -->
-          <section class="bg-background-card border border-border-base rounded-lg overflow-hidden">
+          <!-- Categories List - FLAT -->
+          <section class="border-t border-border-base overflow-hidden">
             <!-- Desktop Table Header -->
-            <div class="hidden lg:block px-6 py-4 bg-background-section border-b border-border-base">
-              <div class="grid grid-cols-12 gap-4 items-center text-13 font-medium text-text-secondary uppercase tracking-wide">
+            <div class="hidden lg:block px-4 py-2.5 bg-background-section border-b border-border-base">
+              <div class="grid grid-cols-12 gap-3 items-center text-[11px] font-medium text-text-secondary uppercase tracking-wide">
                 <div class="col-span-5">Categoria</div>
                 <div class="col-span-2">Transações</div>
-                <div class="col-span-2">Valor Total</div>
-                <div class="col-span-2">% do Total</div>
-                <div class="col-span-1">Média</div>
+                <div class="col-span-2">Valor</div>
+                <div class="col-span-2">% Total</div>
+                <div class="col-span-1 text-right">Média</div>
               </div>
             </div>
 
             <!-- Mobile Header -->
-            <div class="lg:hidden px-4 py-3 bg-background-section border-b border-border-base">
-              <h3 class="text-15 font-medium text-text-primary">Categorias de Gastos</h3>
+            <div class="lg:hidden px-4 py-2.5 bg-background-section border-b border-border-base">
+              <h3 class="text-[13px] font-medium text-text-primary">Gastos por Categoria</h3>
             </div>
 
             <!-- Categories -->
             <div class="divide-y divide-border-base">
               <template v-for="category in categories" :key="category.name">
-                <!-- Desktop Category Row -->
+                <!-- Desktop Category Row - COMPACT -->
                 <div
                   @click="toggleCategory(category.name)"
-                  class="hidden lg:block px-6 py-4 hover:bg-background-hover transition-all cursor-pointer"
+                  class="hidden lg:block px-4 py-2.5 hover:bg-background-hover transition-colors cursor-pointer"
                   :class="{ 'bg-background-section': expandedCategory === category.name }"
                 >
-                  <div class="grid grid-cols-12 gap-4 items-center">
+                  <div class="grid grid-cols-12 gap-3 items-center">
                     <!-- Category Name -->
-                    <div class="col-span-5 flex items-center gap-3">
+                    <div class="col-span-5 flex items-center gap-2">
                       <svg
-                        class="h-4 w-4 text-text-muted transition-transform duration-150"
+                        class="h-3 w-3 text-text-muted transition-transform duration-150 flex-shrink-0"
                         :class="{ 'rotate-90': expandedCategory === category.name }"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -133,129 +114,114 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                       </svg>
 
-                      <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-md bg-background-section border border-border-base">
-                        <span class="text-xl">{{ getCategoryIcon(category.name) }}</span>
+                      <div class="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded bg-background-section border border-border-base">
+                        <span class="text-[16px]">{{ getCategoryIcon(category.name) }}</span>
                       </div>
 
-                      <div>
-                        <p class="text-15 font-medium text-text-primary">{{ category.name }}</p>
-                        <p class="text-13 text-text-muted">Clique para expandir</p>
-                      </div>
+                      <p class="text-[13px] font-medium text-text-primary truncate">{{ category.name }}</p>
                     </div>
 
                     <!-- Transaction Count -->
                     <div class="col-span-2">
-                      <span class="inline-block px-3 py-1 bg-background-section text-accent-info text-13 font-semibold rounded-md border border-border-base">
+                      <span class="inline-block px-2 py-0.5 bg-background-section text-accent-info text-[11px] font-semibold rounded border border-border-base">
                         {{ category.count }}
                       </span>
                     </div>
 
                     <!-- Total Value -->
                     <div class="col-span-2">
-                      <p class="text-16 font-semibold text-text-primary">
-                        {{ formatCurrency(category.total) }}
+                      <p class="text-[13px] font-semibold text-text-primary">
+                        {{ formatCurrencyCompact(category.total) }}
                       </p>
                     </div>
 
                     <!-- Percentage -->
                     <div class="col-span-2">
-                      <div class="space-y-1">
-                        <div class="w-full bg-background-section rounded-full h-2">
+                      <div class="flex items-center gap-2">
+                        <div class="flex-1 bg-background-section rounded-full h-1">
                           <div
-                            class="bg-accent-primary h-2 rounded-full transition-all duration-300"
+                            class="bg-accent-primary h-1 rounded-full transition-all"
                             :style="{ width: `${category.percentage}%` }"
                           ></div>
                         </div>
-                        <span class="text-13 font-medium text-text-secondary">{{ category.percentage.toFixed(1) }}%</span>
+                        <span class="text-[11px] font-medium text-text-secondary whitespace-nowrap">{{ category.percentage.toFixed(0) }}%</span>
                       </div>
                     </div>
 
                     <!-- Average -->
-                    <div class="col-span-1">
-                      <p class="text-13 text-text-secondary">
-                        {{ formatCurrency(category.average) }}
+                    <div class="col-span-1 text-right">
+                      <p class="text-[11px] text-text-muted">
+                        {{ formatCurrencyCompact(category.average) }}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <!-- Mobile Category Card -->
+                <!-- Mobile Category Card - COMPACT -->
                 <div
                   @click="toggleCategory(category.name)"
-                  class="lg:hidden px-4 py-4 hover:bg-background-hover transition-all cursor-pointer"
+                  class="lg:hidden px-3 py-3 hover:bg-background-hover transition-colors cursor-pointer"
                   :class="{ 'bg-background-section': expandedCategory === category.name }"
                 >
-                  <div class="space-y-3">
+                  <div class="space-y-2">
                     <!-- Header -->
                     <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-3 min-w-0 flex-1">
-                        <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-md bg-background-section border border-border-base">
-                          <span class="text-lg">{{ getCategoryIcon(category.name) }}</span>
+                      <div class="flex items-center gap-2 min-w-0 flex-1">
+                        <div class="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded bg-background-section border border-border-base">
+                          <span class="text-[16px]">{{ getCategoryIcon(category.name) }}</span>
                         </div>
                         <div class="min-w-0 flex-1">
-                          <p class="text-15 font-medium text-text-primary truncate">{{ category.name }}</p>
-                          <div class="flex items-center gap-3 text-13 text-text-muted">
-                            <span>{{ category.count }} transações</span>
-                            <span>{{ category.percentage.toFixed(1) }}%</span>
+                          <p class="text-[13px] font-medium text-text-primary truncate">{{ category.name }}</p>
+                          <div class="flex items-center gap-2 text-[11px] text-text-muted">
+                            <span>{{ category.count }} trans.</span>
+                            <span>•</span>
+                            <span>{{ category.percentage.toFixed(0) }}%</span>
                           </div>
                         </div>
                       </div>
                       <div class="text-right">
-                        <p class="text-15 font-semibold text-text-primary whitespace-nowrap">
-                          {{ formatCurrency(category.total) }}
+                        <p class="text-[13px] font-semibold text-text-primary whitespace-nowrap">
+                          {{ formatCurrencyCompact(category.total) }}
                         </p>
-                        <p class="text-13 text-text-muted">
-                          {{ formatCurrency(category.average) }}
+                        <p class="text-[11px] text-text-muted">
+                          {{ formatCurrencyCompact(category.average) }}
                         </p>
                       </div>
                     </div>
 
                     <!-- Progress bar -->
-                    <div class="w-full bg-background-section rounded-full h-2">
+                    <div class="w-full bg-background-section rounded-full h-1">
                       <div
-                        class="bg-accent-primary h-2 rounded-full transition-all duration-300"
+                        class="bg-accent-primary h-1 rounded-full transition-all"
                         :style="{ width: `${category.percentage}%` }"
                       ></div>
-                    </div>
-
-                    <!-- Expand indicator -->
-                    <div class="flex items-center justify-center">
-                      <svg
-                        class="h-4 w-4 text-text-muted transition-transform duration-150"
-                        :class="{ 'rotate-180': expandedCategory === category.name }"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                      </svg>
                     </div>
                   </div>
                 </div>
 
-                <!-- Expanded Transactions -->
+                <!-- Expanded Transactions - COMPACT -->
                 <div v-if="expandedCategory === category.name" class="bg-background-section">
-                  <div class="px-4 sm:px-6 py-4">
-                    <h4 class="text-14 sm:text-15 font-medium text-text-primary mb-3 sm:mb-4">
-                      Transações de {{ category.name }} ({{ getCategoryTransactions(category.name).length }})
+                  <div class="px-4 py-3">
+                    <h4 class="text-[12px] font-medium text-text-primary mb-2 uppercase tracking-wide">
+                      Transações ({{ getCategoryTransactions(category.name).length }})
                     </h4>
-                    <div class="bg-background-page rounded-lg border border-border-base p-3 sm:p-4 max-h-80 sm:max-h-96 overflow-y-auto">
-                      <div class="space-y-2 sm:space-y-3">
+                    <div class="bg-background-page rounded border border-border-base p-2 max-h-64 overflow-y-auto">
+                      <div class="space-y-1.5">
                         <div
                           v-for="transaction in getCategoryTransactions(category.name)"
                           :key="transaction.transactionId"
-                          class="flex items-start justify-between gap-3 py-2 sm:py-3 border-b border-divider last:border-0"
+                          class="flex items-start justify-between gap-2 py-1.5 border-b border-divider last:border-0"
                         >
-                          <div class="flex-1 min-w-0 space-y-1">
-                            <p class="text-14 sm:text-15 text-text-primary truncate">{{ transaction.description }}</p>
-                            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-12 sm:text-13 text-text-muted">
-                              <span>{{ formatDate(transaction.date) }}</span>
-                              <span class="hidden sm:inline">•</span>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-[12px] text-text-primary truncate">{{ transaction.description }}</p>
+                            <div class="flex items-center gap-2 text-[10px] text-text-muted mt-0.5">
+                              <span>{{ formatDateCompact(transaction.date) }}</span>
+                              <span>•</span>
                               <span class="truncate">{{ transaction.origin }}</span>
                             </div>
                           </div>
-                          <p class="text-14 sm:text-15 font-semibold text-accent-primary whitespace-nowrap">
-                            {{ formatCurrency(transaction.amount) }}
+                          <p class="text-[12px] font-semibold text-accent-primary whitespace-nowrap">
+                            {{ formatCurrencyCompact(transaction.amount) }}
                           </p>
                         </div>
                       </div>
@@ -269,8 +235,8 @@
             <EmptyState
               v-if="categories.length === 0"
               icon="📊"
-              title="Nenhuma transação encontrada"
-              description="Não há transações para o período selecionado. Tente selecionar outro mês."
+              title="Nenhuma transação"
+              description="Selecione outro período."
             />
           </section>
         </template>
@@ -313,6 +279,12 @@ const gastosComprometidosTotal = computed(() => categoriesData.value?.totals.com
 
 const custosFixosCategoriesCount = computed(() => categoriesData.value?.totals.categoryCounts.fixedCosts || 0)
 const gastosComprometidosCategoriesCount = computed(() => categoriesData.value?.totals.categoryCounts.committedExpenses || 0)
+
+const formattedMonth = computed(() => {
+  const [year, month] = selectedMonth.value.split('-')
+  const date = new Date(parseInt(year), parseInt(month) - 1)
+  return date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+})
 
 // Methods
 const getCategoryIcon = (categoryName: string): string => {
@@ -359,18 +331,20 @@ const getCategoryIcon = (categoryName: string): string => {
   return '💰'
 }
 
-const formatCurrency = (value: number) => {
+const formatCurrencyCompact = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
   }).format(value)
 }
 
-const formatDate = (dateString: string) => {
+const formatDateCompact = (dateString: string) => {
   if (!dateString) return '-'
   try {
     const date = new Date(dateString)
-    return date.toLocaleDateString('pt-BR')
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
   } catch {
     return dateString
   }

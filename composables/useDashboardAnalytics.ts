@@ -5,10 +5,12 @@ export interface CategorySummary {
   total: number
   count: number
   percentage: number
+  trend?: number // Percentage change vs previous month
+  avgLast3Months?: number
 }
 
 export interface Alert {
-  type: 'warning' | 'danger' | 'info'
+  type: 'warning' | 'danger' | 'info' | 'success'
   title: string
   message: string
   amount?: number
@@ -19,6 +21,32 @@ export interface MonthlyStats {
   expenses: number
   balance: number
   transactionCount: number
+  dailyAverage: number
+  trend: {
+    income: number // % change vs previous month
+    expenses: number
+    balance: number
+  }
+  comparison: {
+    incomeVsAvg: number // % vs 3-month average
+    expensesVsAvg: number
+  }
+}
+
+export interface HistoricalData {
+  last6Months: number[] // For sparklines
+  last3MonthsAverage: number
+  currentMonth: number
+  trend: 'increasing' | 'decreasing' | 'stable'
+}
+
+export interface SmartInsight {
+  type: 'warning' | 'danger' | 'info' | 'success'
+  title: string
+  message: string
+  value?: number
+  action?: string
+  priority: number // 1-5, higher = more important
 }
 
 export const useDashboardAnalytics = () => {
@@ -33,14 +61,16 @@ export const useDashboardAnalytics = () => {
     return originLower.includes('bank account') || originLower.includes('credit card')
   }
 
-  const getCurrentMonthStats = (transactions: Transaction[]): MonthlyStats => {
+  // Get stats for a specific month
+  const getMonthStats = (transactions: Transaction[], monthOffset: number = 0) => {
     const now = new Date()
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
+    const targetDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
+    const targetMonth = targetDate.getMonth()
+    const targetYear = targetDate.getFullYear()
 
     const monthTransactions = transactions.filter(t => {
       const date = new Date(t.date)
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear
+      return date.getMonth() === targetMonth && date.getFullYear() === targetYear
     })
 
     const income = monthTransactions
@@ -55,7 +85,65 @@ export const useDashboardAnalytics = () => {
       income,
       expenses,
       balance: income - expenses,
-      transactionCount: monthTransactions.length
+      count: monthTransactions.length
+    }
+  }
+
+  const getCurrentMonthStats = (transactions: Transaction[]): MonthlyStats => {
+    const now = new Date()
+    const currentDay = now.getDate()
+
+    // Current month
+    const current = getMonthStats(transactions, 0)
+
+    // Previous month
+    const previous = getMonthStats(transactions, -1)
+
+    // Last 3 months average (excluding current)
+    const last3Months = [-1, -2, -3].map(offset => getMonthStats(transactions, offset))
+    const avg3MonthsIncome = last3Months.reduce((sum, m) => sum + m.income, 0) / 3
+    const avg3MonthsExpenses = last3Months.reduce((sum, m) => sum + m.expenses, 0) / 3
+
+    // Calculate trends
+    const incomeTrend = previous.income > 0
+      ? ((current.income - previous.income) / previous.income) * 100
+      : 0
+
+    const expensesTrend = previous.expenses > 0
+      ? ((current.expenses - previous.expenses) / previous.expenses) * 100
+      : 0
+
+    const balanceTrend = previous.balance !== 0
+      ? ((current.balance - previous.balance) / Math.abs(previous.balance)) * 100
+      : 0
+
+    // Comparison with 3-month average
+    const incomeVsAvg = avg3MonthsIncome > 0
+      ? ((current.income - avg3MonthsIncome) / avg3MonthsIncome) * 100
+      : 0
+
+    const expensesVsAvg = avg3MonthsExpenses > 0
+      ? ((current.expenses - avg3MonthsExpenses) / avg3MonthsExpenses) * 100
+      : 0
+
+    // Daily average (considering current day of month)
+    const dailyAverage = currentDay > 0 ? current.expenses / currentDay : 0
+
+    return {
+      income: current.income,
+      expenses: current.expenses,
+      balance: current.balance,
+      transactionCount: current.count,
+      dailyAverage,
+      trend: {
+        income: incomeTrend,
+        expenses: expensesTrend,
+        balance: balanceTrend
+      },
+      comparison: {
+        incomeVsAvg,
+        expensesVsAvg
+      }
     }
   }
 
@@ -210,11 +298,125 @@ export const useDashboardAnalytics = () => {
     }
   }
 
+  // Get historical data for sparklines
+  const getHistoricalExpenses = (transactions: Transaction[]): HistoricalData => {
+    // Get last 6 months of expenses
+    const last6Months = [-5, -4, -3, -2, -1, 0].map(offset => {
+      return getMonthStats(transactions, offset).expenses
+    })
+
+    const currentMonth = last6Months[5]
+    const last3MonthsAverage = (last6Months[2] + last6Months[3] + last6Months[4]) / 3
+
+    // Detect trend
+    let trend: 'increasing' | 'decreasing' | 'stable' = 'stable'
+    const recentAvg = (last6Months[3] + last6Months[4] + last6Months[5]) / 3
+    const olderAvg = (last6Months[0] + last6Months[1] + last6Months[2]) / 3
+
+    if (recentAvg > olderAvg * 1.1) trend = 'increasing'
+    else if (recentAvg < olderAvg * 0.9) trend = 'decreasing'
+
+    return {
+      last6Months,
+      last3MonthsAverage,
+      currentMonth,
+      trend
+    }
+  }
+
+  // Generate smart, prioritized insights
+  const getSmartInsights = (transactions: Transaction[]): SmartInsight[] => {
+    const insights: SmartInsight[] = []
+    const stats = getCurrentMonthStats(transactions)
+    const now = new Date()
+    const currentDay = now.getDate()
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+
+    // Critical: Negative balance
+    if (stats.balance < 0) {
+      insights.push({
+        type: 'danger',
+        title: 'Saldo Negativo',
+        message: 'Despesas excedem receitas',
+        value: Math.abs(stats.balance),
+        priority: 5
+      })
+    }
+
+    // High priority: Significant expense increase
+    if (stats.comparison.expensesVsAvg > 20) {
+      insights.push({
+        type: 'warning',
+        title: `+${stats.comparison.expensesVsAvg.toFixed(0)}% vs média`,
+        message: 'Gastos muito acima do normal dos últimos 3 meses',
+        value: stats.expenses,
+        priority: 4
+      })
+    }
+
+    // High daily average warning
+    const projectedMonthly = stats.dailyAverage * daysInMonth
+    const last3MonthsAvg = getHistoricalExpenses(transactions).last3MonthsAverage
+    if (projectedMonthly > last3MonthsAvg * 1.15 && currentDay > 7) {
+      insights.push({
+        type: 'warning',
+        title: 'Ritmo de gastos elevado',
+        message: `Média de R$ ${(stats.dailyAverage).toFixed(0)}/dia pode exceder orçamento`,
+        priority: 4
+      })
+    }
+
+    // Medium priority: Unusual spending in category
+    const topCat = getTopCategories(transactions, 1)[0]
+    if (topCat && topCat.percentage > 40) {
+      insights.push({
+        type: 'info',
+        title: `${topCat.name} dominante`,
+        message: `${topCat.percentage.toFixed(0)}% dos gastos concentrados`,
+        value: topCat.total,
+        priority: 3
+      })
+    }
+
+    // Positive: Under budget
+    if (stats.comparison.expensesVsAvg < -10) {
+      insights.push({
+        type: 'success',
+        title: 'Gastos controlados',
+        message: `${Math.abs(stats.comparison.expensesVsAvg).toFixed(0)}% abaixo da média`,
+        priority: 2
+      })
+    }
+
+    // Info: Trend detection
+    const historical = getHistoricalExpenses(transactions)
+    if (historical.trend === 'increasing') {
+      insights.push({
+        type: 'info',
+        title: 'Tendência de aumento',
+        message: 'Gastos crescendo nos últimos meses',
+        priority: 2
+      })
+    } else if (historical.trend === 'decreasing') {
+      insights.push({
+        type: 'success',
+        title: 'Tendência de redução',
+        message: 'Gastos diminuindo nos últimos meses',
+        priority: 2
+      })
+    }
+
+    // Sort by priority
+    return insights.sort((a, b) => b.priority - a.priority)
+  }
+
   return {
     getCurrentMonthStats,
     getTopCategories,
     getUpcomingExpenses,
     generateAlerts,
-    getMonthlyForecast
+    getMonthlyForecast,
+    getHistoricalExpenses,
+    getSmartInsights
   }
 }

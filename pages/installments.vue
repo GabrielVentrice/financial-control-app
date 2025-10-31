@@ -1,30 +1,21 @@
 <template>
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
-      <!-- Header -->
-      <PageHeader
-        title="Análise de Parcelas"
-        subtitle="Visualize parcelas passadas e futuras por período"
-      >
-        <template #actions>
-          <BaseButton @click="refreshData" :loading="loading">
-            Atualizar
-          </BaseButton>
-        </template>
-      </PageHeader>
-
-      <!-- Filter Info -->
-      <div class="px-6 lg:px-10 py-6 border-b border-border-base">
-        <div class="flex items-center gap-2 text-13">
-          <span class="font-medium text-text-secondary whitespace-nowrap">Pessoa:</span>
-          <span class="px-2 sm:px-3 py-1 sm:py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20 text-12 sm:text-13">
+      <!-- Compact Header with inline filter -->
+      <header class="h-14 px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
+        <div class="flex items-baseline gap-3">
+          <h1 class="text-[18px] font-medium tracking-tight">Parcelas</h1>
+          <span class="px-2 py-0.5 text-[11px] font-medium bg-accent-primary/10 text-accent-primary rounded border border-accent-primary/20">
             {{ selectedPerson }}
           </span>
         </div>
-      </div>
+        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading">
+          Atualizar
+        </BaseButton>
+      </header>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-8 space-y-8">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-5 space-y-4">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando parcelas..." />
 
@@ -33,126 +24,118 @@
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Cards -->
-          <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:col-span-2 lg:col-span-1">
-              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
-                Parcelas Ativas
-              </p>
-              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-info tracking-tight">
-                {{ activeInstallments.length }}
-              </p>
-              <p class="text-text-muted text-13 leading-normal">Com parcelas futuras</p>
-            </div>
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3">
-              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
-                Total Mês Atual
-              </p>
-              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-primary tracking-tight break-all">
-                {{ formatCurrency(currentMonthTotal) }}
-              </p>
-              <p class="text-text-muted text-13 leading-normal">{{ formatMonthYear(currentMonth) }}</p>
-            </div>
-            <div class="bg-background-card border border-accent-success/20 rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3 border-l-[3px] border-l-accent-success">
-              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
-                Média Mensal
-              </p>
-              <p class="text-[24px] sm:text-[28px] lg:text-[32px] font-normal font-serif text-accent-success tracking-tight break-all">
-                {{ formatCurrency(averageMonthlyTotal) }}
-              </p>
-              <p class="text-text-muted text-13 leading-normal">Últimos 13 meses</p>
-            </div>
+          <!-- Summary Cards - DENSE -->
+          <section class="grid grid-cols-3 gap-3">
+            <DenseStatCard
+              label="Ativas"
+              :value="activeInstallments.length"
+              format="number"
+              value-color="info"
+              :secondary-stat="{ label: 'Futuras', value: '' }"
+            />
+
+            <DenseStatCard
+              label="Mês Atual"
+              :value="currentMonthTotal"
+              format="currency"
+              value-color="primary"
+              :secondary-stat="{ label: formatMonthYear(currentMonth), value: '' }"
+            />
+
+            <DenseStatCard
+              label="Média"
+              :value="averageMonthlyTotal"
+              format="currency"
+              value-color="success"
+              :secondary-stat="{ label: '13 meses', value: '' }"
+            />
           </section>
 
-          <!-- Chart -->
-          <section class="bg-background-card border border-border-base rounded-lg p-4 sm:p-6">
-            <h2 class="text-15 sm:text-16 font-medium text-text-primary mb-4 sm:mb-6 tracking-tight">Parcelas por Mês</h2>
-            <p class="text-13 text-text-muted mb-4 hidden sm:block">6 meses atrás → 6 meses à frente</p>
-            <div class="h-64 sm:h-80 lg:h-96">
+          <!-- Chart - FLAT -->
+          <section class="border-l-2 border-l-accent-primary pl-4 py-2">
+            <h2 class="text-[14px] font-medium text-text-primary mb-3 tracking-tight">Parcelas por Mês</h2>
+            <p class="text-[11px] text-text-muted mb-3">6 meses atrás → 6 meses à frente</p>
+            <div class="h-64">
               <Bar :data="chartData" :options="chartOptions" />
             </div>
           </section>
 
-          <!-- Active Installments List -->
-          <section class="bg-background-card border border-border-base rounded-lg p-4 sm:p-6">
-            <h2 class="text-15 sm:text-16 font-medium text-text-primary mb-4 sm:mb-6 tracking-tight">Parcelas Ativas ({{ activeInstallments.length }})</h2>
+          <!-- Active Installments List - FLAT -->
+          <section class="border-l-2 border-l-accent-info pl-4 py-2">
+            <h2 class="text-[14px] font-medium text-text-primary mb-3 tracking-tight">Parcelas Ativas ({{ activeInstallments.length }})</h2>
             <EmptyState
               v-if="activeInstallments.length === 0"
               icon="📅"
               title="Nenhuma parcela ativa"
               description="Você não possui parcelas ou financiamentos ativos no momento."
             />
-            <div v-else class="space-y-3 sm:space-y-4">
+            <div v-else class="space-y-2.5">
               <div
                 v-for="installment in activeInstallments"
                 :key="installment.key"
-                class="border border-border-base rounded-lg p-4 sm:p-5 hover:bg-background-hover transition-all duration-150 ease-out bg-background-section"
+                class="border border-border-base rounded-lg p-3 hover:bg-background-hover transition-colors bg-background-section"
               >
-                <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3">
                   <div class="flex-1 min-w-0">
-                    <h3 class="font-medium text-text-primary text-15 sm:text-16 mb-2 tracking-tight truncate">{{ installment.description }}</h3>
-                    <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-13">
+                    <h3 class="font-medium text-text-primary text-[13px] mb-1.5 tracking-tight truncate">{{ installment.description }}</h3>
+                    <div class="flex flex-wrap gap-3 text-[11px]">
                       <span class="text-text-secondary">
                         <span class="font-medium">Origem:</span> {{ installment.origin }}
                       </span>
                       <span class="text-text-secondary">
-                        <span class="font-medium">Valor:</span> {{ formatCurrency(installment.amount) }}/mês
+                        <span class="font-medium">Valor:</span> {{ formatCurrencyCompact(installment.amount) }}/mês
                       </span>
                     </div>
                   </div>
-                  <div class="text-left lg:text-right lg:ml-6">
-                    <div class="text-[20px] sm:text-[24px] font-normal font-serif text-accent-primary">
+                  <div class="text-left lg:text-right lg:ml-4">
+                    <div class="text-[18px] font-normal font-serif text-accent-primary">
                       {{ installment.paid }}/{{ installment.total }}
                     </div>
-                    <div class="text-13 text-text-muted mt-1">
+                    <div class="text-[11px] text-text-muted mt-0.5">
                       {{ installment.remaining }} restantes
                     </div>
-                    <div class="mt-3">
-                      <div class="w-full lg:w-32 bg-background-page rounded-full h-2 border border-border-base">
+                    <div class="mt-2">
+                      <div class="w-full lg:w-28 bg-background-page rounded-full h-1 border border-border-base">
                         <div
-                          class="bg-accent-primary h-2 rounded-full transition-all duration-300 ease-out"
+                          class="bg-accent-primary h-1 rounded-full transition-all"
                           :style="{ width: `${(installment.paid / installment.total) * 100}%` }"
                         ></div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-13">
-                  <div class="bg-background-page rounded-md p-3 border border-border-base">
-                    <div class="flex flex-col sm:flex-row sm:items-center">
-                      <span class="text-text-secondary">Primeira parcela:</span>
-                      <span class="font-medium text-text-primary sm:ml-2">{{ formatDate(installment.firstDate) }}</span>
-                    </div>
+                <div class="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                  <div class="bg-background-page rounded p-2 border border-border-base">
+                    <span class="text-text-secondary">Primeira:</span>
+                    <span class="font-medium text-text-primary ml-1">{{ formatDateCompact(installment.firstDate) }}</span>
                   </div>
-                  <div class="bg-background-page rounded-md p-3 border border-border-base">
-                    <div class="flex flex-col sm:flex-row sm:items-center">
-                      <span class="text-text-secondary">Última parcela:</span>
-                      <span class="font-medium text-text-primary sm:ml-2">{{ formatDate(installment.lastDate) }}</span>
-                    </div>
+                  <div class="bg-background-page rounded p-2 border border-border-base">
+                    <span class="text-text-secondary">Última:</span>
+                    <span class="font-medium text-text-primary ml-1">{{ formatDateCompact(installment.lastDate) }}</span>
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <!-- Monthly Breakdown -->
-          <section class="bg-background-card border border-border-base rounded-lg overflow-hidden">
-            <div class="px-4 sm:px-6 py-3 sm:py-4 bg-background-section border-b border-border-base">
-              <h2 class="text-15 sm:text-16 font-medium text-text-primary tracking-tight">Detalhamento Mensal</h2>
+          <!-- Monthly Breakdown - FLAT -->
+          <section class="border-t border-border-base overflow-hidden">
+            <div class="px-4 py-2.5 bg-background-section border-b border-border-base">
+              <h2 class="text-[14px] font-medium text-text-primary tracking-tight">Detalhamento Mensal</h2>
             </div>
-            
+
             <!-- Desktop Table -->
             <div class="hidden lg:block overflow-x-auto">
               <table class="min-w-full divide-y divide-border-base">
                 <thead class="bg-background-section">
                   <tr>
-                    <th class="px-6 py-4 text-left text-13 font-medium text-text-secondary uppercase tracking-wide">
+                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-text-secondary uppercase tracking-wide">
                       Mês
                     </th>
-                    <th class="px-6 py-4 text-left text-13 font-medium text-text-secondary uppercase tracking-wide">
+                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-text-secondary uppercase tracking-wide">
                       Qtd. Parcelas
                     </th>
-                    <th class="px-6 py-4 text-left text-13 font-medium text-text-secondary uppercase tracking-wide">
+                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-text-secondary uppercase tracking-wide">
                       Total
                     </th>
                   </tr>
@@ -161,28 +144,28 @@
                   <tr
                     v-for="month in monthlyBreakdown"
                     :key="month.monthKey"
-                    class="hover:bg-background-hover transition-all duration-150 ease-out"
+                    class="hover:bg-background-hover transition-colors"
                     :class="{ 'bg-background-section': month.monthKey === currentMonth }"
                   >
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="flex items-center gap-3">
+                    <td class="px-4 py-2.5 whitespace-nowrap">
+                      <div class="flex items-center gap-2">
                         <span
                           v-if="month.monthKey === currentMonth"
-                          class="px-2 py-1 text-[11px] font-semibold rounded-md bg-accent-primary text-text-inverse uppercase tracking-wide"
+                          class="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-accent-primary text-text-inverse uppercase tracking-wide"
                         >
                           Atual
                         </span>
-                        <span class="text-15 font-medium text-text-primary">{{ formatMonthYear(month.monthKey) }}</span>
+                        <span class="text-[13px] font-medium text-text-primary">{{ formatMonthYearCompact(month.monthKey) }}</span>
                       </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="px-3 py-1.5 inline-flex text-13 font-semibold rounded-md bg-accent-info/10 text-accent-info border border-accent-info/20">
+                    <td class="px-4 py-2.5 whitespace-nowrap">
+                      <span class="px-2 py-1 inline-flex text-[11px] font-semibold rounded bg-accent-info/10 text-accent-info border border-accent-info/20">
                         {{ month.count }}
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="text-16 font-semibold text-accent-primary">
-                        {{ formatCurrency(month.total) }}
+                    <td class="px-4 py-2.5 whitespace-nowrap">
+                      <div class="text-[13px] font-semibold text-accent-primary">
+                        {{ formatCurrencyCompact(month.total) }}
                       </div>
                     </td>
                   </tr>
@@ -195,26 +178,26 @@
               <div
                 v-for="month in monthlyBreakdown"
                 :key="month.monthKey"
-                class="p-4 space-y-3"
+                class="p-3 space-y-2"
                 :class="{ 'bg-background-section': month.monthKey === currentMonth }"
               >
                 <div class="flex justify-between items-start">
                   <div class="flex items-center gap-2">
                     <span
                       v-if="month.monthKey === currentMonth"
-                      class="px-2 py-1 text-[10px] font-semibold rounded-md bg-accent-primary text-text-inverse uppercase tracking-wide"
+                      class="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-accent-primary text-text-inverse uppercase tracking-wide"
                     >
                       Atual
                     </span>
-                    <span class="text-15 font-medium text-text-primary">{{ formatMonthYear(month.monthKey) }}</span>
+                    <span class="text-[13px] font-medium text-text-primary">{{ formatMonthYearCompact(month.monthKey) }}</span>
                   </div>
-                  <div class="text-15 font-semibold text-accent-primary">
-                    {{ formatCurrency(month.total) }}
+                  <div class="text-[13px] font-semibold text-accent-primary">
+                    {{ formatCurrencyCompact(month.total) }}
                   </div>
                 </div>
-                <div class="flex justify-between items-center text-13">
+                <div class="flex justify-between items-center text-[11px]">
                   <span class="text-text-secondary">Parcelas:</span>
-                  <span class="px-2 py-1 bg-accent-info/10 text-accent-info rounded-md font-semibold border border-accent-info/20">
+                  <span class="px-2 py-0.5 bg-accent-info/10 text-accent-info rounded font-semibold border border-accent-info/20">
                     {{ month.count }}
                   </span>
                 </div>
@@ -502,6 +485,15 @@ const formatCurrency = (value: number) => {
   }).format(value)
 }
 
+const formatCurrencyCompact = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value)
+}
+
 const formatDate = (dateString: string) => {
   if (!dateString) return '-'
   try {
@@ -512,10 +504,26 @@ const formatDate = (dateString: string) => {
   }
 }
 
+const formatDateCompact = (dateString: string) => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' })
+  } catch {
+    return dateString
+  }
+}
+
 const formatMonthYear = (monthKey: string) => {
   const [year, month] = monthKey.split('-')
   const date = new Date(parseInt(year), parseInt(month) - 1)
   return date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+}
+
+const formatMonthYearCompact = (monthKey: string) => {
+  const [year, month] = monthKey.split('-')
+  const date = new Date(parseInt(year), parseInt(month) - 1)
+  return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
 }
 
 // Data loading
