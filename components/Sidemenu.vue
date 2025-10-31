@@ -1,32 +1,35 @@
 <template>
-  <div class="flex h-screen bg-background-page">
+  <div class="flex min-h-screen bg-background-page">
     <!-- Mobile overlay -->
-        <!-- Overlay para mobile -->
-    <div 
+    <div
       v-if="isMobile && sidebarOpen"
-      class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+      class="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
       @click="closeSidebar"
     ></div>
-    
+
     <!-- Sidebar -->
-    <aside 
+    <aside
       :class="[
-        'fixed lg:static inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 ease-in-out',
-        'bg-slate-900 border-r border-slate-700',
-        isMobile 
-          ? (sidebarOpen ? 'w-80 translate-x-0' : 'w-80 -translate-x-full')
-          : (sidebarOpen ? 'w-80' : 'w-16')
+        'fixed lg:sticky top-0 left-0 h-screen z-50 flex flex-col transition-all duration-300 ease-in-out',
+        'bg-background-sidebar border-r border-border-base',
+        isMobile
+          ? (sidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full')
+          : (sidebarOpen ? 'w-72' : 'w-20')
       ]"
     >
       <!-- Logo/Header -->
-      <div class="h-[72px] px-5 flex items-center justify-between border-b border-border-base">
-        <h1 v-if="isOpen || isMobile" class="text-[18px] lg:text-[22px] font-medium truncate">
+      <div class="h-[72px] px-5 flex items-center justify-between border-b border-border-base flex-shrink-0">
+        <h1
+          v-if="sidebarOpen"
+          class="text-18 lg:text-20 font-medium text-text-primary truncate transition-opacity duration-200"
+        >
           Controle Financeiro
         </h1>
         <button
           @click="toggleSidebar"
-          class="p-2 rounded-md hover:bg-background-hover transition-colors"
-          :class="{ 'mx-auto': !isOpen && !isMobile }"
+          class="p-2 rounded-md hover:bg-background-hover transition-colors text-text-secondary hover:text-text-primary flex-shrink-0"
+          :class="{ 'mx-auto': !sidebarOpen }"
+          :title="sidebarOpen ? 'Fechar menu' : 'Abrir menu'"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -39,44 +42,56 @@
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="2"
-              :d="isOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'"
+              :d="sidebarOpen ? (isMobile ? 'M6 18L18 6M6 6l12 12' : 'M15 19l-7-7 7-7') : 'M4 6h16M4 12h16M4 18h16'"
             />
           </svg>
         </button>
       </div>
 
       <!-- Navigation -->
-      <nav class="flex-1 p-5 space-y-2">
+      <nav class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-1">
         <NuxtLink
           v-for="item in menuItems"
           :key="item.path"
           :to="item.path"
           @click="handleNavigation"
-          class="flex items-center gap-3 h-11 px-3 rounded-md hover:bg-background-hover transition-all duration-150 ease-out text-text-secondary hover:text-text-primary"
+          class="flex items-center gap-3 h-11 px-3 rounded-lg hover:bg-background-hover transition-all duration-150 ease-out text-text-secondary hover:text-text-primary group"
           active-class="bg-background-hover text-accent-primary font-medium"
         >
           <component :is="item.icon" class="h-5 w-5 flex-shrink-0" />
-          <span v-if="sidebarOpen" class="font-normal text-[15px] truncate">{{ item.label }}</span>
+          <span
+            v-if="sidebarOpen"
+            class="font-normal text-15 truncate"
+          >
+            {{ item.label }}
+          </span>
+          <!-- Tooltip for collapsed state -->
+          <span
+            v-if="!sidebarOpen && !isMobile"
+            class="absolute left-full ml-2 px-2 py-1 bg-background-card border border-border-base rounded-md text-13 text-text-primary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+          >
+            {{ item.label }}
+          </span>
         </NuxtLink>
       </nav>
 
       <!-- Footer - Person Filter -->
-      <div class="p-5 border-t border-border-base">
+      <div class="p-4 border-t border-border-base flex-shrink-0">
         <div v-if="sidebarOpen" class="space-y-2">
-          <p class="text-[13px] text-text-muted uppercase font-medium tracking-wide">
+          <p class="text-13 text-text-muted uppercase font-medium tracking-wide">
             Filtrar por pessoa
           </p>
           <select
             v-model="selectedPerson"
-            class="w-full px-4 py-2.5 bg-background-input text-text-primary text-[15px] rounded-md border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
+            class="w-full px-3 py-2.5 bg-background-input text-text-primary text-14 rounded-lg border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
           >
             <option value="Ambos">Ambos</option>
             <option value="Juliana">Juliana</option>
             <option value="Gabriel">Gabriel</option>
           </select>
         </div>
-        <div v-else class="flex justify-center">
-          <div class="w-3 h-3 rounded-full" :class="{
+        <div v-else class="flex justify-center" :title="'Filtro: ' + selectedPerson">
+          <div class="w-3 h-3 rounded-full transition-colors" :class="{
             'bg-accent-info': selectedPerson === 'Juliana',
             'bg-accent-primary': selectedPerson === 'Gabriel',
             'bg-accent-success': selectedPerson === 'Ambos'
@@ -86,7 +101,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-auto lg:overflow-visible">
+    <main class="flex-1 w-full min-w-0">
       <slot />
     </main>
   </div>
@@ -112,9 +127,17 @@ const selectedPerson = computed({
 // Detectar tamanho da tela
 const checkScreenSize = () => {
   if (process.client) {
+    const wasMobile = isMobile.value
     isMobile.value = window.innerWidth < 1024
-    if (isMobile.value) {
-      isOpen.value = false
+
+    // Se mudou de desktop para mobile, fechar sidebar
+    if (!wasMobile && isMobile.value) {
+      closeMobileMenu()
+    }
+
+    // Se mudou de mobile para desktop, abrir sidebar
+    if (wasMobile && !isMobile.value && !isOpen.value) {
+      isOpen.value = true
     }
   }
 }
@@ -139,7 +162,7 @@ const handleNavigation = () => {
   }
 }
 
-// Use mobile menu state for mobile
+// Use mobile menu state for mobile, isOpen for desktop
 const sidebarOpen = computed(() => {
   return isMobile.value ? isMobileMenuOpen.value : isOpen.value
 })
@@ -147,7 +170,9 @@ const sidebarOpen = computed(() => {
 // Lifecycle
 onMounted(() => {
   checkScreenSize()
-  window.addEventListener('resize', checkScreenSize)
+  if (process.client) {
+    window.addEventListener('resize', checkScreenSize)
+  }
 })
 
 onUnmounted(() => {

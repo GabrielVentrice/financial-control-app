@@ -10,28 +10,28 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Claude Dark Design System (Refined)
+        // Claude Dark Design System - Based on design.json
         background: {
           page: '#0C0C0C',
           sidebar: '#1A1A1A',
-          card: '#1A1A1A',        // Mais integrado ao fundo
-          section: '#1A1A1A',     // Uniforme com cards
+          card: '#1F1F1F',
+          section: '#222222',
           hover: '#2A2A2A',
-          input: '#1A1A1A',
+          input: '#1F1F1F',
         },
         border: {
-          base: '#2A2A2A',        // Borda sutil, quase imperceptível
-          subtle: '#2E2E2E',
+          base: '#2E2E2E',
+          subtle: '#393939',
         },
-        divider: '#333333',       // Separação mais sutil
+        divider: '#333333',
         text: {
           primary: '#F3F3F3',
-          secondary: '#B0B0B0',   // Aumenta legibilidade
-          muted: '#888888',
+          secondary: '#B0B0B0',
+          muted: '#777777',
           inverse: '#0A0A0A',
         },
         accent: {
-          primary: '#FF8455',     // Levemente mais pastel
+          primary: '#FF7A45',
           'primary-hover': '#FF8C5E',
           info: '#7ACBD8',
           warning: '#D1B892',
@@ -65,8 +65,8 @@ module.exports = {
       },
       borderRadius: {
         sm: '6px',
-        md: '8px',
-        lg: '10px',
+        md: '10px',
+        lg: '16px',
       },
       lineHeight: {
         normal: '1.6',

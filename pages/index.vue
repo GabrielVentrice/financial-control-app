@@ -2,34 +2,22 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-4 sm:px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="flex items-center gap-3 min-w-0 flex-1">
-          <!-- Mobile menu button -->
-        <!-- Mobile Menu Button -->
-        <button
-          @click="toggleMobileMenu"
-          class="lg:hidden p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-        </button>          <div class="min-w-0 flex-1">
-            <h1 class="text-18 sm:text-20 lg:text-22 font-medium tracking-tight truncate">Dashboard Financeiro</h1>
-            <p class="text-13 text-text-secondary mt-0.5 leading-normal hidden sm:block">{{ getCurrentMonthName() }}</p>
-          </div>
+      <header class="h-[72px] px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
+        <div class="min-w-0 flex-1">
+          <h1 class="text-[22px] font-medium tracking-tight">Dashboard Financeiro</h1>
+          <p class="text-[13px] text-text-secondary mt-1">{{ getCurrentMonthName() }}</p>
         </div>
         <button
           @click="refresh"
           :disabled="loading"
-          class="px-3 py-2 sm:px-[18px] sm:py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-13 sm:text-15 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-150 ease-out font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <span class="hidden sm:inline">{{ loading ? 'Atualizando...' : 'Atualizar' }}</span>
-          <span class="sm:hidden">🔄</span>
+          {{ loading ? 'Atualizando...' : 'Atualizar' }}
         </button>
       </header>
 
       <!-- Content -->
-      <main class="max-w-[1280px] px-4 sm:px-6 lg:px-10 py-6 lg:py-8 space-y-8 lg:space-y-12">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-8 space-y-12">
         <!-- Loading State -->
         <div v-if="loading" class="flex flex-col items-center justify-center py-20">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
@@ -45,7 +33,7 @@
         <!-- Dashboard Content -->
         <template v-else>
           <!-- Alerts -->
-          <section v-if="alerts.length > 0" class="space-y-4">
+          <section v-if="alerts.length > 0" class="space-y-3">
             <div
               v-for="(alert, index) in alerts"
               :key="index"
@@ -54,10 +42,10 @@
                 'border-l-accent-danger': alert.type === 'danger',
                 'border-l-accent-info': alert.type === 'info'
               }"
-              class="border-l-[3px] bg-background-card border border-border-base px-6 py-[14px] rounded-lg"
+              class="border-l-[3px] bg-background-card border border-border-base px-5 py-4 rounded-lg"
             >
-              <h4 class="text-text-primary font-medium text-15">{{ alert.title }}</h4>
-              <p class="text-text-secondary text-13 mt-1 leading-normal">
+              <h4 class="text-text-primary font-medium text-[15px]">{{ alert.title }}</h4>
+              <p class="text-text-secondary text-[13px] mt-1.5">
                 {{ alert.message }}
                 <span v-if="alert.amount" class="font-medium text-text-primary">
                   ({{ formatCurrency(alert.amount) }})
@@ -67,10 +55,10 @@
           </section>
 
           <!-- Summary Cards -->
-          <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
             <!-- Balance Card -->
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:space-y-4 sm:col-span-2 lg:col-span-1">
-              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
+            <div class="bg-background-card border border-border-subtle rounded-lg px-6 py-6 space-y-4">
+              <p class="text-text-muted text-[13px] font-medium uppercase tracking-wider">
                 Saldo do Mês
               </p>
               <p
@@ -78,111 +66,111 @@
                   'text-accent-success': monthlyStats.balance >= 0,
                   'text-accent-danger': monthlyStats.balance < 0
                 }"
-                class="text-[28px] sm:text-[32px] lg:text-[40px] font-normal font-serif tracking-tight break-all"
+                class="text-[40px] font-normal font-serif tracking-tight"
               >
                 {{ formatCurrency(monthlyStats.balance) }}
               </p>
-              <p class="text-text-muted text-13 leading-normal">
+              <p class="text-text-muted text-[13px]">
                 {{ monthlyStats.transactionCount }} transações
               </p>
             </div>
 
             <!-- Income Card -->
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:space-y-4">
-              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
+            <div class="bg-background-card border border-border-subtle rounded-lg px-6 py-6 space-y-4">
+              <p class="text-text-muted text-[13px] font-medium uppercase tracking-wider">
                 Receitas
               </p>
-              <p class="text-[28px] sm:text-[32px] lg:text-[40px] font-normal font-serif text-accent-success tracking-tight break-all">
+              <p class="text-[40px] font-normal font-serif text-accent-success tracking-tight">
                 {{ formatCurrency(monthlyStats.income) }}
               </p>
-              <p class="text-text-muted text-13 leading-normal">Entradas do mês</p>
+              <p class="text-text-muted text-[13px]">Entradas do mês</p>
             </div>
 
             <!-- Expenses Card -->
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:space-y-4">
-              <p class="text-text-secondary text-13 font-medium uppercase tracking-wide">
+            <div class="bg-background-card border border-border-subtle rounded-lg px-6 py-6 space-y-4">
+              <p class="text-text-muted text-[13px] font-medium uppercase tracking-wider">
                 Despesas
               </p>
-              <p class="text-[28px] sm:text-[32px] lg:text-[40px] font-normal font-serif text-accent-danger tracking-tight break-all">
+              <p class="text-[40px] font-normal font-serif text-accent-danger tracking-tight">
                 {{ formatCurrency(monthlyStats.expenses) }}
               </p>
-              <p class="text-text-muted text-13 leading-normal">Saídas do mês</p>
+              <p class="text-text-muted text-[13px]">Saídas do mês</p>
             </div>
           </section>
 
           <!-- Charts and Categories -->
-          <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Income vs Expenses Chart -->
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5">
-              <h2 class="text-15 sm:text-16 font-medium text-text-primary mb-4 sm:mb-6 tracking-tight">Receitas vs Despesas</h2>
-              <div class="h-48 sm:h-56 lg:h-64">
+            <div class="bg-background-card border border-border-subtle rounded-lg px-6 py-6">
+              <h2 class="text-[16px] font-medium text-text-primary mb-6">Receitas vs Despesas</h2>
+              <div class="h-64">
                 <Bar :data="chartData" :options="chartOptions" />
               </div>
             </div>
 
             <!-- Top Categories -->
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5">
-              <h2 class="text-15 sm:text-16 font-medium text-text-primary mb-4 sm:mb-6 tracking-tight">Top Categorias de Gastos</h2>
-              <div v-if="topCategories.length > 0" class="space-y-4 sm:space-y-5">
+            <div class="bg-background-card border border-border-subtle rounded-lg px-6 py-6">
+              <h2 class="text-[16px] font-medium text-text-primary mb-6">Top Categorias de Gastos</h2>
+              <div v-if="topCategories.length > 0" class="space-y-6">
                 <div
                   v-for="category in topCategories"
                   :key="category.name"
-                  class="space-y-2"
+                  class="space-y-2.5"
                 >
-                  <div class="flex justify-between items-start gap-2">
-                    <span class="text-14 sm:text-15 text-text-primary truncate flex-1">
+                  <div class="flex justify-between items-baseline gap-3">
+                    <span class="text-[15px] text-text-primary truncate flex-1">
                       {{ category.name }}
                     </span>
-                    <span class="text-14 sm:text-15 font-semibold text-text-primary whitespace-nowrap">
+                    <span class="text-[15px] font-medium text-text-primary whitespace-nowrap">
                       {{ formatCurrency(category.total) }}
                     </span>
                   </div>
-                  <div class="w-full bg-background-section rounded-full h-2">
+                  <div class="w-full bg-background-section rounded-full h-1.5">
                     <div
-                      class="bg-accent-primary h-2 rounded-full transition-all duration-300 ease-out"
+                      class="bg-accent-primary h-1.5 rounded-full transition-all duration-300 ease-out"
                       :style="{ width: category.percentage + '%' }"
                     ></div>
                   </div>
-                  <div class="flex justify-between text-12 sm:text-13 text-text-muted">
+                  <div class="flex justify-between text-[13px] text-text-muted">
                     <span>{{ category.count }} transações</span>
                     <span>{{ category.percentage.toFixed(1) }}%</span>
                   </div>
                 </div>
               </div>
-              <div v-else class="text-center py-6 sm:py-8 text-text-secondary text-14 sm:text-15">
+              <div v-else class="text-center py-12 text-text-muted text-[15px]">
                 Nenhuma categoria de gasto este mês
               </div>
             </div>
           </section>
 
           <!-- Forecast and Upcoming -->
-          <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+          <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Monthly Forecast -->
-            <div class="lg:col-span-2 bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5">
-              <h2 class="text-15 sm:text-16 font-medium text-text-primary mb-4 sm:mb-6 tracking-tight">Previsão Mensal</h2>
+            <div class="lg:col-span-2 bg-background-card border border-border-subtle rounded-lg px-6 py-6">
+              <h2 class="text-[16px] font-medium text-text-primary mb-6">Previsão Mensal</h2>
 
               <!-- Forecast Cards -->
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-                <div class="bg-background-section rounded-md p-3 sm:p-4 space-y-1 sm:space-y-2">
-                  <p class="text-12 sm:text-13 text-text-secondary font-medium">Receita Projetada</p>
-                  <p class="text-18 sm:text-20 lg:text-22 font-medium text-accent-success tracking-tight break-all">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="bg-background-section rounded-md p-4 space-y-2">
+                  <p class="text-[13px] text-text-muted font-medium">Receita Projetada</p>
+                  <p class="text-[22px] font-medium text-accent-success">
                     {{ formatCurrency(forecast.projectedIncome) }}
                   </p>
                 </div>
-                <div class="bg-background-section rounded-md p-3 sm:p-4 space-y-1 sm:space-y-2">
-                  <p class="text-12 sm:text-13 text-text-secondary font-medium">Despesas Futuras</p>
-                  <p class="text-18 sm:text-20 lg:text-22 font-medium text-accent-danger tracking-tight break-all">
+                <div class="bg-background-section rounded-md p-4 space-y-2">
+                  <p class="text-[13px] text-text-muted font-medium">Despesas Futuras</p>
+                  <p class="text-[22px] font-medium text-accent-danger">
                     {{ formatCurrency(forecast.upcomingExpenses) }}
                   </p>
                 </div>
-                <div class="bg-background-section rounded-md p-3 sm:p-4 space-y-1 sm:space-y-2">
-                  <p class="text-12 sm:text-13 text-text-secondary font-medium">Saldo Projetado</p>
+                <div class="bg-background-section rounded-md p-4 space-y-2">
+                  <p class="text-[13px] text-text-muted font-medium">Saldo Projetado</p>
                   <p
                     :class="{
                       'text-accent-success': forecast.projectedBalance >= 0,
                       'text-accent-danger': forecast.projectedBalance < 0
                     }"
-                    class="text-18 sm:text-20 lg:text-22 font-medium tracking-tight break-all"
+                    class="text-[22px] font-medium"
                   >
                     {{ formatCurrency(forecast.projectedBalance) }}
                   </p>
@@ -190,84 +178,84 @@
               </div>
 
               <!-- Upcoming Expenses List -->
-              <div v-if="upcomingExpenses.length > 0" class="border-t border-divider pt-4 sm:pt-5">
-                <h3 class="text-14 sm:text-15 font-medium text-text-primary mb-3 sm:mb-4">
+              <div v-if="upcomingExpenses.length > 0" class="border-t border-divider pt-5">
+                <h3 class="text-[15px] font-medium text-text-primary mb-4">
                   Próximas Despesas ({{ upcomingExpenses.length }})
                 </h3>
-                <div class="space-y-2 sm:space-y-3 max-h-40 sm:max-h-48 overflow-y-auto">
+                <div class="space-y-0 max-h-48 overflow-y-auto">
                   <div
                     v-for="expense in upcomingExpenses.slice(0, 5)"
                     :key="expense.transactionId"
-                    class="flex justify-between items-start gap-3 py-2 sm:py-3 border-b border-divider last:border-0"
+                    class="flex justify-between items-center gap-4 py-3 border-b border-divider last:border-0"
                   >
                     <div class="flex-1 min-w-0">
-                      <p class="text-14 sm:text-15 text-text-primary truncate">{{ expense.description }}</p>
-                      <p class="text-12 sm:text-13 text-text-muted">{{ formatDate(expense.date) }}</p>
+                      <p class="text-[15px] text-text-primary truncate">{{ expense.description }}</p>
+                      <p class="text-[13px] text-text-muted mt-0.5">{{ formatDate(expense.date) }}</p>
                     </div>
-                    <span class="font-semibold text-14 sm:text-15 text-accent-danger whitespace-nowrap">
+                    <span class="font-medium text-[15px] text-accent-danger whitespace-nowrap">
                       {{ formatCurrency(Math.abs(expense.amount)) }}
                     </span>
                   </div>
                 </div>
               </div>
-              <div v-else class="border-t border-divider pt-4 sm:pt-5 text-center text-text-secondary text-14 sm:text-15">
+              <div v-else class="border-t border-divider pt-5 text-center text-text-muted text-[15px]">
                 Nenhuma despesa futura programada
               </div>
             </div>
 
             <!-- Quick Actions -->
-            <div class="bg-background-card border border-border-base rounded-lg px-4 sm:px-6 py-4 sm:py-5">
-              <h2 class="text-15 sm:text-16 font-medium text-text-primary mb-4 sm:mb-6 tracking-tight">Ações Rápidas</h2>
-              <div class="space-y-2 sm:space-y-3">
+            <div class="bg-background-card border border-border-subtle rounded-lg px-6 py-6">
+              <h2 class="text-[16px] font-medium text-text-primary mb-6">Ações Rápidas</h2>
+              <div class="space-y-3">
                 <NuxtLink
                   to="/transactions"
-                  class="flex items-center gap-3 p-3 sm:p-4 bg-background-section hover:bg-background-hover rounded-md transition-all duration-150 ease-out border border-border-base"
+                  class="flex items-center gap-3 p-4 bg-background-section hover:bg-background-hover rounded-md transition-all duration-150 ease-out"
                 >
-                  <div class="text-lg sm:text-xl">📝</div>
+                  <div class="text-xl">📝</div>
                   <div class="min-w-0 flex-1">
-                    <p class="font-medium text-text-primary text-14 sm:text-15 truncate">Ver Transações</p>
-                    <p class="text-12 sm:text-13 text-text-muted">Lista completa</p>
+                    <p class="font-medium text-text-primary text-[15px]">Ver Transações</p>
+                    <p class="text-[13px] text-text-muted mt-0.5">Lista completa</p>
                   </div>
                 </NuxtLink>
 
                 <NuxtLink
                   to="/categories"
-                  class="flex items-center gap-3 p-3 sm:p-4 bg-background-section hover:bg-background-hover rounded-md transition-all duration-150 ease-out border border-border-base"
+                  class="flex items-center gap-3 p-4 bg-background-section hover:bg-background-hover rounded-md transition-all duration-150 ease-out"
                 >
-                  <div class="text-lg sm:text-xl">📊</div>
+                  <div class="text-xl">📊</div>
                   <div class="min-w-0 flex-1">
-                    <p class="font-medium text-text-primary text-14 sm:text-15 truncate">Categorias</p>
-                    <p class="text-12 sm:text-13 text-text-muted">Análise detalhada</p>
+                    <p class="font-medium text-text-primary text-[15px]">Categorias</p>
+                    <p class="text-[13px] text-text-muted mt-0.5">Análise detalhada</p>
                   </div>
                 </NuxtLink>
 
                 <NuxtLink
                   to="/installments"
-                  class="flex items-center gap-3 p-3 sm:p-4 bg-background-section hover:bg-background-hover rounded-md transition-all duration-150 ease-out border border-border-base"
+                  class="flex items-center gap-3 p-4 bg-background-section hover:bg-background-hover rounded-md transition-all duration-150 ease-out"
                 >
-                  <div class="text-lg sm:text-xl">💳</div>
+                  <div class="text-xl">💳</div>
                   <div class="min-w-0 flex-1">
-                    <p class="font-medium text-text-primary text-14 sm:text-15 truncate">Parcelamentos</p>
-                    <p class="text-12 sm:text-13 text-text-muted">Timeline e análise</p>
+                    <p class="font-medium text-text-primary text-[15px]">Parcelamentos</p>
+                    <p class="text-[13px] text-text-muted mt-0.5">Timeline e análise</p>
                   </div>
                 </NuxtLink>
 
                 <button
                   @click="refresh"
-                  class="w-full flex items-center gap-3 p-3 sm:p-4 bg-background-section hover:bg-background-hover rounded-md transition-all duration-150 ease-out border border-border-base"
+                  class="w-full flex items-center gap-3 p-4 bg-background-section hover:bg-background-hover rounded-md transition-all duration-150 ease-out"
                 >
-                  <div class="text-lg sm:text-xl">🔄</div>
+                  <div class="text-xl">🔄</div>
                   <div class="text-left min-w-0 flex-1">
-                    <p class="font-medium text-text-primary text-14 sm:text-15 truncate">Atualizar Dados</p>
-                    <p class="text-12 sm:text-13 text-text-muted">Sincronizar planilha</p>
+                    <p class="font-medium text-text-primary text-[15px]">Atualizar Dados</p>
+                    <p class="text-[13px] text-text-muted mt-0.5">Sincronizar planilha</p>
                   </div>
                 </button>
               </div>
 
               <!-- Filter Info -->
-              <div class="mt-4 sm:mt-6 p-3 bg-background-section rounded-md border border-border-base">
-                <p class="text-12 sm:text-13 font-medium text-text-muted mb-2">Filtro Atual:</p>
-                <span class="inline-block px-2 sm:px-3 py-1 sm:py-1.5 bg-accent-primary/10 text-accent-primary rounded-md text-12 sm:text-13 font-semibold border border-accent-primary/20">
+              <div class="mt-6 p-4 bg-background-section rounded-md">
+                <p class="text-[13px] font-medium text-text-muted mb-2">Filtro Atual</p>
+                <span class="inline-block px-3 py-1.5 bg-accent-primary/10 text-accent-primary rounded-md text-[13px] font-medium border border-accent-primary/20">
                   {{ selectedPerson }}
                 </span>
               </div>
@@ -304,7 +292,6 @@ const {
 } = useTransactions()
 
 const { selectedPerson } = usePersonFilter()
-const { toggleMobileMenu } = useMobileMenu()
 
 const {
   getCurrentMonthStats,

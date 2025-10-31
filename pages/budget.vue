@@ -2,22 +2,10 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-4 sm:px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="min-w-0 flex-1 flex items-center gap-3">
-          <!-- Mobile Menu Button -->
-          <button
-            @click="toggleMobileMenu"
-            class="lg:hidden p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </button>
-          
-          <div class="min-w-0 flex-1">
-            <h1 class="text-18 sm:text-20 lg:text-22 font-medium tracking-tight truncate">Configuração de Orçamento</h1>
-            <p class="text-13 text-text-secondary mt-0.5 leading-normal hidden sm:block">Defina orçamentos mensais separados para Juliana e Gabriel</p>
-          </div>
+      <header class="h-[72px] px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
+        <div class="min-w-0 flex-1">
+          <h1 class="text-[22px] font-medium tracking-tight">Configuração de Orçamento</h1>
+          <p class="text-[13px] text-text-secondary mt-1">Defina orçamentos mensais separados para Juliana e Gabriel</p>
         </div>
         <div class="flex items-center gap-2 sm:gap-3">
           <button
@@ -65,7 +53,7 @@
       </div>
 
       <!-- Content -->
-      <main class="max-w-[1280px] px-4 sm:px-6 lg:px-10 py-6 lg:py-8 space-y-8 lg:space-y-12">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-8 space-y-8">
         <!-- Loading State -->
         <div v-if="loading" class="flex flex-col items-center justify-center py-20">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
@@ -282,7 +270,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import type { BudgetsResponse, CategoriesResponse, BudgetInput } from '~/types/transaction'
 
 // Composables
-const { toggleMobileMenu } = useMobileMenu()
 
 // State
 const loading = ref(false)

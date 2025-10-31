@@ -2,87 +2,74 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-4 sm:px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="min-w-0 flex-1 flex items-center gap-3">
-          <!-- Mobile Menu Button -->
-          <button
-            @click="toggleMobileMenu"
-            class="lg:hidden p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </button>
-          
-          <div class="min-w-0 flex-1">
-            <h1 class="text-18 sm:text-20 lg:text-22 font-medium tracking-tight truncate">Todas as Transações</h1>
-            <p class="text-13 text-text-secondary mt-0.5 leading-normal hidden sm:block">Visualize e filtre todas as suas transações</p>
-          </div>
+      <header class="h-[72px] px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
+        <div class="min-w-0 flex-1">
+          <h1 class="text-[22px] font-medium tracking-tight">Todas as Transações</h1>
+          <p class="text-[13px] text-text-secondary mt-1">Visualize e filtre todas as suas transações</p>
         </div>
         <button
           @click="refreshData"
           :disabled="loading"
-          class="px-3 py-2 sm:px-[18px] sm:py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-13 sm:text-15 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-150 ease-out font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <span class="hidden sm:inline">{{ loading ? 'Atualizando...' : 'Atualizar' }}</span>
-          <span class="sm:hidden">🔄</span>
+          {{ loading ? 'Atualizando...' : 'Atualizar' }}
         </button>
       </header>
 
       <!-- Filters -->
-      <div class="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 border-b border-border-base">
-        <div class="bg-background-card border border-border-base rounded-lg p-4 sm:p-6">
+      <div class="px-6 lg:px-10 py-6 border-b border-border-base">
+        <div class="max-w-[1400px] mx-auto bg-background-card border border-border-subtle rounded-lg p-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div class="sm:col-span-2 lg:col-span-1">
-              <label class="block text-13 font-medium text-text-secondary mb-2">
+              <label class="block text-[13px] font-medium text-text-muted mb-2">
                 Buscar por descrição
               </label>
               <input
                 v-model="searchTerm"
                 type="text"
                 placeholder="Buscar..."
-                class="w-full px-4 py-2.5 bg-background-input text-text-primary text-15 rounded-md border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
+                class="w-full px-4 py-3 bg-background-input text-text-primary text-[15px] rounded-md border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-primary transition-all"
               />
             </div>
 
             <div>
-              <label class="block text-13 font-medium text-text-secondary mb-2">
+              <label class="block text-[13px] font-medium text-text-muted mb-2">
                 Data inicial
               </label>
               <input
                 v-model="startDate"
                 type="date"
-                class="w-full px-4 py-2.5 bg-background-input text-text-primary text-15 rounded-md border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
+                class="w-full px-4 py-3 bg-background-input text-text-primary text-[15px] rounded-md border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-primary transition-all"
               />
             </div>
 
             <div>
-              <label class="block text-13 font-medium text-text-secondary mb-2">
+              <label class="block text-[13px] font-medium text-text-muted mb-2">
                 Data final
               </label>
               <input
                 v-model="endDate"
                 type="date"
-                class="w-full px-4 py-2.5 bg-background-input text-text-primary text-15 rounded-md border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-info transition-all"
+                class="w-full px-4 py-3 bg-background-input text-text-primary text-[15px] rounded-md border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-primary transition-all"
               />
             </div>
           </div>
 
-          <div class="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-13">
-              <span class="font-medium text-text-secondary whitespace-nowrap">Filtros ativos:</span>
-              <span class="px-2 sm:px-3 py-1 sm:py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20 text-12 sm:text-13">
+          <div class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-2 text-[13px]">
+              <span class="font-medium text-text-muted">Filtros ativos:</span>
+              <span class="px-3 py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-medium border border-accent-primary/20">
                 {{ selectedPerson }}
               </span>
-              <span v-if="startDate || endDate" class="px-2 sm:px-3 py-1 sm:py-1.5 bg-accent-info/10 text-accent-info rounded-md font-semibold border border-accent-info/20 text-12 sm:text-13">
+              <span v-if="startDate || endDate" class="px-3 py-1.5 bg-accent-info/10 text-accent-info rounded-md font-medium border border-accent-info/20">
                 {{ dateRangeLabel }}
               </span>
             </div>
 
-            <div class="flex gap-3">
+            <div>
               <button
                 @click="clearFilters"
-                class="px-3 sm:px-4 py-2 text-text-secondary bg-background-section rounded-md hover:bg-background-hover border border-border-base transition-all duration-150 ease-out text-14 sm:text-15"
+                class="px-4 py-2 text-text-secondary bg-background-section rounded-md hover:bg-background-hover transition-all duration-150 ease-out text-[15px]"
               >
                 Limpar Filtros
               </button>
@@ -92,7 +79,7 @@
       </div>
 
       <!-- Content -->
-      <main class="max-w-[1280px] px-4 sm:px-6 lg:px-10 py-6 lg:py-8 space-y-6 lg:space-y-8">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-8 space-y-8">
         <!-- Loading State -->
         <div v-if="loading" class="flex flex-col items-center justify-center py-20">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
@@ -262,7 +249,6 @@ import type { Transaction } from '~/types/transaction'
 
 // Composables
 const { selectedPerson } = usePersonFilter()
-const { toggleMobileMenu } = useMobileMenu()
 
 // State
 const transactions = ref<Transaction[]>([])

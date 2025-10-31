@@ -2,35 +2,22 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-4 sm:px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="min-w-0 flex-1 flex items-center gap-3">
-          <!-- Mobile Menu Button -->
-          <button
-            @click="toggleMobileMenu"
-            class="lg:hidden p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </button>
-          
-          <div class="min-w-0 flex-1">
-            <h1 class="text-18 sm:text-20 lg:text-22 font-medium tracking-tight truncate">Histórico de Custos Fixos</h1>
-            <p class="text-13 text-text-secondary mt-0.5 leading-normal hidden sm:block">Análise dos últimos 6 meses de custos fixos</p>
-          </div>
+      <header class="h-[72px] px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
+        <div class="min-w-0 flex-1">
+          <h1 class="text-[22px] font-medium tracking-tight">Histórico de Custos Fixos</h1>
+          <p class="text-[13px] text-text-secondary mt-1">Análise dos últimos 6 meses de custos fixos</p>
         </div>
         <button
           @click="refreshData"
           :disabled="loading"
-          class="px-3 py-2 sm:px-[18px] sm:py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-13 sm:text-15 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-150 ease-out font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <span class="hidden sm:inline">{{ loading ? 'Atualizando...' : 'Atualizar' }}</span>
-          <span class="sm:hidden">🔄</span>
+          {{ loading ? 'Atualizando...' : 'Atualizar' }}
         </button>
       </header>
 
       <!-- Filter Info -->
-      <div class="px-4 sm:px-6 lg:px-10 py-4 border-b border-border-base">
+      <div class="px-6 lg:px-10 py-6 border-b border-border-base">
         <div class="flex items-center gap-2 text-13 mb-4">
           <span class="font-medium text-text-secondary whitespace-nowrap">Pessoa:</span>
           <span class="px-2 sm:px-3 py-1 sm:py-1.5 bg-accent-primary/10 text-accent-primary rounded-md font-semibold border border-accent-primary/20 text-12 sm:text-13">
@@ -61,7 +48,7 @@
       </div>
 
       <!-- Content -->
-      <main class="max-w-[1280px] px-4 sm:px-6 lg:px-10 py-6 lg:py-8 space-y-6 lg:space-y-8">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-8 space-y-8">
         <!-- Loading State -->
         <div v-if="loading" class="flex flex-col items-center justify-center py-20">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
@@ -288,7 +275,6 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 // Composables
 const { selectedPerson } = usePersonFilter()
-const { toggleMobileMenu } = useMobileMenu()
 const { processInstallments } = useInstallments()
 
 // State
