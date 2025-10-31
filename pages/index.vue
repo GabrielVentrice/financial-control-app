@@ -2,33 +2,34 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="min-w-0 flex-1">
-          <h1 class="text-[22px] font-medium tracking-tight">Dashboard Financeiro</h1>
-          <p class="text-[13px] text-text-secondary mt-1">{{ getCurrentMonthName() }}</p>
-        </div>
-        <button
-          @click="refresh"
-          :disabled="loading"
-          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-150 ease-out font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {{ loading ? 'Atualizando...' : 'Atualizar' }}
-        </button>
-      </header>
+      <PageHeader
+        title="Dashboard Financeiro"
+        :subtitle="getCurrentMonthName()"
+      >
+        <template #actions>
+          <BaseButton
+            @click="refresh"
+            :loading="loading"
+            :disabled="loading"
+          >
+            Atualizar
+          </BaseButton>
+        </template>
+      </PageHeader>
 
       <!-- Content -->
       <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-8 space-y-12">
         <!-- Loading State -->
-        <div v-if="loading" class="flex flex-col items-center justify-center py-20">
-          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
-          <p class="mt-4 text-text-secondary text-15">Carregando dados financeiros...</p>
-        </div>
+        <LoadingState
+          v-if="loading"
+          message="Carregando dados financeiros..."
+        />
 
         <!-- Error State -->
-        <div v-else-if="error" class="border-l-[3px] border-l-accent-danger bg-background-card border border-border-base p-5 rounded-lg">
-          <h4 class="text-text-primary font-medium text-15">Erro ao carregar dados</h4>
-          <p class="text-text-secondary text-13 mt-1 leading-normal">{{ error }}</p>
-        </div>
+        <ErrorState
+          v-else-if="error"
+          :message="error"
+        />
 
         <!-- Dashboard Content -->
         <template v-else>
@@ -57,45 +58,31 @@
           <!-- Summary Cards -->
           <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
             <!-- Balance Card -->
-            <div class="bg-background-card border border-border-subtle rounded-lg px-6 py-6 space-y-4">
-              <p class="text-text-muted text-[13px] font-medium uppercase tracking-wider">
-                Saldo do Mês
-              </p>
-              <p
-                :class="{
-                  'text-accent-success': monthlyStats.balance >= 0,
-                  'text-accent-danger': monthlyStats.balance < 0
-                }"
-                class="text-[40px] font-normal font-serif tracking-tight"
-              >
-                {{ formatCurrency(monthlyStats.balance) }}
-              </p>
-              <p class="text-text-muted text-[13px]">
-                {{ monthlyStats.transactionCount }} transações
-              </p>
-            </div>
+            <KpiCard
+              label="Saldo do Mês"
+              :value="monthlyStats.balance"
+              :subtitle="`${monthlyStats.transactionCount} transações`"
+              format="currency"
+              :value-color="monthlyStats.balance >= 0 ? 'success' : 'danger'"
+            />
 
             <!-- Income Card -->
-            <div class="bg-background-card border border-border-subtle rounded-lg px-6 py-6 space-y-4">
-              <p class="text-text-muted text-[13px] font-medium uppercase tracking-wider">
-                Receitas
-              </p>
-              <p class="text-[40px] font-normal font-serif text-accent-success tracking-tight">
-                {{ formatCurrency(monthlyStats.income) }}
-              </p>
-              <p class="text-text-muted text-[13px]">Entradas do mês</p>
-            </div>
+            <KpiCard
+              label="Receitas"
+              :value="monthlyStats.income"
+              subtitle="Entradas do mês"
+              format="currency"
+              value-color="success"
+            />
 
             <!-- Expenses Card -->
-            <div class="bg-background-card border border-border-subtle rounded-lg px-6 py-6 space-y-4">
-              <p class="text-text-muted text-[13px] font-medium uppercase tracking-wider">
-                Despesas
-              </p>
-              <p class="text-[40px] font-normal font-serif text-accent-danger tracking-tight">
-                {{ formatCurrency(monthlyStats.expenses) }}
-              </p>
-              <p class="text-text-muted text-[13px]">Saídas do mês</p>
-            </div>
+            <KpiCard
+              label="Despesas"
+              :value="monthlyStats.expenses"
+              subtitle="Saídas do mês"
+              format="currency"
+              value-color="danger"
+            />
           </section>
 
           <!-- Charts and Categories -->
@@ -151,26 +138,26 @@
 
               <!-- Forecast Cards -->
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div class="bg-background-section rounded-md p-4 space-y-2">
+                <div class="bg-background-section rounded-md px-4 py-4 space-y-2 border border-border-base hover:border-border-subtle transition-colors">
                   <p class="text-[13px] text-text-muted font-medium">Receita Projetada</p>
-                  <p class="text-[22px] font-medium text-accent-success">
+                  <p class="text-[24px] font-semibold text-accent-success">
                     {{ formatCurrency(forecast.projectedIncome) }}
                   </p>
                 </div>
-                <div class="bg-background-section rounded-md p-4 space-y-2">
+                <div class="bg-background-section rounded-md px-4 py-4 space-y-2 border border-border-base hover:border-border-subtle transition-colors">
                   <p class="text-[13px] text-text-muted font-medium">Despesas Futuras</p>
-                  <p class="text-[22px] font-medium text-accent-danger">
+                  <p class="text-[24px] font-semibold text-accent-danger">
                     {{ formatCurrency(forecast.upcomingExpenses) }}
                   </p>
                 </div>
-                <div class="bg-background-section rounded-md p-4 space-y-2">
+                <div class="bg-background-section rounded-md px-4 py-4 space-y-2 border border-border-base hover:border-border-subtle transition-colors">
                   <p class="text-[13px] text-text-muted font-medium">Saldo Projetado</p>
                   <p
                     :class="{
                       'text-accent-success': forecast.projectedBalance >= 0,
                       'text-accent-danger': forecast.projectedBalance < 0
                     }"
-                    class="text-[22px] font-medium"
+                    class="text-[24px] font-semibold"
                   >
                     {{ formatCurrency(forecast.projectedBalance) }}
                   </p>

@@ -2,19 +2,16 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="min-w-0 flex-1">
-          <h1 class="text-[22px] font-medium tracking-tight">Todas as Transações</h1>
-          <p class="text-[13px] text-text-secondary mt-1">Visualize e filtre todas as suas transações</p>
-        </div>
-        <button
-          @click="refreshData"
-          :disabled="loading"
-          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-150 ease-out font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {{ loading ? 'Atualizando...' : 'Atualizar' }}
-        </button>
-      </header>
+      <PageHeader
+        title="Todas as Transações"
+        subtitle="Visualize e filtre todas as suas transações"
+      >
+        <template #actions>
+          <BaseButton @click="refreshData" :loading="loading">
+            Atualizar
+          </BaseButton>
+        </template>
+      </PageHeader>
 
       <!-- Filters -->
       <div class="px-6 lg:px-10 py-6 border-b border-border-base">
@@ -81,16 +78,10 @@
       <!-- Content -->
       <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-8 space-y-8">
         <!-- Loading State -->
-        <div v-if="loading" class="flex flex-col items-center justify-center py-20">
-          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
-          <p class="mt-4 text-text-secondary text-15">Carregando transações...</p>
-        </div>
+        <LoadingState v-if="loading" message="Carregando transações..." />
 
         <!-- Error State -->
-        <div v-else-if="error" class="border-l-[3px] border-l-accent-danger bg-background-card border border-border-base p-5 rounded-lg">
-          <h4 class="text-text-primary font-medium text-15">Erro ao carregar dados</h4>
-          <p class="text-text-secondary text-13 mt-1 leading-normal">{{ error }}</p>
-        </div>
+        <ErrorState v-else-if="error" :message="error" />
 
         <!-- Content -->
         <template v-else>
@@ -206,9 +197,12 @@
             </div>
 
             <!-- Empty State -->
-            <div v-if="filteredTransactions.length === 0" class="text-center py-12">
-              <p class="text-text-secondary text-15">Nenhuma transação encontrada com os filtros aplicados</p>
-            </div>
+            <EmptyState
+              v-if="filteredTransactions.length === 0"
+              icon="🔍"
+              title="Nenhuma transação encontrada"
+              description="Tente ajustar os filtros ou selecionar um período diferente para ver suas transações."
+            />
 
             <!-- Pagination -->
             <div v-if="filteredTransactions.length > pageSize" class="bg-background-section px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 border-t border-border-base">

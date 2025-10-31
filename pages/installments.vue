@@ -2,19 +2,16 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="min-w-0 flex-1">
-          <h1 class="text-[22px] font-medium tracking-tight">Análise de Parcelas</h1>
-          <p class="text-[13px] text-text-secondary mt-1">Visualize parcelas passadas e futuras por período</p>
-        </div>
-        <button
-          @click="refreshData"
-          :disabled="loading"
-          class="px-[18px] py-[10px] bg-accent-primary hover:bg-accent-primary-hover text-text-inverse rounded-md transition-all duration-150 ease-out font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {{ loading ? 'Atualizando...' : 'Atualizar' }}
-        </button>
-      </header>
+      <PageHeader
+        title="Análise de Parcelas"
+        subtitle="Visualize parcelas passadas e futuras por período"
+      >
+        <template #actions>
+          <BaseButton @click="refreshData" :loading="loading">
+            Atualizar
+          </BaseButton>
+        </template>
+      </PageHeader>
 
       <!-- Filter Info -->
       <div class="px-6 lg:px-10 py-6 border-b border-border-base">
@@ -29,16 +26,10 @@
       <!-- Content -->
       <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-8 space-y-8">
         <!-- Loading State -->
-        <div v-if="loading" class="flex flex-col items-center justify-center py-20">
-          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
-          <p class="mt-4 text-text-secondary text-15">Carregando dados...</p>
-        </div>
+        <LoadingState v-if="loading" message="Carregando parcelas..." />
 
         <!-- Error State -->
-        <div v-else-if="error" class="border-l-[3px] border-l-accent-danger bg-background-card border border-border-base p-5 rounded-lg">
-          <h4 class="text-text-primary font-medium text-15">Erro ao carregar dados</h4>
-          <p class="text-text-secondary text-13 mt-1 leading-normal">{{ error }}</p>
-        </div>
+        <ErrorState v-else-if="error" :message="error" />
 
         <!-- Content -->
         <template v-else>
@@ -85,9 +76,12 @@
           <!-- Active Installments List -->
           <section class="bg-background-card border border-border-base rounded-lg p-4 sm:p-6">
             <h2 class="text-15 sm:text-16 font-medium text-text-primary mb-4 sm:mb-6 tracking-tight">Parcelas Ativas ({{ activeInstallments.length }})</h2>
-            <div v-if="activeInstallments.length === 0" class="text-center py-8 sm:py-12">
-              <p class="text-text-secondary text-14 sm:text-15">Nenhuma parcela ativa encontrada</p>
-            </div>
+            <EmptyState
+              v-if="activeInstallments.length === 0"
+              icon="📅"
+              title="Nenhuma parcela ativa"
+              description="Você não possui parcelas ou financiamentos ativos no momento."
+            />
             <div v-else class="space-y-3 sm:space-y-4">
               <div
                 v-for="installment in activeInstallments"

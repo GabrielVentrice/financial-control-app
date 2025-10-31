@@ -2,30 +2,27 @@
   <Sidemenu>
     <div class="bg-background-page text-text-primary min-h-screen">
       <!-- Header -->
-      <header class="h-[72px] px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="min-w-0 flex-1">
-          <h1 class="text-[22px] font-medium tracking-tight">Configuração de Orçamento</h1>
-          <p class="text-[13px] text-text-secondary mt-1">Defina orçamentos mensais separados para Juliana e Gabriel</p>
-        </div>
-        <div class="flex items-center gap-2 sm:gap-3">
-          <button
+      <PageHeader
+        title="Configuração de Orçamento"
+        subtitle="Defina orçamentos mensais separados para Juliana e Gabriel"
+      >
+        <template #actions>
+          <BaseButton
+            variant="secondary"
             @click="loadData"
-            :disabled="loading"
-            class="px-3 py-2 sm:px-[18px] sm:py-[10px] bg-background-section hover:bg-background-hover text-text-primary rounded-md transition-all duration-200 ease-out font-medium text-13 sm:text-15 disabled:opacity-40 disabled:cursor-not-allowed border border-border-base"
+            :loading="loading"
           >
-            <span class="hidden sm:inline">{{ loading ? 'Carregando...' : 'Atualizar' }}</span>
-            <span class="sm:hidden">🔄</span>
-          </button>
-          <button
+            Atualizar
+          </BaseButton>
+          <BaseButton
             @click="saveBudgets"
-            :disabled="saving || !hasChanges"
-            class="px-3 py-2 sm:px-[18px] sm:py-[10px] bg-accent-success hover:bg-accent-success/90 text-text-inverse rounded-md transition-all duration-200 ease-out font-medium text-13 sm:text-15 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            :loading="saving"
+            :disabled="!hasChanges"
           >
-            <span class="hidden sm:inline">{{ saving ? 'Salvando...' : 'Salvar Orçamentos' }}</span>
-            <span class="sm:hidden">💾</span>
-          </button>
-        </div>
-      </header>
+            {{ saving ? 'Salvando...' : 'Salvar Orçamentos' }}
+          </BaseButton>
+        </template>
+      </PageHeader>
 
       <!-- Month Selector & Messages -->
       <div class="px-4 sm:px-6 lg:px-10 py-4 border-b border-border-base space-y-3">
@@ -41,24 +38,30 @@
           <span class="text-13 text-text-muted">{{ formattedMonth }}</span>
         </div>
 
-        <!-- Success Message -->
-        <div v-if="successMessage" class="border-l-[3px] border-accent-success bg-background-card p-3 sm:p-4 rounded-lg">
-          <p class="text-text-primary text-14 sm:text-15 font-medium">{{ successMessage }}</p>
-        </div>
+        <!-- Alert Messages -->
+        <Alert
+          v-if="successMessage"
+          v-model="showSuccessAlert"
+          variant="success"
+          :message="successMessage"
+          :auto-dismiss="true"
+          :auto-dismiss-delay="5000"
+          @dismiss="successMessage = null"
+        />
 
-        <!-- Error Message -->
-        <div v-if="errorMessage" class="border-l-[3px] border-accent-danger bg-background-card p-3 sm:p-4 rounded-lg">
-          <p class="text-text-primary text-14 sm:text-15 font-medium">{{ errorMessage }}</p>
-        </div>
+        <Alert
+          v-if="errorMessage"
+          v-model="showErrorAlert"
+          variant="error"
+          :message="errorMessage"
+          @dismiss="errorMessage = null"
+        />
       </div>
 
       <!-- Content -->
       <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-8 space-y-8">
         <!-- Loading State -->
-        <div v-if="loading" class="flex flex-col items-center justify-center py-20">
-          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-accent-primary border-t-transparent"></div>
-          <p class="mt-4 text-text-secondary text-15">Carregando dados...</p>
-        </div>
+        <LoadingState v-if="loading" message="Carregando orçamentos..." />
 
         <!-- Content -->
         <template v-else>
@@ -246,11 +249,12 @@
             </div>
 
             <!-- Empty State -->
-            <div v-if="filteredCategories.length === 0" class="text-center py-12">
-              <p class="text-text-secondary text-15">
-                {{ searchQuery ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria disponível' }}
-              </p>
-            </div>
+            <EmptyState
+              v-if="filteredCategories.length === 0"
+              icon="🔍"
+              :title="searchQuery ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria disponível'"
+              :description="searchQuery ? 'Tente usar termos de busca diferentes.' : 'Não há categorias disponíveis para configurar orçamentos.'"
+            />
           </section>
 
           <!-- Info Note -->
@@ -276,6 +280,8 @@ const loading = ref(false)
 const saving = ref(false)
 const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
+const showSuccessAlert = ref(false)
+const showErrorAlert = ref(false)
 const searchQuery = ref('')
 const hasChanges = ref(false)
 
@@ -440,6 +446,8 @@ const markAsChanged = () => {
 const clearMessages = () => {
   errorMessage.value = null
   successMessage.value = null
+  showErrorAlert.value = false
+  showSuccessAlert.value = false
 }
 
 const loadData = async () => {
@@ -487,6 +495,7 @@ const loadData = async () => {
     hasChanges.value = false
   } catch (e: any) {
     errorMessage.value = e.data || 'Não foi possível carregar os dados. Tente novamente.'
+    showErrorAlert.value = true
   } finally {
     loading.value = false
   }
@@ -528,6 +537,7 @@ const saveBudgets = async () => {
 
     if (budgetsToSave.length === 0) {
       errorMessage.value = 'Nenhum orçamento foi definido. Defina pelo menos um orçamento para salvar.'
+      showErrorAlert.value = true
       return
     }
 
@@ -537,6 +547,7 @@ const saveBudgets = async () => {
     })
 
     successMessage.value = `${budgetsToSave.length} orçamento(s) salvos com sucesso!`
+    showSuccessAlert.value = true
     hasChanges.value = false
 
     setTimeout(() => {
@@ -544,6 +555,7 @@ const saveBudgets = async () => {
     }, 1000)
   } catch (e: any) {
     errorMessage.value = e.data?.message || e.data || 'Não foi possível salvar os orçamentos. Tente novamente.'
+    showErrorAlert.value = true
   } finally {
     saving.value = false
   }
