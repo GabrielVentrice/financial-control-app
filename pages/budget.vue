@@ -1,12 +1,12 @@
 <template>
   <Sidemenu>
-    <div class="bg-background-page text-text-primary min-h-screen">
-      <!-- Compact Header with actions -->
-      <header class="h-14 px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="flex items-baseline gap-3">
-          <h1 class="text-[18px] font-medium tracking-tight">Orçamento</h1>
+    <div class="bg-[#FAFBFC] text-gray-800 min-h-screen">
+      <!-- Header - Clean, sem bordas pesadas -->
+      <header class="h-16 px-6 lg:px-12 flex items-center justify-between border-b border-gray-100">
+        <div class="flex items-baseline gap-4">
+          <h1 class="text-2xl font-normal tracking-tight text-gray-800">Orçamento</h1>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
           <BaseButton size="sm" variant="secondary" @click="loadData" :loading="loading">
             Atualizar
           </BaseButton>
@@ -16,18 +16,18 @@
         </div>
       </header>
 
-      <!-- Month Selector & Messages - COMPACT -->
-      <div class="px-6 lg:px-10 py-3 border-b border-border-base space-y-2">
-        <div class="flex items-center gap-3">
-          <label class="text-[11px] font-medium text-text-secondary whitespace-nowrap uppercase tracking-wide">
+      <!-- Month Selector & Messages - Light Design -->
+      <div class="px-6 lg:px-12 py-6 bg-gray-50/50 border-b border-gray-100 space-y-4">
+        <div class="flex items-center gap-4">
+          <label class="text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">
             Período:
           </label>
           <input
             v-model="selectedMonth"
             type="month"
-            class="px-3 py-1.5 text-[13px] bg-background-input text-text-primary border border-border-subtle rounded focus:outline-none focus:ring-1 focus:ring-accent-info transition-all"
+            class="px-4 py-3 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
           />
-          <span class="text-[11px] text-text-muted">{{ formattedMonth }}</span>
+          <span class="text-sm text-gray-400">{{ formattedMonth }}</span>
         </div>
 
         <!-- Alert Messages -->
@@ -51,63 +51,79 @@
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-5 space-y-4">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-10 space-y-12">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando orçamentos..." />
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Cards - DENSE -->
-          <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <DenseStatCard
-              label="Juliana"
-              :value="totalBudgetJuliana"
-              format="currency"
-              value-color="info"
-              :secondary-stat="{ label: categoriesWithBudgetJuliana + ' cat.', value: '' }"
-            />
+          <!-- Summary Cards - 3 COLUNAS + 1 secundária -->
+          <section>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <LightStatCard
+                label="Juliana"
+                :value="totalBudgetJuliana"
+                format="currency"
+                value-color="info"
+                size="lg"
+                :secondary-stat="{ label: categoriesWithBudgetJuliana + ' categorias', value: '' }"
+              />
 
-            <DenseStatCard
-              label="Gabriel"
-              :value="totalBudgetGabriel"
-              format="currency"
-              value-color="primary"
-              :secondary-stat="{ label: categoriesWithBudgetGabriel + ' cat.', value: '' }"
-            />
+              <LightStatCard
+                label="Gabriel"
+                :value="totalBudgetGabriel"
+                format="currency"
+                value-color="primary"
+                size="lg"
+                :secondary-stat="{ label: categoriesWithBudgetGabriel + ' categorias', value: '' }"
+              />
 
-            <DenseStatCard
-              label="Total"
-              :value="totalBudget"
-              format="currency"
-              value-color="success"
-              :secondary-stat="{ label: formatMonthCompact(), value: '' }"
-            />
+              <LightStatCard
+                label="Total Orçado"
+                :value="totalBudget"
+                format="currency"
+                value-color="success"
+                size="lg"
+                :secondary-stat="{ label: formatMonthCompact(), value: '' }"
+              />
+            </div>
 
-            <DenseStatCard
-              label="Configuradas"
-              :value="categoriesWithBudget"
-              format="number"
-              value-color="warning"
-              :secondary-stat="{ label: 'de ' + availableCategories.length, value: '' }"
-            />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+              <LightStatCard
+                label="Configuradas"
+                :value="categoriesWithBudget"
+                format="number"
+                value-color="warning"
+                size="md"
+                :secondary-stat="{ label: 'de ' + availableCategories.length, value: '' }"
+              />
+
+              <LightStatCard
+                label="Média por Categoria"
+                :value="categoriesWithBudget > 0 ? totalBudget / categoriesWithBudget : 0"
+                format="currency"
+                value-color="default"
+                size="md"
+              />
+            </div>
           </section>
 
-          <!-- Budget Configuration - FLAT -->
-          <section class="border-t border-border-base overflow-hidden">
+          <!-- Budget Configuration - Light Design -->
+          <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
             <!-- Header with Search -->
-            <div class="px-4 py-2.5 bg-background-section border-b border-border-base flex items-center justify-between gap-3">
-              <h2 class="text-[14px] font-medium text-text-primary tracking-tight">Orçamentos por Categoria</h2>
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-4">
+              <h2 class="text-lg font-normal text-gray-700">Orçamentos por Categoria</h2>
               <input
                 v-model="searchQuery"
                 type="text"
                 placeholder="Buscar..."
-                class="px-3 py-1.5 text-[13px] bg-background-input text-text-primary border border-border-subtle rounded focus:outline-none focus:ring-1 focus:ring-accent-info transition-all w-48"
+                class="px-4 py-3 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all w-64"
               />
             </div>
 
             <!-- Desktop Table Header -->
-            <div class="hidden lg:block px-4 py-2 bg-background-section border-b border-border-base">
-              <div class="grid grid-cols-12 gap-3 items-center text-[11px] font-medium text-text-secondary uppercase tracking-wide">
+            <div class="hidden lg:block px-6 py-3 bg-gray-50/50 border-b border-gray-100">
+              <div class="grid grid-cols-12 gap-4 items-center text-xs font-medium text-gray-400 uppercase tracking-wider">
                 <div class="col-span-5">Categoria</div>
                 <div class="col-span-3 text-center">Juliana</div>
                 <div class="col-span-3 text-center">Gabriel</div>
@@ -115,55 +131,48 @@
               </div>
             </div>
 
-            <!-- Mobile Header -->
-            <div class="lg:hidden px-4 py-2 bg-background-section border-b border-border-base">
-              <p class="text-[11px] font-medium text-text-secondary uppercase tracking-wide">Configure os orçamentos</p>
-            </div>
-
             <!-- Categories List -->
-            <div class="divide-y divide-border-base">
+            <div class="divide-y divide-gray-100">
               <div
                 v-for="category in filteredCategories"
                 :key="category"
-                class="px-4 py-3 hover:bg-background-hover transition-colors"
+                class="px-6 py-4 hover:bg-gray-50 transition-colors"
               >
-                <!-- Desktop Layout - COMPACT -->
-                <div class="hidden lg:grid grid-cols-12 gap-3 items-center">
+                <!-- Desktop Layout - Light Design -->
+                <div class="hidden lg:grid grid-cols-12 gap-4 items-center">
                   <!-- Category Name -->
-                  <div class="col-span-5 flex items-center gap-2">
-                    <div class="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded bg-background-section border border-border-base">
-                      <span class="text-[14px]">{{ getCategoryIcon(category) }}</span>
-                    </div>
-                    <p class="text-[13px] font-medium text-text-primary truncate">{{ category }}</p>
+                  <div class="col-span-5 flex items-center gap-3">
+                    <span class="text-lg">{{ getCategoryIcon(category) }}</span>
+                    <p class="text-sm font-normal text-gray-700 truncate">{{ category }}</p>
                   </div>
 
-                  <!-- Juliana Input -->
+                  <!-- Juliana Input - Neutral colors -->
                   <div class="col-span-3">
                     <div class="relative">
-                      <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-text-muted text-[11px]">R$</span>
+                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">R$</span>
                       <input
                         v-model.number="budgetInputsJuliana[category]"
                         type="number"
                         step="0.01"
                         min="0"
                         placeholder="0,00"
-                        class="w-full pl-8 pr-2 py-1.5 text-[13px] bg-background-input text-text-primary border border-accent-info/30 rounded focus:outline-none focus:ring-1 focus:ring-accent-info transition-all"
+                        class="w-full pl-10 pr-3 py-2.5 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
                         @input="markAsChanged"
                       />
                     </div>
                   </div>
 
-                  <!-- Gabriel Input -->
+                  <!-- Gabriel Input - Neutral colors -->
                   <div class="col-span-3">
                     <div class="relative">
-                      <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-text-muted text-[11px]">R$</span>
+                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">R$</span>
                       <input
                         v-model.number="budgetInputsGabriel[category]"
                         type="number"
                         step="0.01"
                         min="0"
                         placeholder="0,00"
-                        class="w-full pl-8 pr-2 py-1.5 text-[13px] bg-background-input text-text-primary border border-accent-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-accent-primary transition-all"
+                        class="w-full pl-10 pr-3 py-2.5 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
                         @input="markAsChanged"
                       />
                     </div>
@@ -171,58 +180,56 @@
 
                   <!-- Total -->
                   <div class="col-span-1 text-center">
-                    <span class="text-[11px] font-semibold text-text-primary">
+                    <span class="text-sm font-light text-gray-700">
                       {{ formatCurrencyShort(getCategoryTotal(category)) }}
                     </span>
                   </div>
                 </div>
 
-                <!-- Mobile Layout - COMPACT -->
-                <div class="lg:hidden space-y-2">
+                <!-- Mobile Layout - Light Design -->
+                <div class="lg:hidden space-y-3">
                   <!-- Category Header -->
-                  <div class="flex items-center gap-2">
-                    <div class="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded bg-background-section border border-border-base">
-                      <span class="text-[14px]">{{ getCategoryIcon(category) }}</span>
-                    </div>
+                  <div class="flex items-center gap-3">
+                    <span class="text-lg">{{ getCategoryIcon(category) }}</span>
                     <div class="flex-1 min-w-0">
-                      <p class="text-[13px] font-medium text-text-primary truncate">{{ category }}</p>
-                      <p v-if="getCategoryTotal(category) > 0" class="text-[11px] text-text-muted">
+                      <p class="text-sm font-normal text-gray-700 truncate">{{ category }}</p>
+                      <p v-if="getCategoryTotal(category) > 0" class="text-xs text-gray-400">
                         Total: {{ formatCurrencyShort(getCategoryTotal(category)) }}
                       </p>
                     </div>
                   </div>
 
                   <!-- Budget Inputs -->
-                  <div class="grid grid-cols-2 gap-2">
-                    <!-- Juliana Input -->
+                  <div class="grid grid-cols-2 gap-3">
+                    <!-- Juliana Input - Neutral -->
                     <div>
-                      <label class="block text-[11px] font-medium text-accent-info mb-1">Juliana</label>
+                      <label class="block text-xs font-normal text-gray-600 mb-2">Juliana</label>
                       <div class="relative">
-                        <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-text-muted text-[11px]">R$</span>
+                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">R$</span>
                         <input
                           v-model.number="budgetInputsJuliana[category]"
                           type="number"
                           step="0.01"
                           min="0"
                           placeholder="0,00"
-                          class="w-full pl-8 pr-2 py-1.5 text-[13px] bg-background-input text-text-primary border border-accent-info/30 rounded focus:outline-none focus:ring-1 focus:ring-accent-info transition-all"
+                          class="w-full pl-10 pr-3 py-2.5 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
                           @input="markAsChanged"
                         />
                       </div>
                     </div>
 
-                    <!-- Gabriel Input -->
+                    <!-- Gabriel Input - Neutral -->
                     <div>
-                      <label class="block text-[11px] font-medium text-accent-primary mb-1">Gabriel</label>
+                      <label class="block text-xs font-normal text-gray-600 mb-2">Gabriel</label>
                       <div class="relative">
-                        <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-text-muted text-[11px]">R$</span>
+                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">R$</span>
                         <input
                           v-model.number="budgetInputsGabriel[category]"
                           type="number"
                           step="0.01"
                           min="0"
                           placeholder="0,00"
-                          class="w-full pl-8 pr-2 py-1.5 text-[13px] bg-background-input text-text-primary border border-accent-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-accent-primary transition-all"
+                          class="w-full pl-10 pr-3 py-2.5 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
                           @input="markAsChanged"
                         />
                       </div>
@@ -241,10 +248,10 @@
             />
           </section>
 
-          <!-- Info Note -->
-          <div class="border-l-[3px] border-accent-info bg-background-card p-4 sm:p-5 rounded-lg">
-            <p class="text-14 sm:text-15 text-text-primary leading-normal">
-              <strong>Nota:</strong> Apenas categorias de gastos são exibidas aqui. Categorias de sistema (contas bancárias, cartões de crédito, etc.) são automaticamente excluídas.
+          <!-- Info Note - Light Design -->
+          <div class="bg-blue-50/30 rounded-xl px-6 py-5">
+            <p class="text-sm text-gray-700 leading-relaxed">
+              <span class="font-medium">Nota:</span> Apenas categorias de gastos são exibidas aqui. Categorias de sistema (contas bancárias, cartões de crédito, etc.) são automaticamente excluídas.
             </p>
           </div>
         </template>

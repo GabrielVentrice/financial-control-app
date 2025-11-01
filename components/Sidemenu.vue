@@ -1,33 +1,33 @@
 <template>
-  <div class="flex min-h-screen bg-background-page">
+  <div class="flex min-h-screen bg-[#FAFBFC]">
     <!-- Mobile overlay -->
     <div
       v-if="isMobile && sidebarOpen"
-      class="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
+      class="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-sm"
       @click="closeSidebar"
     ></div>
 
-    <!-- Sidebar -->
+    <!-- Sidebar - Design Suave -->
     <aside
       :class="[
         'fixed lg:sticky top-0 left-0 h-screen z-50 flex flex-col transition-all duration-300 ease-in-out',
-        'bg-background-sidebar border-r border-border-base',
+        'bg-white border-r border-gray-100',
         isMobile
           ? (sidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full')
           : (sidebarOpen ? 'w-72' : 'w-20')
       ]"
     >
-      <!-- Logo/Header -->
-      <div class="h-[72px] px-5 flex items-center justify-between border-b border-border-base flex-shrink-0">
+      <!-- Logo/Header - Mais espaço, menos peso -->
+      <div class="h-20 px-6 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
         <h1
           v-if="sidebarOpen"
-          class="text-18 lg:text-20 font-medium text-text-primary truncate transition-opacity duration-200"
+          class="text-xl font-normal text-gray-800 truncate transition-opacity duration-200"
         >
           Controle Financeiro
         </h1>
         <button
           @click="toggleSidebar"
-          class="p-2 rounded-md hover:bg-background-hover transition-colors text-text-secondary hover:text-text-primary flex-shrink-0"
+          class="p-2 rounded-lg hover:bg-gray-50 transition-colors text-gray-400 hover:text-gray-700 flex-shrink-0"
           :class="{ 'mx-auto': !sidebarOpen }"
           :title="sidebarOpen ? 'Fechar menu' : 'Abrir menu'"
         >
@@ -37,53 +37,53 @@
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            stroke-width="1.5"
           >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
-              stroke-width="2"
               :d="sidebarOpen ? (isMobile ? 'M6 18L18 6M6 6l12 12' : 'M15 19l-7-7 7-7') : 'M4 6h16M4 12h16M4 18h16'"
             />
           </svg>
         </button>
       </div>
 
-      <!-- Navigation -->
-      <nav class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-1">
+      <!-- Navigation - Mais espaço, design suave -->
+      <nav class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2">
         <NuxtLink
           v-for="item in menuItems"
           :key="item.path"
           :to="item.path"
           @click="handleNavigation"
-          class="flex items-center gap-3 h-11 px-3 rounded-lg hover:bg-background-hover transition-all duration-150 ease-out text-text-secondary hover:text-text-primary group"
-          active-class="bg-background-hover text-accent-primary font-medium"
+          class="flex items-center gap-3 h-12 px-4 rounded-xl hover:bg-gray-50 transition-all duration-200 ease-out text-gray-600 hover:text-gray-800 group"
+          active-class="bg-blue-50 text-blue-600"
         >
-          <component :is="item.icon" class="h-5 w-5 flex-shrink-0" />
+          <component :is="item.icon" class="h-5 w-5 flex-shrink-0" stroke-width="1.5" />
           <span
             v-if="sidebarOpen"
-            class="font-normal text-15 truncate"
+            class="font-normal text-sm truncate"
           >
             {{ item.label }}
           </span>
-          <!-- Tooltip for collapsed state -->
+          <!-- Tooltip for collapsed state - Design suave -->
           <span
             v-if="!sidebarOpen && !isMobile"
-            class="absolute left-full ml-2 px-2 py-1 bg-background-card border border-border-base rounded-md text-13 text-text-primary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+            class="absolute left-full ml-3 px-3 py-2 bg-gray-800 rounded-lg text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg"
           >
             {{ item.label }}
           </span>
         </NuxtLink>
       </nav>
 
-      <!-- Footer - Person Filter -->
-      <div class="p-4 border-t border-border-base flex-shrink-0">
-        <div v-if="sidebarOpen" class="space-y-2">
-          <p class="text-13 text-text-muted uppercase font-medium tracking-wide">
+      <!-- Footer - Person Filter - Design suave -->
+      <div class="p-4 border-t border-gray-100 flex-shrink-0">
+        <div v-if="sidebarOpen" class="space-y-3">
+          <p class="text-xs text-gray-400 uppercase font-medium tracking-wider">
             Filtrar por pessoa
           </p>
           <select
             v-model="selectedPerson"
-            class="w-full px-3 py-2.5 bg-background-input text-text-primary text-14 rounded-lg border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
+            class="w-full px-4 py-3 bg-gray-50 text-gray-700 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
           >
             <option value="Ambos">Ambos</option>
             <option value="Juliana">Juliana</option>
@@ -92,9 +92,9 @@
         </div>
         <div v-else class="flex justify-center" :title="'Filtro: ' + selectedPerson">
           <div class="w-3 h-3 rounded-full transition-colors" :class="{
-            'bg-accent-info': selectedPerson === 'Juliana',
-            'bg-accent-primary': selectedPerson === 'Gabriel',
-            'bg-accent-success': selectedPerson === 'Ambos'
+            'bg-blue-400': selectedPerson === 'Juliana',
+            'bg-blue-500': selectedPerson === 'Gabriel',
+            'bg-emerald-400': selectedPerson === 'Ambos'
           }"></div>
         </div>
       </div>

@@ -1,11 +1,11 @@
 <template>
   <Sidemenu>
-    <div class="bg-background-page text-text-primary min-h-screen">
-      <!-- Compact Header -->
-      <header class="h-14 px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="flex items-baseline gap-3">
-          <h1 class="text-[18px] font-medium tracking-tight">Categorias</h1>
-          <span class="px-2 py-0.5 text-[11px] font-medium bg-accent-primary/10 text-accent-primary rounded border border-accent-primary/20">
+    <div class="bg-[#FAFBFC] text-gray-800 min-h-screen">
+      <!-- Header - Clean, sem bordas pesadas -->
+      <header class="h-16 px-6 lg:px-12 flex items-center justify-between border-b border-gray-100">
+        <div class="flex items-baseline gap-4">
+          <h1 class="text-2xl font-normal tracking-tight text-gray-800">Categorias</h1>
+          <span class="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg">
             {{ selectedPerson }}
           </span>
         </div>
@@ -14,23 +14,23 @@
         </BaseButton>
       </header>
 
-      <!-- Compact Month Filter -->
-      <div class="px-6 lg:px-10 py-3 border-b border-border-base bg-background-card">
-        <div class="max-w-[1400px] mx-auto flex items-center gap-2">
-          <label class="text-[11px] font-medium text-text-muted uppercase tracking-wide">
+      <!-- Month Filter - Cards suaves -->
+      <div class="px-6 lg:px-12 py-6 bg-gray-50/50 border-b border-gray-100">
+        <div class="max-w-[1400px] mx-auto flex items-center gap-4">
+          <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">
             Mês
           </label>
           <input
             v-model="selectedMonth"
             type="month"
-            class="px-3 py-1.5 text-[13px] bg-background-input text-text-primary border border-border-subtle rounded focus:outline-none focus:ring-1 focus:ring-accent-info transition-all"
+            class="px-4 py-3 bg-white text-gray-700 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
           />
-          <span class="text-[11px] text-text-muted ml-2">{{ formattedMonth }}</span>
+          <span class="text-sm text-gray-400 ml-2">{{ formattedMonth }}</span>
         </div>
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-5 space-y-4">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-10 space-y-12">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando..." />
 
@@ -39,46 +39,69 @@
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary - DENSE 4 cards -->
-          <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <DenseStatCard
-              label="Variáveis"
-              :value="variableCostsTotal"
-              format="currency"
-              value-color="success"
-              :secondary-stat="{ label: 'Não recorrentes', value: '' }"
-            />
+          <!-- Summary Cards - 3 COLUNAS (não 4!) -->
+          <section>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <LightStatCard
+                label="Variáveis"
+                :value="variableCostsTotal"
+                format="currency"
+                value-color="success"
+                size="lg"
+                :secondary-stat="{ label: 'Não recorrentes', value: '' }"
+              />
 
-            <DenseStatCard
-              label="Fixos"
-              :value="custosFixosTotal"
-              format="currency"
-              value-color="info"
-              :secondary-stat="{ label: 'Categorias', value: custosFixosCategoriesCount }"
-            />
+              <LightStatCard
+                label="Total"
+                :value="totalAmount"
+                format="currency"
+                value-color="primary"
+                size="lg"
+                :secondary-stat="{ label: 'Transações', value: totalTransactions }"
+              />
 
-            <DenseStatCard
-              label="Comprometidos"
-              :value="gastosComprometidosTotal"
-              format="currency"
-              value-color="warning"
-              :secondary-stat="{ label: 'Categorias', value: gastosComprometidosCategoriesCount }"
-            />
+              <LightStatCard
+                label="Fixos"
+                :value="custosFixosTotal"
+                format="currency"
+                value-color="info"
+                size="lg"
+                :secondary-stat="{ label: 'Categorias', value: custosFixosCategoriesCount }"
+              />
+            </div>
 
-            <DenseStatCard
-              label="Total"
-              :value="totalAmount"
-              format="currency"
-              value-color="primary"
-              :secondary-stat="{ label: 'Transações', value: totalTransactions }"
-            />
+            <!-- Secondary stats - 2 colunas -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+              <LightStatCard
+                label="Comprometidos"
+                :value="gastosComprometidosTotal"
+                format="currency"
+                value-color="warning"
+                size="md"
+                :secondary-stat="{ label: 'Categorias', value: gastosComprometidosCategoriesCount }"
+              />
+
+              <LightStatCard
+                label="Média por Categoria"
+                :value="categories.length > 0 ? totalAmount / categories.length : 0"
+                format="currency"
+                value-color="default"
+                size="md"
+              />
+            </div>
           </section>
 
-          <!-- Categories List - FLAT -->
-          <section class="border-t border-border-base overflow-hidden">
+          <!-- Categories List - Respirável, sem bordas pesadas -->
+          <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-100">
+              <h2 class="text-lg font-normal text-gray-700">Gastos por Categoria</h2>
+              <p class="text-sm text-gray-400 mt-1">{{ categories.length }} categorias</p>
+            </div>
+
             <!-- Desktop Table Header -->
-            <div class="hidden lg:block px-4 py-2.5 bg-background-section border-b border-border-base">
-              <div class="grid grid-cols-12 gap-3 items-center text-[11px] font-medium text-text-secondary uppercase tracking-wide">
+            <div class="hidden lg:block px-6 py-3 bg-gray-50/50 border-b border-gray-100">
+              <div class="grid grid-cols-12 gap-4 items-center text-xs font-medium text-gray-400 uppercase tracking-wider">
                 <div class="col-span-4">Categoria</div>
                 <div class="col-span-2">Gasto / Orçamento</div>
                 <div class="col-span-3">Progresso</div>
@@ -87,25 +110,20 @@
               </div>
             </div>
 
-            <!-- Mobile Header -->
-            <div class="lg:hidden px-4 py-2.5 bg-background-section border-b border-border-base">
-              <h3 class="text-[13px] font-medium text-text-primary">Gastos por Categoria</h3>
-            </div>
-
             <!-- Categories -->
-            <div class="divide-y divide-border-base">
+            <div class="divide-y divide-gray-100">
               <template v-for="category in categories" :key="category.name">
-                <!-- Desktop Category Row - COMPACT WITH BUDGET -->
+                <!-- Desktop Category Row - Light Design -->
                 <div
                   @click="toggleCategory(category.name)"
-                  class="hidden lg:block px-4 py-2.5 hover:bg-background-hover transition-colors cursor-pointer"
-                  :class="{ 'bg-background-section': expandedCategory === category.name }"
+                  class="hidden lg:block px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  :class="{ 'bg-gray-50': expandedCategory === category.name }"
                 >
-                  <div class="grid grid-cols-12 gap-3 items-center">
+                  <div class="grid grid-cols-12 gap-4 items-center">
                     <!-- Category Name -->
-                    <div class="col-span-4 flex items-center gap-2">
+                    <div class="col-span-4 flex items-center gap-3">
                       <svg
-                        class="h-3 w-3 text-text-muted transition-transform duration-150 flex-shrink-0"
+                        class="h-4 w-4 text-gray-400 transition-transform duration-150 flex-shrink-0"
                         :class="{ 'rotate-90': expandedCategory === category.name }"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -114,23 +132,21 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                       </svg>
 
-                      <div class="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded bg-background-section border border-border-base">
-                        <span class="text-[16px]">{{ getCategoryIcon(category.name) }}</span>
-                      </div>
+                      <span class="text-lg">{{ getCategoryIcon(category.name) }}</span>
 
-                      <p class="text-[13px] font-medium text-text-primary truncate">{{ category.name }}</p>
+                      <p class="text-sm font-normal text-gray-700 truncate">{{ category.name }}</p>
                     </div>
 
                     <!-- Gasto / Orçamento -->
                     <div class="col-span-2">
-                      <div class="space-y-0.5">
-                        <p class="text-[13px] font-semibold text-text-primary">
+                      <div class="space-y-1">
+                        <p class="text-base font-light text-gray-800">
                           {{ formatCurrencyCompact(category.total) }}
                         </p>
-                        <p v-if="category.budget" class="text-[11px] text-text-muted">
+                        <p v-if="category.budget" class="text-xs text-gray-400">
                           de {{ formatCurrencyCompact(category.budget.total) }}
                         </p>
-                        <p v-else class="text-[11px] text-text-muted italic">
+                        <p v-else class="text-xs text-gray-400 italic">
                           Sem orçamento
                         </p>
                       </div>
@@ -140,77 +156,75 @@
                     <div class="col-span-3">
                       <template v-if="category.budget">
                         <div class="space-y-1">
-                          <div class="flex items-center gap-2">
-                            <div class="flex-1 bg-background-section rounded-full h-2 overflow-hidden">
+                          <div class="flex items-center gap-3">
+                            <div class="flex-1 bg-gray-100 rounded-full h-[3px] overflow-hidden">
                               <div
-                                class="h-2 rounded-full transition-all"
+                                class="h-[3px] rounded-full transition-all"
                                 :class="getBudgetProgressColor(category.budget.percentageUsed)"
                                 :style="{ width: `${Math.min(category.budget.percentageUsed, 100)}%` }"
                               ></div>
                             </div>
-                            <span class="text-[11px] font-semibold whitespace-nowrap" :class="getBudgetTextColor(category.budget.percentageUsed)">
+                            <span class="text-xs font-normal whitespace-nowrap" :class="getBudgetTextColor(category.budget.percentageUsed)">
                               {{ category.budget.percentageUsed.toFixed(0) }}%
                             </span>
                           </div>
                         </div>
                       </template>
                       <template v-else>
-                        <span class="text-[11px] text-text-muted italic">-</span>
+                        <span class="text-xs text-gray-400 italic">-</span>
                       </template>
                     </div>
 
                     <!-- Restante -->
                     <div class="col-span-2">
                       <template v-if="category.budget">
-                        <p class="text-[13px] font-semibold" :class="category.budget.remaining >= 0 ? 'text-accent-success' : 'text-accent-danger'">
+                        <p class="text-base font-light" :class="category.budget.remaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
                           {{ formatCurrencyCompact(category.budget.remaining) }}
                         </p>
-                        <p class="text-[11px] text-text-muted">
+                        <p class="text-xs text-gray-400">
                           {{ category.budget.remaining >= 0 ? 'disponível' : 'excedido' }}
                         </p>
                       </template>
                       <template v-else>
-                        <span class="text-[11px] text-text-muted italic">-</span>
+                        <span class="text-xs text-gray-400 italic">-</span>
                       </template>
                     </div>
 
                     <!-- Transações -->
                     <div class="col-span-1 text-right">
-                      <span class="inline-block px-2 py-0.5 bg-background-section text-accent-info text-[11px] font-semibold rounded border border-border-base">
+                      <span class="text-sm text-gray-500">
                         {{ category.count }}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <!-- Mobile Category Card - COMPACT WITH BUDGET -->
+                <!-- Mobile Category Card - Light Design -->
                 <div
                   @click="toggleCategory(category.name)"
-                  class="lg:hidden px-3 py-3 hover:bg-background-hover transition-colors cursor-pointer"
-                  :class="{ 'bg-background-section': expandedCategory === category.name }"
+                  class="lg:hidden px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  :class="{ 'bg-gray-50': expandedCategory === category.name }"
                 >
-                  <div class="space-y-2.5">
+                  <div class="space-y-3">
                     <!-- Header -->
                     <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2 min-w-0 flex-1">
-                        <div class="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded bg-background-section border border-border-base">
-                          <span class="text-[16px]">{{ getCategoryIcon(category.name) }}</span>
-                        </div>
+                      <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <span class="text-lg">{{ getCategoryIcon(category.name) }}</span>
                         <div class="min-w-0 flex-1">
-                          <p class="text-[13px] font-medium text-text-primary truncate">{{ category.name }}</p>
-                          <div class="flex items-center gap-2 text-[11px] text-text-muted">
-                            <span>{{ category.count }} trans.</span>
+                          <p class="text-sm font-normal text-gray-700 truncate">{{ category.name }}</p>
+                          <div class="text-xs text-gray-400">
+                            <span>{{ category.count }} transações</span>
                           </div>
                         </div>
                       </div>
                       <div class="text-right">
-                        <p class="text-[13px] font-semibold text-text-primary whitespace-nowrap">
+                        <p class="text-base font-light text-gray-800 whitespace-nowrap">
                           {{ formatCurrencyCompact(category.total) }}
                         </p>
-                        <p v-if="category.budget" class="text-[11px] text-text-muted">
+                        <p v-if="category.budget" class="text-xs text-gray-400">
                           de {{ formatCurrencyCompact(category.budget.total) }}
                         </p>
-                        <p v-else class="text-[11px] text-text-muted italic">
+                        <p v-else class="text-xs text-gray-400 italic">
                           Sem orçamento
                         </p>
                       </div>
@@ -218,23 +232,23 @@
 
                     <!-- Budget Progress bar -->
                     <template v-if="category.budget">
-                      <div class="space-y-1">
-                        <div class="flex items-center justify-between text-[11px]">
-                          <span class="text-text-muted">Progresso do orçamento</span>
-                          <span class="font-semibold" :class="getBudgetTextColor(category.budget.percentageUsed)">
+                      <div class="space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                          <span class="text-gray-400">Progresso do orçamento</span>
+                          <span class="font-normal" :class="getBudgetTextColor(category.budget.percentageUsed)">
                             {{ category.budget.percentageUsed.toFixed(0) }}%
                           </span>
                         </div>
-                        <div class="w-full bg-background-section rounded-full h-2 overflow-hidden">
+                        <div class="w-full bg-gray-100 rounded-full h-[3px] overflow-hidden">
                           <div
-                            class="h-2 rounded-full transition-all"
+                            class="h-[3px] rounded-full transition-all"
                             :class="getBudgetProgressColor(category.budget.percentageUsed)"
                             :style="{ width: `${Math.min(category.budget.percentageUsed, 100)}%` }"
                           ></div>
                         </div>
-                        <div class="flex items-center justify-between text-[11px]">
-                          <span class="text-text-muted">Restante:</span>
-                          <span class="font-semibold" :class="category.budget.remaining >= 0 ? 'text-accent-success' : 'text-accent-danger'">
+                        <div class="flex items-center justify-between text-xs">
+                          <span class="text-gray-400">Restante:</span>
+                          <span class="font-normal" :class="category.budget.remaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
                             {{ formatCurrencyCompact(category.budget.remaining) }}
                           </span>
                         </div>
@@ -243,28 +257,28 @@
                   </div>
                 </div>
 
-                <!-- Expanded Transactions - COMPACT -->
-                <div v-if="expandedCategory === category.name" class="bg-background-section">
-                  <div class="px-4 py-3">
-                    <h4 class="text-[12px] font-medium text-text-primary mb-2 uppercase tracking-wide">
+                <!-- Expanded Transactions - Light Design -->
+                <div v-if="expandedCategory === category.name" class="bg-gray-50/50">
+                  <div class="px-5 py-4">
+                    <h4 class="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wider">
                       Transações ({{ getCategoryTransactions(category.name).length }})
                     </h4>
-                    <div class="bg-background-page rounded border border-border-base p-2 max-h-64 overflow-y-auto">
-                      <div class="space-y-1.5">
+                    <div class="bg-white rounded-xl p-3 max-h-64 overflow-y-auto">
+                      <div class="space-y-3">
                         <div
                           v-for="transaction in getCategoryTransactions(category.name)"
                           :key="transaction.transactionId"
-                          class="flex items-start justify-between gap-2 py-1.5 border-b border-divider last:border-0"
+                          class="flex items-start justify-between gap-3 py-2 border-b border-gray-100 last:border-0"
                         >
                           <div class="flex-1 min-w-0">
-                            <p class="text-[12px] text-text-primary truncate">{{ transaction.description }}</p>
-                            <div class="flex items-center gap-2 text-[10px] text-text-muted mt-0.5">
+                            <p class="text-sm text-gray-700 truncate">{{ transaction.description }}</p>
+                            <div class="flex items-center gap-2 text-xs text-gray-400 mt-1">
                               <span>{{ formatDateCompact(transaction.date) }}</span>
                               <span>•</span>
                               <span class="truncate">{{ transaction.origin }}</span>
                             </div>
                           </div>
-                          <p class="text-[12px] font-semibold text-accent-primary whitespace-nowrap">
+                          <p class="text-sm font-light text-gray-800 whitespace-nowrap">
                             {{ formatCurrencyCompact(transaction.amount) }}
                           </p>
                         </div>
@@ -404,17 +418,17 @@ const getCategoryTransactions = (categoryName: string) => {
 }
 
 const getBudgetProgressColor = (percentageUsed: number): string => {
-  if (percentageUsed >= 100) return 'bg-accent-danger'
-  if (percentageUsed >= 90) return 'bg-accent-warning'
-  if (percentageUsed >= 75) return 'bg-accent-info'
-  return 'bg-accent-success'
+  if (percentageUsed >= 100) return 'bg-gradient-to-r from-rose-400 to-rose-500'
+  if (percentageUsed >= 90) return 'bg-gradient-to-r from-amber-400 to-amber-500'
+  if (percentageUsed >= 75) return 'bg-gradient-to-r from-blue-400 to-blue-500'
+  return 'bg-gradient-to-r from-emerald-400 to-emerald-500'
 }
 
 const getBudgetTextColor = (percentageUsed: number): string => {
-  if (percentageUsed >= 100) return 'text-accent-danger'
-  if (percentageUsed >= 90) return 'text-accent-warning'
-  if (percentageUsed >= 75) return 'text-accent-info'
-  return 'text-accent-success'
+  if (percentageUsed >= 100) return 'text-rose-400'
+  if (percentageUsed >= 90) return 'text-amber-500'
+  if (percentageUsed >= 75) return 'text-blue-500'
+  return 'text-emerald-500'
 }
 
 const refreshData = async () => {

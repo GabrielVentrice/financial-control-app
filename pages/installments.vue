@@ -1,11 +1,11 @@
 <template>
   <Sidemenu>
-    <div class="bg-background-page text-text-primary min-h-screen">
-      <!-- Compact Header with inline filter -->
-      <header class="h-14 px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="flex items-baseline gap-3">
-          <h1 class="text-[18px] font-medium tracking-tight">Parcelas</h1>
-          <span class="px-2 py-0.5 text-[11px] font-medium bg-accent-primary/10 text-accent-primary rounded border border-accent-primary/20">
+    <div class="bg-[#FAFBFC] text-gray-800 min-h-screen">
+      <!-- Header - Clean, sem bordas pesadas -->
+      <header class="h-16 px-6 lg:px-12 flex items-center justify-between border-b border-gray-100">
+        <div class="flex items-baseline gap-4">
+          <h1 class="text-2xl font-normal tracking-tight text-gray-800">Parcelas</h1>
+          <span class="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg">
             {{ selectedPerson }}
           </span>
         </div>
@@ -15,7 +15,7 @@
       </header>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-5 space-y-4">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-10 space-y-12">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando parcelas..." />
 
@@ -24,147 +24,150 @@
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Cards - DENSE -->
-          <section class="grid grid-cols-3 gap-3">
-            <DenseStatCard
+          <!-- Summary Cards - 3 COLUNAS Light Design -->
+          <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <LightStatCard
               label="Ativas"
               :value="activeInstallments.length"
               format="number"
               value-color="info"
+              size="lg"
               :secondary-stat="{ label: 'Futuras', value: '' }"
             />
 
-            <DenseStatCard
+            <LightStatCard
               label="Mês Atual"
               :value="currentMonthTotal"
               format="currency"
               value-color="primary"
+              size="lg"
               :secondary-stat="{ label: formatMonthYear(currentMonth), value: '' }"
             />
 
-            <DenseStatCard
-              label="Média"
+            <LightStatCard
+              label="Média Mensal"
               :value="averageMonthlyTotal"
               format="currency"
               value-color="success"
+              size="lg"
               :secondary-stat="{ label: '13 meses', value: '' }"
             />
           </section>
 
-          <!-- Chart - FLAT -->
-          <section class="border-l-2 border-l-accent-primary pl-4 py-2">
-            <h2 class="text-[14px] font-medium text-text-primary mb-3 tracking-tight">Parcelas por Mês</h2>
-            <p class="text-[11px] text-text-muted mb-3">6 meses atrás → 6 meses à frente</p>
+          <!-- Chart - Light Design -->
+          <section class="space-y-5">
+            <h2 class="text-lg font-normal text-gray-700">Parcelas por Mês</h2>
+            <p class="text-sm text-gray-400">6 meses atrás → 6 meses à frente</p>
             <div class="h-64">
               <Bar :data="chartData" :options="chartOptions" />
             </div>
           </section>
 
-          <!-- Active Installments List - FLAT -->
-          <section class="border-l-2 border-l-accent-info pl-4 py-2">
-            <h2 class="text-[14px] font-medium text-text-primary mb-3 tracking-tight">Parcelas Ativas ({{ activeInstallments.length }})</h2>
+          <!-- Active Installments List - Light Design -->
+          <section class="space-y-5">
+            <h2 class="text-lg font-normal text-gray-700">Parcelas Ativas ({{ activeInstallments.length }})</h2>
             <EmptyState
               v-if="activeInstallments.length === 0"
               icon="📅"
               title="Nenhuma parcela ativa"
               description="Você não possui parcelas ou financiamentos ativos no momento."
             />
-            <div v-else class="space-y-2.5">
+            <div v-else class="space-y-6">
               <div
                 v-for="installment in activeInstallments"
                 :key="installment.key"
-                class="border border-border-base rounded-lg p-3 hover:bg-background-hover transition-colors bg-background-section"
+                class="bg-gray-50/50 rounded-2xl px-8 py-7 hover:bg-gray-50 transition-colors"
               >
-                <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3">
+                <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                   <div class="flex-1 min-w-0">
-                    <h3 class="font-medium text-text-primary text-[13px] mb-1.5 tracking-tight truncate">{{ installment.description }}</h3>
-                    <div class="flex flex-wrap gap-3 text-[11px]">
-                      <span class="text-text-secondary">
-                        <span class="font-medium">Origem:</span> {{ installment.origin }}
+                    <h3 class="font-normal text-gray-800 text-base mb-3 truncate">{{ installment.description }}</h3>
+                    <div class="flex flex-wrap gap-6 text-sm text-gray-500">
+                      <span>
+                        <span class="text-gray-400">Origem:</span> {{ installment.origin }}
                       </span>
-                      <span class="text-text-secondary">
-                        <span class="font-medium">Valor:</span> {{ formatCurrencyCompact(installment.amount) }}/mês
+                      <span>
+                        <span class="text-gray-400">Valor:</span> {{ formatCurrencyCompact(installment.amount) }}/mês
                       </span>
                     </div>
                   </div>
                   <div class="text-left lg:text-right lg:ml-4">
-                    <div class="text-[18px] font-normal font-serif text-accent-primary">
+                    <div class="text-3xl font-light text-blue-500">
                       {{ installment.paid }}/{{ installment.total }}
                     </div>
-                    <div class="text-[11px] text-text-muted mt-0.5">
+                    <div class="text-sm text-gray-400 mt-1">
                       {{ installment.remaining }} restantes
                     </div>
-                    <div class="mt-2">
-                      <div class="w-full lg:w-28 bg-background-page rounded-full h-1 border border-border-base">
+                    <div class="mt-3">
+                      <div class="w-full lg:w-32 bg-gray-100 rounded-full h-[2px]">
                         <div
-                          class="bg-accent-primary h-1 rounded-full transition-all"
+                          class="bg-gradient-to-r from-blue-400 to-blue-500 h-[2px] rounded-full transition-all"
                           :style="{ width: `${(installment.paid / installment.total) * 100}%` }"
                         ></div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div class="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-                  <div class="bg-background-page rounded p-2 border border-border-base">
-                    <span class="text-text-secondary">Primeira:</span>
-                    <span class="font-medium text-text-primary ml-1">{{ formatDateCompact(installment.firstDate) }}</span>
+                <div class="mt-6 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span class="text-gray-400">Primeira:</span>
+                    <span class="font-normal text-gray-700 ml-2">{{ formatDateCompact(installment.firstDate) }}</span>
                   </div>
-                  <div class="bg-background-page rounded p-2 border border-border-base">
-                    <span class="text-text-secondary">Última:</span>
-                    <span class="font-medium text-text-primary ml-1">{{ formatDateCompact(installment.lastDate) }}</span>
+                  <div>
+                    <span class="text-gray-400">Última:</span>
+                    <span class="font-normal text-gray-700 ml-2">{{ formatDateCompact(installment.lastDate) }}</span>
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <!-- Monthly Breakdown - FLAT -->
-          <section class="border-t border-border-base overflow-hidden">
-            <div class="px-4 py-2.5 bg-background-section border-b border-border-base">
-              <h2 class="text-[14px] font-medium text-text-primary tracking-tight">Detalhamento Mensal</h2>
+          <!-- Monthly Breakdown - Light Design -->
+          <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
+            <div class="px-6 py-4 border-b border-gray-100">
+              <h2 class="text-lg font-normal text-gray-700">Detalhamento Mensal</h2>
             </div>
 
             <!-- Desktop Table -->
             <div class="hidden lg:block overflow-x-auto">
-              <table class="min-w-full divide-y divide-border-base">
-                <thead class="bg-background-section">
+              <table class="min-w-full">
+                <thead class="bg-gray-50/50">
                   <tr>
-                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-text-secondary uppercase tracking-wide">
+                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Mês
                     </th>
-                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-text-secondary uppercase tracking-wide">
+                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Qtd. Parcelas
                     </th>
-                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-text-secondary uppercase tracking-wide">
+                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Total
                     </th>
                   </tr>
                 </thead>
-                <tbody class="bg-background-card divide-y divide-border-base">
+                <tbody>
                   <tr
                     v-for="month in monthlyBreakdown"
                     :key="month.monthKey"
-                    class="hover:bg-background-hover transition-colors"
-                    :class="{ 'bg-background-section': month.monthKey === currentMonth }"
+                    class="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
+                    :class="{ 'bg-gray-50': month.monthKey === currentMonth }"
                   >
-                    <td class="px-4 py-2.5 whitespace-nowrap">
-                      <div class="flex items-center gap-2">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-3">
                         <span
                           v-if="month.monthKey === currentMonth"
-                          class="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-accent-primary text-text-inverse uppercase tracking-wide"
+                          class="px-2 py-1 text-xs font-medium rounded-lg bg-blue-50 text-blue-600"
                         >
                           Atual
                         </span>
-                        <span class="text-[13px] font-medium text-text-primary">{{ formatMonthYearCompact(month.monthKey) }}</span>
+                        <span class="text-sm font-normal text-gray-700">{{ formatMonthYearCompact(month.monthKey) }}</span>
                       </div>
                     </td>
-                    <td class="px-4 py-2.5 whitespace-nowrap">
-                      <span class="px-2 py-1 inline-flex text-[11px] font-semibold rounded bg-accent-info/10 text-accent-info border border-accent-info/20">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="text-sm text-gray-500">
                         {{ month.count }}
                       </span>
                     </td>
-                    <td class="px-4 py-2.5 whitespace-nowrap">
-                      <div class="text-[13px] font-semibold text-accent-primary">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-base font-light text-gray-800">
                         {{ formatCurrencyCompact(month.total) }}
                       </div>
                     </td>
@@ -174,30 +177,30 @@
             </div>
 
             <!-- Mobile Cards -->
-            <div class="lg:hidden divide-y divide-border-base">
+            <div class="lg:hidden divide-y divide-gray-100">
               <div
                 v-for="month in monthlyBreakdown"
                 :key="month.monthKey"
-                class="p-3 space-y-2"
-                :class="{ 'bg-background-section': month.monthKey === currentMonth }"
+                class="p-5 space-y-3"
+                :class="{ 'bg-gray-50': month.monthKey === currentMonth }"
               >
                 <div class="flex justify-between items-start">
-                  <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-3">
                     <span
                       v-if="month.monthKey === currentMonth"
-                      class="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-accent-primary text-text-inverse uppercase tracking-wide"
+                      class="px-2 py-1 text-xs font-medium rounded-lg bg-blue-50 text-blue-600"
                     >
                       Atual
                     </span>
-                    <span class="text-[13px] font-medium text-text-primary">{{ formatMonthYearCompact(month.monthKey) }}</span>
+                    <span class="text-sm font-normal text-gray-700">{{ formatMonthYearCompact(month.monthKey) }}</span>
                   </div>
-                  <div class="text-[13px] font-semibold text-accent-primary">
+                  <div class="text-base font-light text-gray-800">
                     {{ formatCurrencyCompact(month.total) }}
                   </div>
                 </div>
-                <div class="flex justify-between items-center text-[11px]">
-                  <span class="text-text-secondary">Parcelas:</span>
-                  <span class="px-2 py-0.5 bg-accent-info/10 text-accent-info rounded font-semibold border border-accent-info/20">
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-gray-400">Parcelas:</span>
+                  <span class="text-gray-500">
                     {{ month.count }}
                   </span>
                 </div>
@@ -401,19 +404,19 @@ const chartData = computed(() => {
         data: monthlyBreakdown.value.map(m => m.total),
         backgroundColor: monthlyBreakdown.value.map(m =>
           m.monthKey === currentMonth
-            ? 'rgba(37, 99, 235, 0.8)'  // Current month - darker blue
+            ? 'rgba(59, 130, 246, 0.8)'  // Current month - blue-500
             : m.monthKey < currentMonth
-              ? 'rgba(156, 163, 175, 0.6)' // Past months - gray
-              : 'rgba(59, 130, 246, 0.5)'  // Future months - light blue
+              ? 'rgba(156, 163, 175, 0.5)' // Past months - gray-400
+              : 'rgba(96, 165, 250, 0.5)'  // Future months - blue-400
         ),
         borderColor: monthlyBreakdown.value.map(m =>
           m.monthKey === currentMonth
-            ? 'rgb(29, 78, 216)'
+            ? 'rgb(59, 130, 246)'
             : m.monthKey < currentMonth
-              ? 'rgb(107, 114, 128)'
-              : 'rgb(37, 99, 235)'
+              ? 'rgb(156, 163, 175)'
+              : 'rgb(96, 165, 250)'
         ),
-        borderWidth: 2
+        borderWidth: 1
       }
     ]
   }
