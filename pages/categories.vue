@@ -39,15 +39,15 @@
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Cards - 3 COLUNAS (não 4!) -->
+          <!-- Summary Cards - Todos em uma linha -->
           <section>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
               <LightStatCard
                 label="Variáveis"
                 :value="variableCostsTotal"
                 format="currency"
                 value-color="success"
-                size="lg"
+                size="md"
                 :secondary-stat="{ label: 'Não recorrentes', value: '' }"
               />
 
@@ -56,7 +56,7 @@
                 :value="totalAmount"
                 format="currency"
                 value-color="primary"
-                size="lg"
+                size="md"
                 :secondary-stat="{ label: 'Transações', value: totalTransactions }"
               />
 
@@ -65,13 +65,10 @@
                 :value="custosFixosTotal"
                 format="currency"
                 value-color="info"
-                size="lg"
+                size="md"
                 :secondary-stat="{ label: 'Categorias', value: custosFixosCategoriesCount }"
               />
-            </div>
 
-            <!-- Secondary stats - 2 colunas -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
               <LightStatCard
                 label="Comprometidos"
                 :value="gastosComprometidosTotal"
