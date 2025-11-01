@@ -55,16 +55,18 @@
           </section>
 
           <!-- Chart - Light Design -->
-          <section class="space-y-5">
-            <h2 class="text-lg font-normal text-gray-700">Parcelas por Mês</h2>
-            <p class="text-sm text-gray-400">6 meses atrás → 6 meses à frente</p>
+          <section class="bg-gray-50/50 rounded-2xl px-8 py-7">
+            <div class="mb-6">
+              <h2 class="text-lg font-normal text-gray-700">Parcelas por Mês</h2>
+              <p class="text-sm text-gray-400 mt-1">6 meses atrás → 6 meses à frente</p>
+            </div>
             <div class="h-64">
               <Bar :data="chartData" :options="chartOptions" />
             </div>
           </section>
 
           <!-- Active Installments List - Light Design -->
-          <section class="space-y-5">
+          <section class="space-y-6">
             <h2 class="text-lg font-normal text-gray-700">Parcelas Ativas ({{ activeInstallments.length }})</h2>
             <EmptyState
               v-if="activeInstallments.length === 0"
@@ -123,7 +125,7 @@
 
           <!-- Monthly Breakdown - Light Design -->
           <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
-            <div class="px-6 py-4 border-b border-gray-100">
+            <div class="px-8 py-6 border-b border-gray-100">
               <h2 class="text-lg font-normal text-gray-700">Detalhamento Mensal</h2>
             </div>
 

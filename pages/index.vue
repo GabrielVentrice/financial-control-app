@@ -1,12 +1,12 @@
 <template>
   <Sidemenu>
-    <div class="bg-background-page text-text-primary min-h-screen">
-      <!-- Compact Header -->
-      <header class="h-14 px-6 lg:px-10 flex items-center justify-between border-b border-border-base">
-        <div class="flex items-baseline gap-3">
-          <h1 class="text-[18px] font-medium tracking-tight">Dashboard</h1>
-          <span class="text-[12px] text-text-muted">{{ getCurrentMonthName() }}</span>
-          <span class="px-2 py-0.5 text-[11px] font-medium bg-accent-primary/10 text-accent-primary rounded border border-accent-primary/20">
+    <div class="bg-[#FAFBFC] text-gray-800 min-h-screen">
+      <!-- Header - Clean, h-16 -->
+      <header class="h-16 px-6 lg:px-12 flex items-center justify-between border-b border-gray-100">
+        <div class="flex items-baseline gap-4">
+          <h1 class="text-2xl font-normal tracking-tight text-gray-800">Dashboard</h1>
+          <span class="text-sm text-gray-400">{{ getCurrentMonthName() }}</span>
+          <span class="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg">
             {{ selectedPerson }}
           </span>
         </div>
@@ -16,7 +16,7 @@
       </header>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-10 py-6 space-y-5">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-10 space-y-12">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando..." />
 
@@ -25,9 +25,9 @@
 
         <!-- Dashboard Content -->
         <template v-else>
-          <!-- Smart Insights (Compact, High Priority Only) -->
-          <section v-if="smartInsights.length > 0" class="space-y-2">
-            <InsightCard
+          <!-- Smart Insights - Usando LightInsightCard -->
+          <section v-if="smartInsights.length > 0" class="space-y-4">
+            <LightInsightCard
               v-for="(insight, index) in smartInsights.slice(0, 3)"
               :key="index"
               :type="insight.type"
@@ -37,102 +37,109 @@
             />
           </section>
 
-          <!-- Main Stats Grid - DENSE 5 columns -->
-          <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            <!-- Balance -->
-            <DenseStatCard
-              label="Saldo"
-              :value="monthlyStats.balance"
-              format="currency"
-              :value-color="monthlyStats.balance >= 0 ? 'success' : 'danger'"
-              :trend="monthlyStats.trend.balance"
-              :secondary-stat="{ label: 'Transações', value: monthlyStats.transactionCount }"
-            />
+          <!-- Main Stats Grid - 3 COLUNAS Light Design -->
+          <section>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <!-- Receitas -->
+              <LightStatCard
+                label="Receitas"
+                :value="monthlyStats.income"
+                format="currency"
+                value-color="success"
+                size="lg"
+                :trend="monthlyStats.trend.income"
+              />
 
-            <!-- Income -->
-            <DenseStatCard
-              label="Receitas"
-              :value="monthlyStats.income"
-              format="currency"
-              value-color="success"
-              :trend="monthlyStats.trend.income"
-              :secondary-stat="{ label: 'vs Média', value: formatTrendValue(monthlyStats.comparison.incomeVsAvg) }"
-            />
+              <!-- Despesas -->
+              <LightStatCard
+                label="Despesas"
+                :value="monthlyStats.expenses"
+                format="currency"
+                value-color="danger"
+                size="lg"
+                :trend="monthlyStats.trend.expenses"
+                :invert-trend-colors="true"
+              >
+                <template #bottom>
+                  <div class="flex items-center justify-between text-xs text-gray-400">
+                    <span>Últimos 6 meses</span>
+                    <MiniSparkline
+                      :data="historicalExpenses.last6Months"
+                      :height="16"
+                      :bar-width="3"
+                      color="danger"
+                    />
+                  </div>
+                </template>
+              </LightStatCard>
 
-            <!-- Expenses -->
-            <DenseStatCard
-              label="Despesas"
-              :value="monthlyStats.expenses"
-              format="currency"
-              value-color="danger"
-              :trend="monthlyStats.trend.expenses"
-              :invert-trend-colors="true"
-              :secondary-stat="{ label: 'vs Média', value: formatTrendValue(monthlyStats.comparison.expensesVsAvg) }"
-            >
-              <template #bottom>
-                <div class="flex items-center justify-between text-[10px] text-text-muted">
-                  <span>6 meses</span>
-                  <MiniSparkline
-                    :data="historicalExpenses.last6Months"
-                    :height="16"
-                    :bar-width="3"
-                    color="danger"
-                  />
-                </div>
-              </template>
-            </DenseStatCard>
+              <!-- Saldo -->
+              <LightStatCard
+                label="Saldo"
+                :value="monthlyStats.balance"
+                format="currency"
+                :value-color="monthlyStats.balance >= 0 ? 'success' : 'danger'"
+                size="lg"
+                :trend="monthlyStats.trend.balance"
+              />
+            </div>
 
-            <!-- Daily Average -->
-            <DenseStatCard
-              label="Média Diária"
-              :value="monthlyStats.dailyAverage"
-              format="currency"
-              value-color="info"
-              :secondary-stat="{ label: 'Dia', value: getCurrentDay() }"
-            />
+            <!-- Secondary Stats - 2 COLUNAS -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+              <!-- Média Diária -->
+              <LightStatCard
+                label="Média Diária"
+                :value="monthlyStats.dailyAverage"
+                format="currency"
+                value-color="info"
+                size="md"
+                :secondary-stat="{ label: 'Dia ' + getCurrentDay(), value: '' }"
+              />
 
-            <!-- Forecast -->
-            <DenseStatCard
-              label="Projeção"
-              :value="forecast.projectedBalance"
-              format="currency"
-              :value-color="forecast.projectedBalance >= 0 ? 'success' : 'warning'"
-              :secondary-stat="{ label: 'Fim do mês', value: '' }"
-            />
+              <!-- Projeção -->
+              <LightStatCard
+                label="Projeção"
+                :value="forecast.projectedBalance"
+                format="currency"
+                :value-color="forecast.projectedBalance >= 0 ? 'success' : 'warning'"
+                size="md"
+                :secondary-stat="{ label: 'Fim do mês', value: '' }"
+              />
+            </div>
           </section>
 
           <!-- Two Column Layout: Categories + Activity -->
-          <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <!-- Top Categories - Flat Design -->
-            <div class="lg:col-span-2 border-l-2 border-l-accent-primary pl-4 py-2">
-              <div class="flex items-center justify-between mb-3">
-                <h2 class="text-[14px] font-medium">Top Categorias</h2>
-                <NuxtLink to="/categories" class="text-[11px] text-accent-primary hover:underline">
+          <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Top Categories - SEM BORDAS coloridas, mais espaçoso -->
+            <div class="lg:col-span-2 bg-gray-50/50 rounded-2xl px-8 py-7">
+              <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-normal text-gray-700">Top Categorias</h2>
+                <NuxtLink to="/categories" class="text-sm text-blue-500 hover:text-blue-600 transition-colors">
                   Ver todas →
                 </NuxtLink>
               </div>
 
-              <div v-if="topCategories.length > 0" class="space-y-3">
+              <div v-if="topCategories.length > 0" class="space-y-6">
                 <div
                   v-for="category in topCategories"
                   :key="category.name"
-                  class="flex items-center gap-3"
+                  class="flex items-center gap-4"
                 >
                   <div class="flex-1 min-w-0">
-                    <div class="flex items-baseline justify-between gap-2 mb-1">
-                      <span class="text-[13px] text-text-primary truncate">{{ category.name }}</span>
-                      <span class="text-[13px] font-semibold text-text-primary whitespace-nowrap">
-                        {{ formatCurrency(category.total) }}
+                    <div class="flex items-baseline justify-between gap-2 mb-2">
+                      <span class="text-sm text-gray-700 font-normal truncate">{{ category.name }}</span>
+                      <span class="text-lg font-light text-gray-800 whitespace-nowrap">
+                        {{ formatCurrencyCompact(category.total) }}
                       </span>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <div class="flex-1 bg-background-section rounded-full h-1">
+                    <div class="flex items-center gap-3">
+                      <div class="flex-1 bg-gray-100 rounded-full h-[3px]">
                         <div
-                          class="bg-accent-primary h-1 rounded-full transition-all"
+                          class="bg-gradient-to-r from-blue-400 to-blue-500 h-[3px] rounded-full transition-all"
                           :style="{ width: category.percentage + '%' }"
                         />
                       </div>
-                      <span class="text-[10px] text-text-muted whitespace-nowrap">
+                      <span class="text-xs text-gray-400 whitespace-nowrap">
                         {{ category.percentage.toFixed(0) }}%
                       </span>
                     </div>
@@ -147,70 +154,70 @@
               />
             </div>
 
-            <!-- Quick Links & Filter - Flat Design -->
-            <div class="space-y-4">
+            <!-- Quick Links - SEM BORDAS coloridas -->
+            <div class="space-y-6">
               <!-- Filter Badge -->
-              <div class="border-l-2 border-l-accent-info pl-3 py-2">
-                <p class="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">Filtro Ativo</p>
+              <div class="bg-gray-50/50 rounded-2xl px-6 py-5">
+                <p class="text-xs text-gray-400 mb-3 uppercase tracking-wide">Filtro Ativo</p>
                 <div class="flex items-center justify-between">
-                  <span class="text-[15px] font-medium text-text-primary">{{ selectedPerson }}</span>
-                  <span class="text-[11px] text-text-muted">{{ monthlyStats.transactionCount }} transações</span>
+                  <span class="text-base font-normal text-gray-700">{{ selectedPerson }}</span>
+                  <span class="text-sm text-gray-400">{{ monthlyStats.transactionCount }} transações</span>
                 </div>
               </div>
 
               <!-- Quick Links -->
-              <div class="border-l-2 border-l-border-base pl-3 py-2 space-y-1.5">
-                <p class="text-[11px] text-text-muted mb-2 uppercase tracking-wide">Navegação Rápida</p>
+              <div class="bg-gray-50/50 rounded-2xl px-6 py-5 space-y-2">
+                <p class="text-xs text-gray-400 mb-4 uppercase tracking-wide">Navegação Rápida</p>
                 <NuxtLink
                   to="/transactions"
-                  class="flex items-center justify-between px-2 py-1.5 hover:bg-background-hover rounded text-[13px] transition-colors"
+                  class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-100 rounded-lg text-sm transition-colors"
                 >
-                  <span class="text-text-primary">Transações</span>
-                  <span class="text-[18px]">→</span>
+                  <span class="text-gray-700 font-normal">Transações</span>
+                  <span class="text-gray-400">→</span>
                 </NuxtLink>
                 <NuxtLink
                   to="/categories"
-                  class="flex items-center justify-between px-2 py-1.5 hover:bg-background-hover rounded text-[13px] transition-colors"
+                  class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-100 rounded-lg text-sm transition-colors"
                 >
-                  <span class="text-text-primary">Categorias</span>
-                  <span class="text-[18px]">→</span>
+                  <span class="text-gray-700 font-normal">Categorias</span>
+                  <span class="text-gray-400">→</span>
                 </NuxtLink>
                 <NuxtLink
                   to="/installments"
-                  class="flex items-center justify-between px-2 py-1.5 hover:bg-background-hover rounded text-[13px] transition-colors"
+                  class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-100 rounded-lg text-sm transition-colors"
                 >
-                  <span class="text-text-primary">Parcelas</span>
-                  <span class="text-[18px]">→</span>
+                  <span class="text-gray-700 font-normal">Parcelas</span>
+                  <span class="text-gray-400">→</span>
                 </NuxtLink>
                 <NuxtLink
                   to="/budget"
-                  class="flex items-center justify-between px-2 py-1.5 hover:bg-background-hover rounded text-[13px] transition-colors"
+                  class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-100 rounded-lg text-sm transition-colors"
                 >
-                  <span class="text-text-primary">Orçamento</span>
-                  <span class="text-[18px]">→</span>
+                  <span class="text-gray-700 font-normal">Orçamento</span>
+                  <span class="text-gray-400">→</span>
                 </NuxtLink>
               </div>
             </div>
           </section>
 
-          <!-- Upcoming Expenses - Flat Design -->
-          <section v-if="upcomingExpenses.length > 0" class="border-l-2 border-l-accent-danger pl-4 py-2">
-            <div class="flex items-center justify-between mb-3">
-              <h2 class="text-[14px] font-medium">Próximas Despesas</h2>
-              <span class="text-[11px] text-text-muted">{{ upcomingExpenses.length }} itens</span>
+          <!-- Upcoming Expenses - SEM BORDAS coloridas -->
+          <section v-if="upcomingExpenses.length > 0" class="bg-gray-50/50 rounded-2xl px-8 py-7">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-lg font-normal text-gray-700">Próximas Despesas</h2>
+              <span class="text-sm text-gray-400">{{ upcomingExpenses.length }} itens</span>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div
                 v-for="expense in upcomingExpenses.slice(0, 8)"
                 :key="expense.transactionId"
-                class="flex items-start justify-between gap-2 pb-2 border-b border-border-base"
+                class="flex items-start justify-between gap-3 pb-4 border-b border-gray-100 last:border-0"
               >
                 <div class="flex-1 min-w-0">
-                  <p class="text-[12px] text-text-primary truncate font-medium">{{ expense.description }}</p>
-                  <p class="text-[10px] text-text-muted mt-0.5">{{ formatDate(expense.date) }}</p>
+                  <p class="text-sm text-gray-700 font-normal truncate">{{ expense.description }}</p>
+                  <p class="text-xs text-gray-400 mt-1">{{ formatDate(expense.date) }}</p>
                 </div>
-                <span class="text-[12px] font-semibold text-accent-danger whitespace-nowrap">
-                  {{ formatCurrency(Math.abs(expense.amount)) }}
+                <span class="text-base font-light text-rose-400 whitespace-nowrap">
+                  {{ formatCurrencyCompact(Math.abs(expense.amount)) }}
                 </span>
               </div>
             </div>
@@ -256,7 +263,7 @@ const filteredTransactions = computed(() => {
   return filtered
 })
 
-// Dashboard Analytics - Now with rich historical data
+// Dashboard Analytics
 const monthlyStats = computed(() => getCurrentMonthStats([...filteredTransactions.value]))
 const topCategories = computed(() => getTopCategories([...filteredTransactions.value], 5))
 const upcomingExpenses = computed(() => getUpcomingExpenses([...filteredTransactions.value]))
@@ -279,18 +286,13 @@ const formatDate = (dateString: string) => {
   }
 }
 
-const formatCurrency = (value: number) => {
+const formatCurrencyCompact = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(value)
-}
-
-const formatTrendValue = (value: number) => {
-  const sign = value >= 0 ? '+' : ''
-  return `${sign}${value.toFixed(0)}%`
 }
 
 const getCurrentMonthName = () => {

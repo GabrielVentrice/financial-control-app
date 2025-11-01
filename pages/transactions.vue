@@ -79,43 +79,24 @@
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Stats - 3 COLUNAS (não 5!) -->
+          <!-- Summary Stats - 3 COLUNAS principais -->
           <section>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
               <LightStatCard
-                label="Total Transações"
+                label="Total de Transações"
                 :value="filteredTransactions.length"
                 format="number"
-                value-color="info"
+                value-color="primary"
                 size="lg"
               />
 
-              <LightStatCard
-                label="Soma Total"
-                :value="totalAmount"
-                format="currency"
-                :value-color="totalAmount >= 0 ? 'success' : 'danger'"
-                size="lg"
-              />
-
-              <LightStatCard
-                label="Valor Médio"
-                :value="filteredTransactions.length > 0 ? totalAmount / filteredTransactions.length : 0"
-                format="currency"
-                value-color="default"
-                size="lg"
-              />
-            </div>
-
-            <!-- Secondary stats - 2 colunas -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
               <LightStatCard
                 label="Receitas"
                 :value="incomeCount"
                 format="number"
                 value-color="success"
-                size="md"
-                :secondary-stat="{ label: 'Transações de entrada', value: '' }"
+                size="lg"
+                :secondary-stat="{ label: 'Entradas', value: '' }"
               />
 
               <LightStatCard
@@ -123,8 +104,27 @@
                 :value="expenseCount"
                 format="number"
                 value-color="danger"
+                size="lg"
+                :secondary-stat="{ label: 'Saídas', value: '' }"
+              />
+            </div>
+
+            <!-- Secondary stats - 2 colunas -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+              <LightStatCard
+                label="Soma Total"
+                :value="totalAmount"
+                format="currency"
+                :value-color="totalAmount >= 0 ? 'success' : 'danger'"
                 size="md"
-                :secondary-stat="{ label: 'Transações de saída', value: '' }"
+              />
+
+              <LightStatCard
+                label="Valor Médio"
+                :value="filteredTransactions.length > 0 ? totalAmount / filteredTransactions.length : 0"
+                format="currency"
+                value-color="info"
+                size="md"
               />
             </div>
           </section>
@@ -132,7 +132,7 @@
           <!-- Transactions Table - Respirável -->
           <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
             <!-- Header -->
-            <div class="px-6 py-4 border-b border-gray-100">
+            <div class="px-8 py-6 border-b border-gray-100">
               <h2 class="text-lg font-normal text-gray-700">Transações</h2>
               <p class="text-sm text-gray-400 mt-1">{{ filteredTransactions.length }} resultados</p>
             </div>

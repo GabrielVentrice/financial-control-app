@@ -73,8 +73,11 @@
           </section>
 
           <!-- Chart - Light Design -->
-          <section class="space-y-5">
-            <h2 class="text-lg font-normal text-gray-700">Evolução dos Custos Fixos</h2>
+          <section class="bg-gray-50/50 rounded-2xl px-8 py-7">
+            <div class="mb-6">
+              <h2 class="text-lg font-normal text-gray-700">Evolução dos Custos Fixos</h2>
+              <p class="text-sm text-gray-400 mt-1">Últimos 6 meses</p>
+            </div>
             <div class="h-64">
               <Bar
                 v-if="chartData"
@@ -86,8 +89,9 @@
 
           <!-- Detailed Table - Light Design -->
           <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
-            <div class="px-6 py-4 border-b border-gray-100">
+            <div class="px-8 py-6 border-b border-gray-100">
               <h2 class="text-lg font-normal text-gray-700">Detalhamento por Categoria</h2>
+              <p class="text-sm text-gray-400 mt-1">Valores mensais e totais</p>
             </div>
 
             <!-- Desktop Table -->

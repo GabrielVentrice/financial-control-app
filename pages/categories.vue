@@ -39,25 +39,16 @@
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Cards - Todos em uma linha -->
+          <!-- Summary Cards - 3 COLUNAS principais -->
           <section>
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
-              <LightStatCard
-                label="Variáveis"
-                :value="variableCostsTotal"
-                format="currency"
-                value-color="success"
-                size="md"
-                :secondary-stat="{ label: 'Não recorrentes', value: '' }"
-              />
-
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
               <LightStatCard
                 label="Total"
                 :value="totalAmount"
                 format="currency"
                 value-color="primary"
-                size="md"
-                :secondary-stat="{ label: 'Transações', value: totalTransactions }"
+                size="lg"
+                :secondary-stat="{ label: totalTransactions + ' transações', value: '' }"
               />
 
               <LightStatCard
@@ -65,17 +56,28 @@
                 :value="custosFixosTotal"
                 format="currency"
                 value-color="info"
-                size="md"
-                :secondary-stat="{ label: 'Categorias', value: custosFixosCategoriesCount }"
+                size="lg"
+                :secondary-stat="{ label: custosFixosCategoriesCount + ' categorias', value: '' }"
               />
 
+              <LightStatCard
+                label="Variáveis"
+                :value="variableCostsTotal"
+                format="currency"
+                value-color="success"
+                size="lg"
+              />
+            </div>
+
+            <!-- Secondary stats - 2 colunas -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
               <LightStatCard
                 label="Comprometidos"
                 :value="gastosComprometidosTotal"
                 format="currency"
                 value-color="warning"
                 size="md"
-                :secondary-stat="{ label: 'Categorias', value: gastosComprometidosCategoriesCount }"
+                :secondary-stat="{ label: gastosComprometidosCategoriesCount + ' categorias', value: '' }"
               />
 
               <LightStatCard
@@ -91,7 +93,7 @@
           <!-- Categories List - Respirável, sem bordas pesadas -->
           <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
             <!-- Header -->
-            <div class="px-6 py-4 border-b border-gray-100">
+            <div class="px-8 py-6 border-b border-gray-100">
               <h2 class="text-lg font-normal text-gray-700">Gastos por Categoria</h2>
               <p class="text-sm text-gray-400 mt-1">{{ categories.length }} categorias</p>
             </div>

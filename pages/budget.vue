@@ -57,9 +57,18 @@
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Cards - 3 COLUNAS + 1 secundária -->
+          <!-- Summary Cards - 3 COLUNAS principais -->
           <section>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <LightStatCard
+                label="Total Orçado"
+                :value="totalBudget"
+                format="currency"
+                value-color="primary"
+                size="lg"
+                :secondary-stat="{ label: formatMonthCompact(), value: '' }"
+              />
+
               <LightStatCard
                 label="Juliana"
                 :value="totalBudgetJuliana"
@@ -73,29 +82,21 @@
                 label="Gabriel"
                 :value="totalBudgetGabriel"
                 format="currency"
-                value-color="primary"
+                value-color="success"
                 size="lg"
                 :secondary-stat="{ label: categoriesWithBudgetGabriel + ' categorias', value: '' }"
               />
-
-              <LightStatCard
-                label="Total Orçado"
-                :value="totalBudget"
-                format="currency"
-                value-color="success"
-                size="lg"
-                :secondary-stat="{ label: formatMonthCompact(), value: '' }"
-              />
             </div>
 
+            <!-- Secondary stats - 2 colunas -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
               <LightStatCard
-                label="Configuradas"
+                label="Categorias Configuradas"
                 :value="categoriesWithBudget"
                 format="number"
                 value-color="warning"
                 size="md"
-                :secondary-stat="{ label: 'de ' + availableCategories.length, value: '' }"
+                :secondary-stat="{ label: 'de ' + availableCategories.length + ' disponíveis', value: '' }"
               />
 
               <LightStatCard
@@ -111,13 +112,16 @@
           <!-- Budget Configuration - Light Design -->
           <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
             <!-- Header with Search -->
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-4">
-              <h2 class="text-lg font-normal text-gray-700">Orçamentos por Categoria</h2>
+            <div class="px-8 py-6 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <h2 class="text-lg font-normal text-gray-700">Orçamentos por Categoria</h2>
+                <p class="text-sm text-gray-400 mt-1">Configure os orçamentos mensais</p>
+              </div>
               <input
                 v-model="searchQuery"
                 type="text"
-                placeholder="Buscar..."
-                class="px-4 py-3 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all w-64"
+                placeholder="Buscar categoria..."
+                class="px-4 py-3 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all lg:w-64"
               />
             </div>
 
@@ -249,9 +253,9 @@
           </section>
 
           <!-- Info Note - Light Design -->
-          <div class="bg-blue-50/30 rounded-xl px-6 py-5">
+          <div class="bg-blue-50/30 rounded-2xl px-8 py-6">
             <p class="text-sm text-gray-700 leading-relaxed">
-              <span class="font-medium">Nota:</span> Apenas categorias de gastos são exibidas aqui. Categorias de sistema (contas bancárias, cartões de crédito, etc.) são automaticamente excluídas.
+              <span class="font-normal text-gray-800">Nota:</span> Apenas categorias de gastos são exibidas aqui. Categorias de sistema (contas bancárias, cartões de crédito, etc.) são automaticamente excluídas.
             </p>
           </div>
         </template>
