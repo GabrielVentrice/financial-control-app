@@ -75,6 +75,13 @@ export interface CategoryData {
   percentage: number
   average: number
   transactions: Transaction[]
+  budget?: {
+    juliana: number
+    gabriel: number
+    total: number
+    remaining: number
+    percentageUsed: number
+  }
 }
 
 export interface CategoryTotals {

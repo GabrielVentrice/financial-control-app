@@ -1,8 +1,9 @@
-import type { Transaction, CategoriesQueryParams, CategoriesResponse, CategoryData, CategoryTotals } from '~/types/transaction'
+import type { Transaction, CategoriesQueryParams, CategoriesResponse, CategoryData, CategoryTotals, Budget } from '~/types/transaction'
 import { fetchTransactionsFromGoogleSheets } from '../utils/googleSheets'
 import { enrichTransactionsWithPerson } from '../utils/personIdentifier'
 import { processInstallments } from '../utils/installmentProcessor'
 import { applyFilters, validateQueryParams } from '../utils/transactionFilters'
+import { fetchBudgetsFromGoogleSheets } from '../utils/budgetSheets'
 
 /**
  * Get category analysis and spending breakdown
@@ -94,10 +95,43 @@ export default defineEventHandler(async (event) => {
     transactions = applyFilters(transactions, query)
     console.log('[API] Applied filters. Final count:', transactions.length)
 
-    // STEP 5: Process categories
+    // STEP 5: Fetch budgets for the filtered period
+    let budgets: Budget[] = []
+    try {
+      budgets = await fetchBudgetsFromGoogleSheets()
+
+      // If date filters are present, filter budgets to match the period
+      if (query.startDate || query.endDate) {
+        budgets = budgets.filter(budget => {
+          const budgetDate = new Date(budget.year, budget.month - 1, 1)
+
+          if (query.startDate) {
+            const startDate = new Date(query.startDate)
+            if (budgetDate < new Date(startDate.getFullYear(), startDate.getMonth(), 1)) {
+              return false
+            }
+          }
+
+          if (query.endDate) {
+            const endDate = new Date(query.endDate)
+            if (budgetDate > new Date(endDate.getFullYear(), endDate.getMonth(), 1)) {
+              return false
+            }
+          }
+
+          return true
+        })
+      }
+
+      console.log('[API] Fetched budgets for period:', budgets.length)
+    } catch (error) {
+      console.warn('[API] Could not fetch budgets, continuing without budget data:', error)
+    }
+
+    // STEP 6: Process categories
     const includeTransactions = query.includeTransactions === 'true' || query.includeTransactions === true
-    const categoriesResponse = processCategoriesData(transactions, includeTransactions)
-    
+    const categoriesResponse = processCategoriesData(transactions, budgets, includeTransactions, query.person)
+
     console.log('[API] Processed categories. Categories count:', categoriesResponse.categories.length)
 
     return categoriesResponse
@@ -120,7 +154,12 @@ export default defineEventHandler(async (event) => {
 /**
  * Process transactions into category data with totals and classifications
  */
-function processCategoriesData(transactions: Transaction[], includeTransactions: boolean): CategoriesResponse {
+function processCategoriesData(
+  transactions: Transaction[],
+  budgets: Budget[],
+  includeTransactions: boolean,
+  selectedPerson?: 'Juliana' | 'Gabriel' | 'Ambos'
+): CategoriesResponse {
   // Configuration - Categories that should be excluded from analysis
   const EXCLUDED_CATEGORIES = [
     'Sem Categoria',
@@ -197,18 +236,59 @@ function processCategoriesData(transactions: Transaction[], includeTransactions:
   // Calculate total amount for percentage calculations
   const totalAmount = filteredTransactions.reduce((sum, t) => sum + t.amount, 0)
 
-  // Build categories array
+  // Build categories array with budget information
   const categories: CategoryData[] = []
   categoryMap.forEach((data, name) => {
+    // Find budgets for this category
+    const categoryBudgets = budgets.filter(b => b.category === name)
+    const julianaBudget = categoryBudgets.find(b => b.person === 'Juliana')?.amount || 0
+    const gabrielBudget = categoryBudgets.find(b => b.person === 'Gabriel')?.amount || 0
+
+    // Calculate budget based on selected person
+    let totalBudget = 0
+    let displayJulianaBudget = 0
+    let displayGabrielBudget = 0
+
+    if (selectedPerson === 'Gabriel') {
+      // Show only Gabriel's budget
+      totalBudget = gabrielBudget
+      displayGabrielBudget = gabrielBudget
+    } else if (selectedPerson === 'Juliana') {
+      // Show only Juliana's budget
+      totalBudget = julianaBudget
+      displayJulianaBudget = julianaBudget
+    } else {
+      // Show both (Ambos or undefined)
+      totalBudget = julianaBudget + gabrielBudget
+      displayJulianaBudget = julianaBudget
+      displayGabrielBudget = gabrielBudget
+    }
+
+    // Calculate budget metrics if budget exists
+    let budgetInfo = undefined
+    if (totalBudget > 0) {
+      const remaining = totalBudget - data.total
+      const percentageUsed = (data.total / totalBudget) * 100
+
+      budgetInfo = {
+        juliana: displayJulianaBudget,
+        gabriel: displayGabrielBudget,
+        total: totalBudget,
+        remaining: remaining,
+        percentageUsed: percentageUsed
+      }
+    }
+
     categories.push({
       name,
       count: data.count,
       total: data.total,
       percentage: totalAmount > 0 ? (data.total / totalAmount) * 100 : 0,
       average: data.total / data.count,
-      transactions: includeTransactions ? data.transactions.sort((a, b) => 
+      transactions: includeTransactions ? data.transactions.sort((a, b) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
-      ) : []
+      ) : [],
+      budget: budgetInfo
     })
   })
 

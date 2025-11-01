@@ -79,11 +79,11 @@
             <!-- Desktop Table Header -->
             <div class="hidden lg:block px-4 py-2.5 bg-background-section border-b border-border-base">
               <div class="grid grid-cols-12 gap-3 items-center text-[11px] font-medium text-text-secondary uppercase tracking-wide">
-                <div class="col-span-5">Categoria</div>
-                <div class="col-span-2">Transações</div>
-                <div class="col-span-2">Valor</div>
-                <div class="col-span-2">% Total</div>
-                <div class="col-span-1 text-right">Média</div>
+                <div class="col-span-4">Categoria</div>
+                <div class="col-span-2">Gasto / Orçamento</div>
+                <div class="col-span-3">Progresso</div>
+                <div class="col-span-2">Restante</div>
+                <div class="col-span-1 text-right">Trans.</div>
               </div>
             </div>
 
@@ -95,7 +95,7 @@
             <!-- Categories -->
             <div class="divide-y divide-border-base">
               <template v-for="category in categories" :key="category.name">
-                <!-- Desktop Category Row - COMPACT -->
+                <!-- Desktop Category Row - COMPACT WITH BUDGET -->
                 <div
                   @click="toggleCategory(category.name)"
                   class="hidden lg:block px-4 py-2.5 hover:bg-background-hover transition-colors cursor-pointer"
@@ -103,7 +103,7 @@
                 >
                   <div class="grid grid-cols-12 gap-3 items-center">
                     <!-- Category Name -->
-                    <div class="col-span-5 flex items-center gap-2">
+                    <div class="col-span-4 flex items-center gap-2">
                       <svg
                         class="h-3 w-3 text-text-muted transition-transform duration-150 flex-shrink-0"
                         :class="{ 'rotate-90': expandedCategory === category.name }"
@@ -121,49 +121,75 @@
                       <p class="text-[13px] font-medium text-text-primary truncate">{{ category.name }}</p>
                     </div>
 
-                    <!-- Transaction Count -->
+                    <!-- Gasto / Orçamento -->
                     <div class="col-span-2">
+                      <div class="space-y-0.5">
+                        <p class="text-[13px] font-semibold text-text-primary">
+                          {{ formatCurrencyCompact(category.total) }}
+                        </p>
+                        <p v-if="category.budget" class="text-[11px] text-text-muted">
+                          de {{ formatCurrencyCompact(category.budget.total) }}
+                        </p>
+                        <p v-else class="text-[11px] text-text-muted italic">
+                          Sem orçamento
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Barra de Progresso -->
+                    <div class="col-span-3">
+                      <template v-if="category.budget">
+                        <div class="space-y-1">
+                          <div class="flex items-center gap-2">
+                            <div class="flex-1 bg-background-section rounded-full h-2 overflow-hidden">
+                              <div
+                                class="h-2 rounded-full transition-all"
+                                :class="getBudgetProgressColor(category.budget.percentageUsed)"
+                                :style="{ width: `${Math.min(category.budget.percentageUsed, 100)}%` }"
+                              ></div>
+                            </div>
+                            <span class="text-[11px] font-semibold whitespace-nowrap" :class="getBudgetTextColor(category.budget.percentageUsed)">
+                              {{ category.budget.percentageUsed.toFixed(0) }}%
+                            </span>
+                          </div>
+                        </div>
+                      </template>
+                      <template v-else>
+                        <span class="text-[11px] text-text-muted italic">-</span>
+                      </template>
+                    </div>
+
+                    <!-- Restante -->
+                    <div class="col-span-2">
+                      <template v-if="category.budget">
+                        <p class="text-[13px] font-semibold" :class="category.budget.remaining >= 0 ? 'text-accent-success' : 'text-accent-danger'">
+                          {{ formatCurrencyCompact(category.budget.remaining) }}
+                        </p>
+                        <p class="text-[11px] text-text-muted">
+                          {{ category.budget.remaining >= 0 ? 'disponível' : 'excedido' }}
+                        </p>
+                      </template>
+                      <template v-else>
+                        <span class="text-[11px] text-text-muted italic">-</span>
+                      </template>
+                    </div>
+
+                    <!-- Transações -->
+                    <div class="col-span-1 text-right">
                       <span class="inline-block px-2 py-0.5 bg-background-section text-accent-info text-[11px] font-semibold rounded border border-border-base">
                         {{ category.count }}
                       </span>
                     </div>
-
-                    <!-- Total Value -->
-                    <div class="col-span-2">
-                      <p class="text-[13px] font-semibold text-text-primary">
-                        {{ formatCurrencyCompact(category.total) }}
-                      </p>
-                    </div>
-
-                    <!-- Percentage -->
-                    <div class="col-span-2">
-                      <div class="flex items-center gap-2">
-                        <div class="flex-1 bg-background-section rounded-full h-1">
-                          <div
-                            class="bg-accent-primary h-1 rounded-full transition-all"
-                            :style="{ width: `${category.percentage}%` }"
-                          ></div>
-                        </div>
-                        <span class="text-[11px] font-medium text-text-secondary whitespace-nowrap">{{ category.percentage.toFixed(0) }}%</span>
-                      </div>
-                    </div>
-
-                    <!-- Average -->
-                    <div class="col-span-1 text-right">
-                      <p class="text-[11px] text-text-muted">
-                        {{ formatCurrencyCompact(category.average) }}
-                      </p>
-                    </div>
                   </div>
                 </div>
 
-                <!-- Mobile Category Card - COMPACT -->
+                <!-- Mobile Category Card - COMPACT WITH BUDGET -->
                 <div
                   @click="toggleCategory(category.name)"
                   class="lg:hidden px-3 py-3 hover:bg-background-hover transition-colors cursor-pointer"
                   :class="{ 'bg-background-section': expandedCategory === category.name }"
                 >
-                  <div class="space-y-2">
+                  <div class="space-y-2.5">
                     <!-- Header -->
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-2 min-w-0 flex-1">
@@ -174,8 +200,6 @@
                           <p class="text-[13px] font-medium text-text-primary truncate">{{ category.name }}</p>
                           <div class="flex items-center gap-2 text-[11px] text-text-muted">
                             <span>{{ category.count }} trans.</span>
-                            <span>•</span>
-                            <span>{{ category.percentage.toFixed(0) }}%</span>
                           </div>
                         </div>
                       </div>
@@ -183,19 +207,39 @@
                         <p class="text-[13px] font-semibold text-text-primary whitespace-nowrap">
                           {{ formatCurrencyCompact(category.total) }}
                         </p>
-                        <p class="text-[11px] text-text-muted">
-                          {{ formatCurrencyCompact(category.average) }}
+                        <p v-if="category.budget" class="text-[11px] text-text-muted">
+                          de {{ formatCurrencyCompact(category.budget.total) }}
+                        </p>
+                        <p v-else class="text-[11px] text-text-muted italic">
+                          Sem orçamento
                         </p>
                       </div>
                     </div>
 
-                    <!-- Progress bar -->
-                    <div class="w-full bg-background-section rounded-full h-1">
-                      <div
-                        class="bg-accent-primary h-1 rounded-full transition-all"
-                        :style="{ width: `${category.percentage}%` }"
-                      ></div>
-                    </div>
+                    <!-- Budget Progress bar -->
+                    <template v-if="category.budget">
+                      <div class="space-y-1">
+                        <div class="flex items-center justify-between text-[11px]">
+                          <span class="text-text-muted">Progresso do orçamento</span>
+                          <span class="font-semibold" :class="getBudgetTextColor(category.budget.percentageUsed)">
+                            {{ category.budget.percentageUsed.toFixed(0) }}%
+                          </span>
+                        </div>
+                        <div class="w-full bg-background-section rounded-full h-2 overflow-hidden">
+                          <div
+                            class="h-2 rounded-full transition-all"
+                            :class="getBudgetProgressColor(category.budget.percentageUsed)"
+                            :style="{ width: `${Math.min(category.budget.percentageUsed, 100)}%` }"
+                          ></div>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px]">
+                          <span class="text-text-muted">Restante:</span>
+                          <span class="font-semibold" :class="category.budget.remaining >= 0 ? 'text-accent-success' : 'text-accent-danger'">
+                            {{ formatCurrencyCompact(category.budget.remaining) }}
+                          </span>
+                        </div>
+                      </div>
+                    </template>
                   </div>
                 </div>
 
@@ -357,6 +401,20 @@ const toggleCategory = (categoryName: string) => {
 const getCategoryTransactions = (categoryName: string) => {
   const category = categories.value.find(cat => cat.name === categoryName)
   return category?.transactions || []
+}
+
+const getBudgetProgressColor = (percentageUsed: number): string => {
+  if (percentageUsed >= 100) return 'bg-accent-danger'
+  if (percentageUsed >= 90) return 'bg-accent-warning'
+  if (percentageUsed >= 75) return 'bg-accent-info'
+  return 'bg-accent-success'
+}
+
+const getBudgetTextColor = (percentageUsed: number): string => {
+  if (percentageUsed >= 100) return 'text-accent-danger'
+  if (percentageUsed >= 90) return 'text-accent-warning'
+  if (percentageUsed >= 75) return 'text-accent-info'
+  return 'text-accent-success'
 }
 
 const refreshData = async () => {
