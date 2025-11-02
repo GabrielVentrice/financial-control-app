@@ -33,7 +33,7 @@
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-10 space-y-12">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando custos fixos..." />
 
@@ -43,7 +43,7 @@
         <!-- Content -->
         <template v-else>
           <!-- Summary Cards - 3 COLUNAS Light Design -->
-          <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <LightStatCard
               label="Mês Atual"
               :value="currentMonthTotal"
@@ -72,30 +72,32 @@
             />
           </section>
 
-          <!-- Chart - Light Design -->
-          <section class="bg-gray-50/50 rounded-2xl px-8 py-7">
-            <div class="mb-6">
-              <h2 class="text-lg font-normal text-gray-700">Evolução dos Custos Fixos</h2>
-              <p class="text-sm text-gray-400 mt-1">Últimos 6 meses</p>
-            </div>
-            <div class="h-64">
-              <Bar
-                v-if="chartData"
-                :data="chartData"
-                :options="chartOptions"
-              />
-            </div>
-          </section>
-
-          <!-- Detailed Table - Light Design -->
-          <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
-            <div class="px-8 py-6 border-b border-gray-100">
-              <h2 class="text-lg font-normal text-gray-700">Detalhamento por Categoria</h2>
-              <p class="text-sm text-gray-400 mt-1">Valores mensais e totais</p>
+          <!-- Chart + Table lado a lado em desktop -->
+          <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Chart - Light Design -->
+            <div class="bg-gray-50/50 rounded-xl px-6 py-5">
+              <div class="mb-5">
+                <h2 class="text-lg font-normal text-gray-700">Evolução dos Custos Fixos</h2>
+                <p class="text-sm text-gray-400 mt-1">Últimos 6 meses</p>
+              </div>
+              <div class="h-64">
+                <Bar
+                  v-if="chartData"
+                  :data="chartData"
+                  :options="chartOptions"
+                />
+              </div>
             </div>
 
-            <!-- Desktop Table -->
-            <div class="hidden lg:block overflow-x-auto">
+            <!-- Detailed Table - Light Design com scroll interno -->
+            <div class="bg-white rounded-xl overflow-hidden shadow-sm flex flex-col" style="max-height: 400px;">
+              <div class="px-6 py-5 border-b border-gray-100 flex-shrink-0">
+                <h2 class="text-lg font-normal text-gray-700">Detalhamento</h2>
+                <p class="text-sm text-gray-400 mt-1">Valores mensais</p>
+              </div>
+
+              <!-- Desktop Table -->
+              <div class="hidden lg:block overflow-x-auto overflow-y-auto flex-1">
               <table class="min-w-full">
                 <thead class="bg-gray-50/50">
                   <tr>
@@ -168,8 +170,8 @@
               </table>
             </div>
 
-            <!-- Mobile Cards - COMPACT -->
-            <div class="lg:hidden divide-y divide-border-base">
+              <!-- Mobile Cards - COMPACT -->
+              <div class="lg:hidden divide-y divide-gray-100 overflow-y-auto flex-1">
               <div
                 v-for="category in categoryBreakdown"
                 :key="category.name"
@@ -223,13 +225,14 @@
               </div>
             </div>
 
-            <!-- Empty State -->
-            <EmptyState
-              v-if="categoryBreakdown.length === 0"
-              icon="💰"
-              title="Nenhum custo fixo encontrado"
-              description="Não há custos fixos registrados nos últimos 6 meses para as categorias configuradas."
-            />
+              <!-- Empty State -->
+              <EmptyState
+                v-if="categoryBreakdown.length === 0"
+                icon="💰"
+                title="Nenhum custo fixo encontrado"
+                description="Não há custos fixos registrados nos últimos 6 meses para as categorias configuradas."
+              />
+            </div>
           </section>
         </template>
       </main>

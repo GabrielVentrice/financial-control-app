@@ -15,7 +15,7 @@
       </header>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-10 space-y-12">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando parcelas..." />
 
@@ -25,7 +25,7 @@
         <!-- Content -->
         <template v-else>
           <!-- Summary Cards - 3 COLUNAS Light Design -->
-          <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <LightStatCard
               label="Ativas"
               :value="activeInstallments.length"
@@ -55,18 +55,18 @@
           </section>
 
           <!-- Chart - Light Design -->
-          <section class="bg-gray-50/50 rounded-2xl px-8 py-7">
-            <div class="mb-6">
+          <section class="bg-gray-50/50 rounded-xl px-6 py-5">
+            <div class="mb-5">
               <h2 class="text-lg font-normal text-gray-700">Parcelas por Mês</h2>
               <p class="text-sm text-gray-400 mt-1">6 meses atrás → 6 meses à frente</p>
             </div>
-            <div class="h-64">
+            <div class="h-56">
               <Bar :data="chartData" :options="chartOptions" />
             </div>
           </section>
 
-          <!-- Active Installments List - Light Design -->
-          <section class="space-y-6">
+          <!-- Active Installments List - Light Design em Grid 2 colunas -->
+          <section class="space-y-5">
             <h2 class="text-lg font-normal text-gray-700">Parcelas Ativas ({{ activeInstallments.length }})</h2>
             <EmptyState
               v-if="activeInstallments.length === 0"
@@ -74,16 +74,16 @@
               title="Nenhuma parcela ativa"
               description="Você não possui parcelas ou financiamentos ativos no momento."
             />
-            <div v-else class="space-y-6">
+            <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div
                 v-for="installment in activeInstallments"
                 :key="installment.key"
-                class="bg-gray-50/50 rounded-2xl px-8 py-7 hover:bg-gray-50 transition-colors"
+                class="bg-gray-50/50 rounded-xl px-6 py-5 hover:bg-gray-50 transition-colors"
               >
-                <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                <div class="flex flex-col gap-4">
                   <div class="flex-1 min-w-0">
-                    <h3 class="font-normal text-gray-800 text-base mb-3 truncate">{{ installment.description }}</h3>
-                    <div class="flex flex-wrap gap-6 text-sm text-gray-500">
+                    <h3 class="font-normal text-gray-800 text-base mb-2 truncate">{{ installment.description }}</h3>
+                    <div class="flex flex-wrap gap-4 text-sm text-gray-500">
                       <span>
                         <span class="text-gray-400">Origem:</span> {{ installment.origin }}
                       </span>
@@ -92,15 +92,13 @@
                       </span>
                     </div>
                   </div>
-                  <div class="text-left lg:text-right lg:ml-4">
-                    <div class="text-3xl font-light text-blue-500">
+                  <div class="flex items-center justify-between">
+                    <div class="text-2xl font-light text-blue-500">
                       {{ installment.paid }}/{{ installment.total }}
+                      <span class="text-sm text-gray-400 ml-2">{{ installment.remaining }} restantes</span>
                     </div>
-                    <div class="text-sm text-gray-400 mt-1">
-                      {{ installment.remaining }} restantes
-                    </div>
-                    <div class="mt-3">
-                      <div class="w-full lg:w-32 bg-gray-100 rounded-full h-[2px]">
+                    <div class="flex-1 max-w-xs ml-4">
+                      <div class="w-full bg-gray-100 rounded-full h-[2px]">
                         <div
                           class="bg-gradient-to-r from-blue-400 to-blue-500 h-[2px] rounded-full transition-all"
                           :style="{ width: `${(installment.paid / installment.total) * 100}%` }"
@@ -109,7 +107,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="mt-6 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4 text-sm">
+                <div class="mt-4 pt-3 border-t border-gray-100 grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span class="text-gray-400">Primeira:</span>
                     <span class="font-normal text-gray-700 ml-2">{{ formatDateCompact(installment.firstDate) }}</span>
@@ -123,14 +121,14 @@
             </div>
           </section>
 
-          <!-- Monthly Breakdown - Light Design -->
-          <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
-            <div class="px-8 py-6 border-b border-gray-100">
+          <!-- Monthly Breakdown - Light Design com scroll interno -->
+          <section class="bg-white rounded-xl overflow-hidden shadow-sm flex flex-col" style="max-height: 500px;">
+            <div class="px-6 py-5 border-b border-gray-100 flex-shrink-0">
               <h2 class="text-lg font-normal text-gray-700">Detalhamento Mensal</h2>
             </div>
 
             <!-- Desktop Table -->
-            <div class="hidden lg:block overflow-x-auto">
+            <div class="hidden lg:block overflow-x-auto overflow-y-auto flex-1">
               <table class="min-w-full">
                 <thead class="bg-gray-50/50">
                   <tr>
@@ -179,7 +177,7 @@
             </div>
 
             <!-- Mobile Cards -->
-            <div class="lg:hidden divide-y divide-gray-100">
+            <div class="lg:hidden divide-y divide-gray-100 overflow-y-auto flex-1">
               <div
                 v-for="month in monthlyBreakdown"
                 :key="month.monthKey"

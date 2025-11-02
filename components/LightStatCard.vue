@@ -1,12 +1,12 @@
 <template>
-  <div class="bg-gray-50/50 rounded-2xl px-8 py-7 transition-colors duration-300 hover:bg-gray-50">
+  <div class="bg-gray-50/50 rounded-xl px-6 py-5 transition-colors duration-200 hover:bg-gray-50">
     <!-- Label - Suave e pequeno -->
-    <p class="text-xs font-medium text-gray-400 mb-4 tracking-wide uppercase">
+    <p class="text-xs font-medium text-gray-400 mb-3 tracking-wide uppercase">
       {{ label }}
     </p>
 
     <!-- Main Value - Hierarquia por TAMANHO, não peso -->
-    <div class="flex items-baseline gap-3 mb-4">
+    <div class="flex items-baseline gap-3 mb-3">
       <p :class="['font-light leading-none tracking-tight', valueSizeClass, valueColorClass]">
         {{ formattedValue }}
       </p>
@@ -22,9 +22,9 @@
     </div>
 
     <!-- Secondary Stats - Respirável -->
-    <div v-if="hasSecondaryStats" class="flex items-center gap-6 pt-2 border-t border-gray-100">
-      <div v-if="secondaryStat" class="flex-1 pt-3">
-        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">
+    <div v-if="hasSecondaryStats" class="flex items-center gap-4 pt-2 border-t border-gray-100">
+      <div v-if="secondaryStat" class="flex-1 pt-2">
+        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
           {{ secondaryStat.label }}
         </p>
         <p class="text-sm font-normal text-gray-600">
@@ -32,8 +32,8 @@
         </p>
       </div>
 
-      <div v-if="tertiaryStat" class="flex-1 pt-3">
-        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">
+      <div v-if="tertiaryStat" class="flex-1 pt-2">
+        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
           {{ tertiaryStat.label }}
         </p>
         <p class="text-sm font-normal text-gray-600">
@@ -43,7 +43,7 @@
     </div>
 
     <!-- Bottom Slot - Para sparklines, etc -->
-    <div v-if="$slots.bottom" class="pt-4 mt-4 border-t border-gray-100">
+    <div v-if="$slots.bottom" class="pt-3 mt-3 border-t border-gray-100">
       <slot name="bottom" />
     </div>
   </div>

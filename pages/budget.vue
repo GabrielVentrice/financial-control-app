@@ -51,7 +51,7 @@
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-10 space-y-12">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando orçamentos..." />
 
@@ -59,7 +59,7 @@
         <template v-else>
           <!-- Summary Cards - 3 COLUNAS principais -->
           <section>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <LightStatCard
                 label="Total Orçado"
                 :value="totalBudget"
@@ -89,7 +89,7 @@
             </div>
 
             <!-- Secondary stats - 2 colunas -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               <LightStatCard
                 label="Categorias Configuradas"
                 :value="categoriesWithBudget"
@@ -109,10 +109,10 @@
             </div>
           </section>
 
-          <!-- Budget Configuration - Light Design -->
-          <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
+          <!-- Budget Configuration - Light Design com scroll interno -->
+          <section class="bg-white rounded-xl overflow-hidden shadow-sm flex flex-col" style="max-height: calc(100vh - 480px); min-height: 500px;">
             <!-- Header with Search -->
-            <div class="px-8 py-6 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="px-6 py-5 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4 flex-shrink-0">
               <div>
                 <h2 class="text-lg font-normal text-gray-700">Orçamentos por Categoria</h2>
                 <p class="text-sm text-gray-400 mt-1">Configure os orçamentos mensais</p>
@@ -126,7 +126,7 @@
             </div>
 
             <!-- Desktop Table Header -->
-            <div class="hidden lg:block px-6 py-3 bg-gray-50/50 border-b border-gray-100">
+            <div class="hidden lg:block px-6 py-3 bg-gray-50/50 border-b border-gray-100 flex-shrink-0">
               <div class="grid grid-cols-12 gap-4 items-center text-xs font-medium text-gray-400 uppercase tracking-wider">
                 <div class="col-span-5">Categoria</div>
                 <div class="col-span-3 text-center">Juliana</div>
@@ -135,8 +135,8 @@
               </div>
             </div>
 
-            <!-- Categories List -->
-            <div class="divide-y divide-gray-100">
+            <!-- Categories List - Scroll interno -->
+            <div class="divide-y divide-gray-100 overflow-y-auto flex-1">
               <div
                 v-for="category in filteredCategories"
                 :key="category"
@@ -253,7 +253,7 @@
           </section>
 
           <!-- Info Note - Light Design -->
-          <div class="bg-blue-50/30 rounded-2xl px-8 py-6">
+          <div class="bg-blue-50/30 rounded-xl px-6 py-5">
             <p class="text-sm text-gray-700 leading-relaxed">
               <span class="font-normal text-gray-800">Nota:</span> Apenas categorias de gastos são exibidas aqui. Categorias de sistema (contas bancárias, cartões de crédito, etc.) são automaticamente excluídas.
             </p>

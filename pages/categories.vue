@@ -30,7 +30,7 @@
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-10 space-y-12">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando..." />
 
@@ -41,7 +41,7 @@
         <template v-else>
           <!-- Summary Cards - 3 COLUNAS principais -->
           <section>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <LightStatCard
                 label="Total"
                 :value="totalAmount"
@@ -70,7 +70,7 @@
             </div>
 
             <!-- Secondary stats - 2 colunas -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               <LightStatCard
                 label="Comprometidos"
                 :value="gastosComprometidosTotal"
@@ -90,16 +90,16 @@
             </div>
           </section>
 
-          <!-- Categories List - Respirável, sem bordas pesadas -->
-          <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
+          <!-- Categories List - Respirável, sem bordas pesadas, com scroll interno -->
+          <section class="bg-white rounded-xl overflow-hidden shadow-sm flex flex-col" style="max-height: 600px;">
             <!-- Header -->
-            <div class="px-8 py-6 border-b border-gray-100">
+            <div class="px-6 py-5 border-b border-gray-100 flex-shrink-0">
               <h2 class="text-lg font-normal text-gray-700">Gastos por Categoria</h2>
               <p class="text-sm text-gray-400 mt-1">{{ categories.length }} categorias</p>
             </div>
 
             <!-- Desktop Table Header -->
-            <div class="hidden lg:block px-6 py-3 bg-gray-50/50 border-b border-gray-100">
+            <div class="hidden lg:block px-6 py-3 bg-gray-50/50 border-b border-gray-100 flex-shrink-0">
               <div class="grid grid-cols-12 gap-4 items-center text-xs font-medium text-gray-400 uppercase tracking-wider">
                 <div class="col-span-4">Categoria</div>
                 <div class="col-span-2">Gasto / Orçamento</div>
@@ -109,8 +109,8 @@
               </div>
             </div>
 
-            <!-- Categories -->
-            <div class="divide-y divide-gray-100">
+            <!-- Categories - Scroll interno -->
+            <div class="divide-y divide-gray-100 overflow-y-auto flex-1">
               <template v-for="category in categories" :key="category.name">
                 <!-- Desktop Category Row - Light Design -->
                 <div
@@ -262,7 +262,7 @@
                     <h4 class="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wider">
                       Transações ({{ getCategoryTransactions(category.name).length }})
                     </h4>
-                    <div class="bg-white rounded-xl p-3 max-h-64 overflow-y-auto">
+                    <div class="bg-white rounded-xl p-3 max-h-48 overflow-y-auto">
                       <div class="space-y-3">
                         <div
                           v-for="transaction in getCategoryTransactions(category.name)"

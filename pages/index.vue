@@ -16,7 +16,7 @@
       </header>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-10 space-y-12">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando..." />
 
@@ -25,10 +25,10 @@
 
         <!-- Dashboard Content -->
         <template v-else>
-          <!-- Smart Insights - Usando LightInsightCard -->
-          <section v-if="smartInsights.length > 0" class="space-y-4">
+          <!-- Smart Insights - Compacto, máximo 2 insights lado a lado -->
+          <section v-if="smartInsights.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <LightInsightCard
-              v-for="(insight, index) in smartInsights.slice(0, 3)"
+              v-for="(insight, index) in smartInsights.slice(0, 2)"
               :key="index"
               :type="insight.type"
               :title="insight.title"
@@ -39,7 +39,7 @@
 
           <!-- Main Stats Grid - 3 COLUNAS Light Design -->
           <section>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <!-- Receitas -->
               <LightStatCard
                 label="Receitas"
@@ -85,7 +85,7 @@
             </div>
 
             <!-- Secondary Stats - 2 COLUNAS -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               <!-- Média Diária -->
               <LightStatCard
                 label="Média Diária"
@@ -109,17 +109,17 @@
           </section>
 
           <!-- Two Column Layout: Categories + Activity -->
-          <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Top Categories - SEM BORDAS coloridas, mais espaçoso -->
-            <div class="lg:col-span-2 bg-gray-50/50 rounded-2xl px-8 py-7">
-              <div class="flex items-center justify-between mb-6">
+            <div class="lg:col-span-2 bg-gray-50/50 rounded-xl px-6 py-5">
+              <div class="flex items-center justify-between mb-5">
                 <h2 class="text-lg font-normal text-gray-700">Top Categorias</h2>
                 <NuxtLink to="/categories" class="text-sm text-blue-500 hover:text-blue-600 transition-colors">
                   Ver todas →
                 </NuxtLink>
               </div>
 
-              <div v-if="topCategories.length > 0" class="space-y-6">
+              <div v-if="topCategories.length > 0" class="space-y-4">
                 <div
                   v-for="category in topCategories"
                   :key="category.name"
@@ -155,9 +155,9 @@
             </div>
 
             <!-- Quick Links - SEM BORDAS coloridas -->
-            <div class="space-y-6">
+            <div class="space-y-4">
               <!-- Filter Badge -->
-              <div class="bg-gray-50/50 rounded-2xl px-6 py-5">
+              <div class="bg-gray-50/50 rounded-xl px-5 py-4">
                 <p class="text-xs text-gray-400 mb-3 uppercase tracking-wide">Filtro Ativo</p>
                 <div class="flex items-center justify-between">
                   <span class="text-base font-normal text-gray-700">{{ selectedPerson }}</span>
@@ -166,7 +166,7 @@
               </div>
 
               <!-- Quick Links -->
-              <div class="bg-gray-50/50 rounded-2xl px-6 py-5 space-y-2">
+              <div class="bg-gray-50/50 rounded-xl px-5 py-4 space-y-1">
                 <p class="text-xs text-gray-400 mb-4 uppercase tracking-wide">Navegação Rápida</p>
                 <NuxtLink
                   to="/transactions"
@@ -201,12 +201,12 @@
           </section>
 
           <!-- Upcoming Expenses - SEM BORDAS coloridas -->
-          <section v-if="upcomingExpenses.length > 0" class="bg-gray-50/50 rounded-2xl px-8 py-7">
-            <div class="flex items-center justify-between mb-6">
+          <section v-if="upcomingExpenses.length > 0" class="bg-gray-50/50 rounded-xl px-6 py-5">
+            <div class="flex items-center justify-between mb-4">
               <h2 class="text-lg font-normal text-gray-700">Próximas Despesas</h2>
               <span class="text-sm text-gray-400">{{ upcomingExpenses.length }} itens</span>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div
                 v-for="expense in upcomingExpenses.slice(0, 8)"
                 :key="expense.transactionId"

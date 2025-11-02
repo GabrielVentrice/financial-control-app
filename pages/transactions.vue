@@ -70,7 +70,7 @@
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-10 space-y-12">
+      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando..." />
 
@@ -81,7 +81,7 @@
         <template v-else>
           <!-- Summary Stats - 3 COLUNAS principais -->
           <section>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <LightStatCard
                 label="Total de Transações"
                 :value="filteredTransactions.length"
@@ -110,7 +110,7 @@
             </div>
 
             <!-- Secondary stats - 2 colunas -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               <LightStatCard
                 label="Soma Total"
                 :value="totalAmount"
@@ -129,16 +129,16 @@
             </div>
           </section>
 
-          <!-- Transactions Table - Respirável -->
-          <section class="bg-white rounded-2xl overflow-hidden shadow-sm">
+          <!-- Transactions Table - Respirável com scroll interno -->
+          <section class="bg-white rounded-xl overflow-hidden shadow-sm flex flex-col" style="max-height: calc(100vh - 520px); min-height: 500px;">
             <!-- Header -->
-            <div class="px-8 py-6 border-b border-gray-100">
+            <div class="px-6 py-5 border-b border-gray-100 flex-shrink-0">
               <h2 class="text-lg font-normal text-gray-700">Transações</h2>
               <p class="text-sm text-gray-400 mt-1">{{ filteredTransactions.length }} resultados</p>
             </div>
 
             <!-- Desktop Table -->
-            <div class="hidden lg:block overflow-x-auto">
+            <div class="hidden lg:block overflow-x-auto overflow-y-auto flex-1">
               <table class="min-w-full">
                 <thead class="bg-gray-50/50">
                   <tr>
@@ -189,7 +189,7 @@
             </div>
 
             <!-- Mobile Cards -->
-            <div class="lg:hidden divide-y divide-gray-100">
+            <div class="lg:hidden divide-y divide-gray-100 overflow-y-auto flex-1">
               <div
                 v-for="transaction in paginatedTransactions"
                 :key="transaction.transactionId"
@@ -224,7 +224,7 @@
             />
 
             <!-- Pagination - Minimalista -->
-            <div v-if="filteredTransactions.length > pageSize" class="bg-gray-50/50 px-6 py-4 flex items-center justify-between border-t border-gray-100">
+            <div v-if="filteredTransactions.length > pageSize" class="bg-gray-50/50 px-6 py-4 flex items-center justify-between border-t border-gray-100 flex-shrink-0">
               <div class="text-sm text-gray-500">
                 <span class="font-medium text-gray-700">{{ startIndex + 1 }}-{{ Math.min(endIndex, filteredTransactions.length) }}</span>
                 <span class="mx-1">de</span>
