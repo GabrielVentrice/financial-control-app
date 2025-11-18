@@ -10,6 +10,15 @@
           <BaseButton size="sm" variant="secondary" @click="loadData" :loading="loading">
             Atualizar
           </BaseButton>
+          <BaseButton
+            size="sm"
+            variant="secondary"
+            @click="copyFromPreviousMonth"
+            :loading="copying"
+            :disabled="loading || saving"
+          >
+            {{ copying ? 'Copiando...' : 'Copiar Mês Anterior' }}
+          </BaseButton>
           <BaseButton size="sm" @click="saveBudgets" :loading="saving" :disabled="!hasChanges">
             {{ saving ? 'Salvando...' : 'Salvar' }}
           </BaseButton>
@@ -252,6 +261,7 @@ import type { BudgetsResponse, CategoriesResponse, BudgetInput, CategoryData } f
 // State
 const loading = ref(false)
 const saving = ref(false)
+const copying = ref(false)
 const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const showSuccessAlert = ref(false)
@@ -580,6 +590,50 @@ const saveBudgets = async () => {
     showErrorAlert.value = true
   } finally {
     saving.value = false
+  }
+}
+
+const copyFromPreviousMonth = async () => {
+  copying.value = true
+  clearMessages()
+
+  try {
+    // Calculate previous month
+    const [year, month] = selectedMonth.value.split('-')
+    const currentDate = new Date(parseInt(year), parseInt(month) - 1)
+    currentDate.setMonth(currentDate.getMonth() - 1)
+
+    const previousYear = currentDate.getFullYear()
+    const previousMonth = currentDate.getMonth() + 1
+
+    // Fetch budgets from previous month for the current person
+    const budgetsResponse = await $fetch<BudgetsResponse>(
+      `/api/budgets?month=${previousMonth}&year=${previousYear}&person=${selectedPerson.value}`
+    )
+
+    if (budgetsResponse.budgets.length === 0) {
+      errorMessage.value = `Não foram encontrados orçamentos de ${selectedPerson.value} para o mês anterior (${previousMonth.toString().padStart(2, '0')}/${previousYear}).`
+      showErrorAlert.value = true
+      return
+    }
+
+    // Copy values to current budget inputs
+    let copiedCount = 0
+    for (const budget of budgetsResponse.budgets) {
+      if (availableCategories.value.includes(budget.category)) {
+        budgetInputs.value[budget.category] = budget.amount
+        copiedCount++
+      }
+    }
+
+    successMessage.value = `${copiedCount} orçamento(s) copiado(s) do mês ${previousMonth.toString().padStart(2, '0')}/${previousYear}. Lembre-se de salvar as alterações!`
+    showSuccessAlert.value = true
+    markAsChanged()
+  } catch (e: any) {
+    errorMessage.value = e.data?.message || e.data || 'Não foi possível copiar os orçamentos do mês anterior. Tente novamente.'
+    showErrorAlert.value = true
+  } finally {
+    copying.value = false
   }
 }
 
