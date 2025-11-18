@@ -1,7 +1,7 @@
 <template>
   <Sidemenu>
     <div class="bg-[#FAFBFC] text-gray-800 min-h-screen">
-      <!-- Header - Clean, sem bordas pesadas -->
+      <!-- Header -->
       <header class="h-16 px-6 lg:px-12 flex items-center justify-between border-b border-gray-100">
         <div class="flex items-baseline gap-4">
           <h1 class="text-2xl font-normal tracking-tight text-gray-800">Orçamento</h1>
@@ -16,7 +16,7 @@
         </div>
       </header>
 
-      <!-- Month Selector & Messages - Light Design -->
+      <!-- Month Selector & Messages -->
       <div class="px-6 lg:px-12 py-6 bg-gray-50/50 border-b border-gray-100 space-y-4">
         <div class="flex items-center gap-4">
           <label class="text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">
@@ -51,196 +51,94 @@
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
+      <main class="w-full max-w-[1600px] mx-auto px-6 lg:px-12 py-8 space-y-6">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando orçamentos..." />
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Cards - 3 COLUNAS principais -->
+          <!-- Tabs for Juliana and Gabriel -->
           <section>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="flex gap-2 border-b border-gray-200">
+              <button
+                @click="selectedPerson = 'Juliana'"
+                class="px-6 py-3 text-sm font-medium transition-colors border-b-2"
+                :class="selectedPerson === 'Juliana'
+                  ? 'text-blue-600 border-blue-600'
+                  : 'text-gray-500 border-transparent hover:text-gray-700'"
+              >
+                Juliana
+              </button>
+              <button
+                @click="selectedPerson = 'Gabriel'"
+                class="px-6 py-3 text-sm font-medium transition-colors border-b-2"
+                :class="selectedPerson === 'Gabriel'
+                  ? 'text-blue-600 border-blue-600'
+                  : 'text-gray-500 border-transparent hover:text-gray-700'"
+              >
+                Gabriel
+              </button>
+            </div>
+          </section>
+
+          <!-- Summary Cards in one row - Sticky -->
+          <section class="sticky top-0 z-10 bg-[#FAFBFC] pt-2 pb-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <LightStatCard
                 label="Total Orçado"
-                :value="totalBudget"
+                :value="currentPersonTotalBudget"
                 format="currency"
                 value-color="primary"
-                size="lg"
+                size="md"
                 :secondary-stat="{ label: formatMonthCompact(), value: '' }"
               />
 
               <LightStatCard
-                label="Juliana"
-                :value="totalBudgetJuliana"
+                label="Gasto no Mês"
+                :value="currentPersonTotalSpent"
                 format="currency"
-                value-color="info"
-                size="lg"
-                :secondary-stat="{ label: categoriesWithBudgetJuliana + ' categorias', value: '' }"
-              />
-
-              <LightStatCard
-                label="Gabriel"
-                :value="totalBudgetGabriel"
-                format="currency"
-                value-color="success"
-                size="lg"
-                :secondary-stat="{ label: categoriesWithBudgetGabriel + ' categorias', value: '' }"
-              />
-            </div>
-
-            <!-- Secondary stats - 2 colunas -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <LightStatCard
-                label="Categorias Configuradas"
-                :value="categoriesWithBudget"
-                format="number"
                 value-color="warning"
                 size="md"
-                :secondary-stat="{ label: 'de ' + availableCategories.length + ' disponíveis', value: '' }"
+                :secondary-stat="{
+                  label: currentPersonTotalBudget > 0
+                    ? `${((currentPersonTotalSpent / currentPersonTotalBudget) * 100).toFixed(0)}% usado`
+                    : '',
+                  value: ''
+                }"
               />
 
               <LightStatCard
-                label="Média por Categoria"
-                :value="categoriesWithBudget > 0 ? totalBudget / categoriesWithBudget : 0"
+                label="Disponível"
+                :value="currentPersonTotalBudget - currentPersonTotalSpent"
                 format="currency"
-                value-color="default"
+                :value-color="currentPersonTotalBudget - currentPersonTotalSpent >= 0 ? 'success' : 'error'"
                 size="md"
+              />
+
+              <LightStatCard
+                label="Categorias Configuradas"
+                :value="currentPersonCategoriesWithBudget"
+                format="number"
+                value-color="info"
+                size="md"
+                :secondary-stat="{ label: 'de ' + availableCategories.length + ' disponíveis', value: '' }"
               />
             </div>
           </section>
 
-          <!-- Budget Configuration - Light Design com scroll interno -->
-          <section class="bg-white rounded-xl overflow-hidden shadow-sm flex flex-col" style="max-height: calc(100vh - 480px); min-height: 500px;">
-            <!-- Header with Search -->
-            <div class="px-6 py-5 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4 flex-shrink-0">
+          <!-- Budget Configuration Cards - 3 per row with flex wrap -->
+          <section>
+            <div class="mb-6 flex items-center justify-between">
               <div>
                 <h2 class="text-lg font-normal text-gray-700">Orçamentos por Categoria</h2>
-                <p class="text-sm text-gray-400 mt-1">Configure os orçamentos mensais</p>
+                <p class="text-sm text-gray-400 mt-1">Configure os orçamentos mensais para {{ selectedPerson }}</p>
               </div>
               <input
                 v-model="searchQuery"
                 type="text"
                 placeholder="Buscar categoria..."
-                class="px-4 py-3 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all lg:w-64"
+                class="px-4 py-3 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all w-64"
               />
-            </div>
-
-            <!-- Desktop Table Header -->
-            <div class="hidden lg:block px-6 py-3 bg-gray-50/50 border-b border-gray-100 flex-shrink-0">
-              <div class="grid grid-cols-12 gap-4 items-center text-xs font-medium text-gray-400 uppercase tracking-wider">
-                <div class="col-span-5">Categoria</div>
-                <div class="col-span-3 text-center">Juliana</div>
-                <div class="col-span-3 text-center">Gabriel</div>
-                <div class="col-span-1 text-center">Total</div>
-              </div>
-            </div>
-
-            <!-- Categories List - Scroll interno -->
-            <div class="divide-y divide-gray-100 overflow-y-auto flex-1">
-              <div
-                v-for="category in filteredCategories"
-                :key="category"
-                class="px-6 py-4 hover:bg-gray-50 transition-colors"
-              >
-                <!-- Desktop Layout - Light Design -->
-                <div class="hidden lg:grid grid-cols-12 gap-4 items-center">
-                  <!-- Category Name -->
-                  <div class="col-span-5 flex items-center gap-3">
-                    <span class="text-lg">{{ getCategoryIcon(category) }}</span>
-                    <p class="text-sm font-normal text-gray-700 truncate">{{ category }}</p>
-                  </div>
-
-                  <!-- Juliana Input - Neutral colors -->
-                  <div class="col-span-3">
-                    <div class="relative">
-                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">R$</span>
-                      <input
-                        v-model.number="budgetInputsJuliana[category]"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0,00"
-                        class="w-full pl-10 pr-3 py-2.5 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
-                        @input="markAsChanged"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Gabriel Input - Neutral colors -->
-                  <div class="col-span-3">
-                    <div class="relative">
-                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">R$</span>
-                      <input
-                        v-model.number="budgetInputsGabriel[category]"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0,00"
-                        class="w-full pl-10 pr-3 py-2.5 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
-                        @input="markAsChanged"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Total -->
-                  <div class="col-span-1 text-center">
-                    <span class="text-sm font-light text-gray-700">
-                      {{ formatCurrencyShort(getCategoryTotal(category)) }}
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Mobile Layout - Light Design -->
-                <div class="lg:hidden space-y-3">
-                  <!-- Category Header -->
-                  <div class="flex items-center gap-3">
-                    <span class="text-lg">{{ getCategoryIcon(category) }}</span>
-                    <div class="flex-1 min-w-0">
-                      <p class="text-sm font-normal text-gray-700 truncate">{{ category }}</p>
-                      <p v-if="getCategoryTotal(category) > 0" class="text-xs text-gray-400">
-                        Total: {{ formatCurrencyShort(getCategoryTotal(category)) }}
-                      </p>
-                    </div>
-                  </div>
-
-                  <!-- Budget Inputs -->
-                  <div class="grid grid-cols-2 gap-3">
-                    <!-- Juliana Input - Neutral -->
-                    <div>
-                      <label class="block text-xs font-normal text-gray-600 mb-2">Juliana</label>
-                      <div class="relative">
-                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">R$</span>
-                        <input
-                          v-model.number="budgetInputsJuliana[category]"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0,00"
-                          class="w-full pl-10 pr-3 py-2.5 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
-                          @input="markAsChanged"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Gabriel Input - Neutral -->
-                    <div>
-                      <label class="block text-xs font-normal text-gray-600 mb-2">Gabriel</label>
-                      <div class="relative">
-                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">R$</span>
-                        <input
-                          v-model.number="budgetInputsGabriel[category]"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0,00"
-                          class="w-full pl-10 pr-3 py-2.5 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
-                          @input="markAsChanged"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <!-- Empty State -->
@@ -250,12 +148,95 @@
               :title="searchQuery ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria disponível'"
               :description="searchQuery ? 'Tente usar termos de busca diferentes.' : 'Não há categorias disponíveis para configurar orçamentos.'"
             />
+
+            <!-- Categories Grid - 3 per row -->
+            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div
+                v-for="category in filteredCategories"
+                :key="category"
+                class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <!-- Category Header -->
+                <div class="flex items-center gap-3 mb-4">
+                  <span class="text-2xl">{{ getCategoryIcon(category) }}</span>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-700 truncate">{{ category }}</p>
+                  </div>
+                </div>
+
+                <!-- Budget Input -->
+                <div class="mb-4">
+                  <label class="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">
+                    Orçamento do Mês
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">R$</span>
+                    <input
+                      v-model.number="budgetInputs[category]"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0,00"
+                      class="w-full pl-10 pr-3 py-3 text-base bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
+                      @input="markAsChanged"
+                    />
+                  </div>
+                </div>
+
+                <!-- Historical Spending -->
+                <div class="space-y-3 pt-4 border-t border-gray-100">
+                  <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Histórico de Gastos
+                  </p>
+
+                  <!-- Current Month -->
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-600">{{ getMonthLabel(0) }}</span>
+                    <span class="text-sm font-semibold text-gray-900">
+                      {{ formatCurrencyCompact(getCategorySpending(category, 0)) }}
+                    </span>
+                  </div>
+
+                  <!-- Previous Month -->
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-500">{{ getMonthLabel(-1) }}</span>
+                    <span class="text-sm font-medium text-gray-600">
+                      {{ formatCurrencyCompact(getCategorySpending(category, -1)) }}
+                    </span>
+                  </div>
+
+                  <!-- 2 Months Back -->
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">{{ getMonthLabel(-2) }}</span>
+                    <span class="text-sm font-normal text-gray-500">
+                      {{ formatCurrencyCompact(getCategorySpending(category, -2)) }}
+                    </span>
+                  </div>
+
+                  <!-- Average -->
+                  <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <span class="text-xs text-gray-600 font-medium">Média 3 meses</span>
+                    <span class="text-sm font-semibold text-blue-600">
+                      {{ formatCurrencyCompact(getCategoryAverageSpending(category)) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Quick Set to Average Button -->
+                <button
+                  @click="setBudgetToAverage(category)"
+                  class="w-full mt-4 px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  Usar média como orçamento
+                </button>
+              </div>
+            </div>
           </section>
 
-          <!-- Info Note - Light Design -->
+          <!-- Info Note -->
           <div class="bg-blue-50/30 rounded-xl px-6 py-5">
             <p class="text-sm text-gray-700 leading-relaxed">
-              <span class="font-normal text-gray-800">Nota:</span> Apenas categorias de gastos são exibidas aqui. Categorias de sistema (contas bancárias, cartões de crédito, etc.) são automaticamente excluídas.
+              <span class="font-normal text-gray-800">Nota:</span> Apenas categorias de gastos são exibidas aqui. Categorias de sistema (contas bancárias, cartões de crédito, etc.) são automaticamente excluídas. Os valores históricos ajudam você a definir orçamentos mais realistas.
             </p>
           </div>
         </template>
@@ -266,9 +247,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import type { BudgetsResponse, CategoriesResponse, BudgetInput } from '~/types/transaction'
-
-// Composables
+import type { BudgetsResponse, CategoriesResponse, BudgetInput, CategoryData } from '~/types/transaction'
 
 // State
 const loading = ref(false)
@@ -279,6 +258,7 @@ const showSuccessAlert = ref(false)
 const showErrorAlert = ref(false)
 const searchQuery = ref('')
 const hasChanges = ref(false)
+const selectedPerson = ref<'Juliana' | 'Gabriel'>('Gabriel')
 
 // Get current month in YYYY-MM format
 const getCurrentMonth = () => {
@@ -292,8 +272,18 @@ const selectedMonth = ref(getCurrentMonth())
 
 // Data
 const availableCategories = ref<string[]>([])
-const budgetInputsJuliana = ref<Record<string, number>>({})
-const budgetInputsGabriel = ref<Record<string, number>>({})
+const budgetInputs = ref<Record<string, number>>({})
+
+// Historical data for current month, -1 month, -2 months
+const historicalData = ref<{
+  current: CategoriesResponse | null
+  previous: CategoriesResponse | null
+  twoMonthsBack: CategoriesResponse | null
+}>({
+  current: null,
+  previous: null,
+  twoMonthsBack: null
+})
 
 // Excluded categories
 const EXCLUDED_CATEGORIES = [
@@ -325,44 +315,66 @@ const filteredCategories = computed(() => {
   )
 })
 
-const getCategoryTotal = (category: string): number => {
-  return (budgetInputsJuliana.value[category] || 0) + (budgetInputsGabriel.value[category] || 0)
-}
-
-const categoriesWithBudgetJuliana = computed(() => {
-  return Object.values(budgetInputsJuliana.value).filter(amount => amount && amount > 0).length
+const currentPersonTotalBudget = computed(() => {
+  return Object.values(budgetInputs.value).reduce((sum, amount) => sum + (amount || 0), 0)
 })
 
-const categoriesWithBudgetGabriel = computed(() => {
-  return Object.values(budgetInputsGabriel.value).filter(amount => amount && amount > 0).length
+const currentPersonTotalSpent = computed(() => {
+  if (!historicalData.value.current) return 0
+
+  return historicalData.value.current.categories.reduce((sum, cat) => {
+    return sum + cat.total
+  }, 0)
 })
 
-const categoriesWithBudget = computed(() => {
-  const categoriesSet = new Set<string>()
-
-  for (const category of availableCategories.value) {
-    if ((budgetInputsJuliana.value[category] && budgetInputsJuliana.value[category] > 0) ||
-        (budgetInputsGabriel.value[category] && budgetInputsGabriel.value[category] > 0)) {
-      categoriesSet.add(category)
-    }
-  }
-
-  return categoriesSet.size
-})
-
-const totalBudgetJuliana = computed(() => {
-  return Object.values(budgetInputsJuliana.value).reduce((sum, amount) => sum + (amount || 0), 0)
-})
-
-const totalBudgetGabriel = computed(() => {
-  return Object.values(budgetInputsGabriel.value).reduce((sum, amount) => sum + (amount || 0), 0)
-})
-
-const totalBudget = computed(() => {
-  return totalBudgetJuliana.value + totalBudgetGabriel.value
+const currentPersonCategoriesWithBudget = computed(() => {
+  return Object.values(budgetInputs.value).filter(amount => amount && amount > 0).length
 })
 
 // Methods
+const getMonthLabel = (offset: number): string => {
+  const [year, month] = selectedMonth.value.split('-')
+  const date = new Date(parseInt(year), parseInt(month) - 1)
+  date.setMonth(date.getMonth() + offset)
+
+  if (offset === 0) {
+    return date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') + ' (atual)'
+  }
+
+  return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')
+}
+
+const getCategorySpending = (category: string, monthOffset: number): number => {
+  let data: CategoriesResponse | null = null
+
+  if (monthOffset === 0) {
+    data = historicalData.value.current
+  } else if (monthOffset === -1) {
+    data = historicalData.value.previous
+  } else if (monthOffset === -2) {
+    data = historicalData.value.twoMonthsBack
+  }
+
+  if (!data) return 0
+
+  const categoryData = data.categories.find(cat => cat.name === category)
+  return categoryData?.total || 0
+}
+
+const getCategoryAverageSpending = (category: string): number => {
+  const current = getCategorySpending(category, 0)
+  const previous = getCategorySpending(category, -1)
+  const twoMonthsBack = getCategorySpending(category, -2)
+
+  return (current + previous + twoMonthsBack) / 3
+}
+
+const setBudgetToAverage = (category: string) => {
+  const average = getCategoryAverageSpending(category)
+  budgetInputs.value[category] = Math.round(average)
+  markAsChanged()
+}
+
 const getCategoryIcon = (categoryName: string): string => {
   const name = categoryName.toLowerCase()
 
@@ -410,26 +422,12 @@ const getCategoryIcon = (categoryName: string): string => {
   return '💰'
 }
 
-const formatCurrency = (value: number) => {
+const formatCurrencyCompact = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
-  }).format(value)
-}
-
-const formatCurrencyShort = (value: number) => {
-  if (value === 0) return '-'
-  if (value >= 1000) {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value)
-  }
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
   }).format(value)
 }
 
@@ -452,6 +450,21 @@ const clearMessages = () => {
   showSuccessAlert.value = false
 }
 
+const getMonthDateRange = (monthOffset: number = 0) => {
+  const [year, month] = selectedMonth.value.split('-')
+  const date = new Date(parseInt(year), parseInt(month) - 1)
+  date.setMonth(date.getMonth() + monthOffset)
+
+  const targetYear = date.getFullYear()
+  const targetMonth = date.getMonth() + 1
+
+  const startDate = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`
+  const lastDay = new Date(targetYear, targetMonth, 0).getDate()
+  const endDate = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+
+  return { startDate, endDate }
+}
+
 const loadData = async () => {
   loading.value = true
   clearMessages()
@@ -471,29 +484,47 @@ const loadData = async () => {
 
     availableCategories.value = allCategories
 
-    // Fetch existing budgets
+    // Fetch existing budgets for selected month
     const budgetsResponse = await $fetch<BudgetsResponse>(
       `/api/budgets?month=${month}&year=${year}`
     )
 
-    // Initialize budget inputs
-    const inputsJuliana: Record<string, number> = {}
-    const inputsGabriel: Record<string, number> = {}
+    // Initialize budget inputs for current person
+    const inputs: Record<string, number> = {}
 
     for (const category of allCategories) {
-      const julianaBudget = budgetsResponse.budgets.find(
-        b => b.category === category && b.person === 'Juliana'
-      )
-      const gabrielBudget = budgetsResponse.budgets.find(
-        b => b.category === category && b.person === 'Gabriel'
+      const personBudget = budgetsResponse.budgets.find(
+        b => b.category === category && b.person === selectedPerson.value
       )
 
-      inputsJuliana[category] = julianaBudget?.amount || 0
-      inputsGabriel[category] = gabrielBudget?.amount || 0
+      inputs[category] = personBudget?.amount || 0
     }
 
-    budgetInputsJuliana.value = inputsJuliana
-    budgetInputsGabriel.value = inputsGabriel
+    budgetInputs.value = inputs
+
+    // Fetch historical spending data (current month, -1, -2)
+    const currentRange = getMonthDateRange(0)
+    const previousRange = getMonthDateRange(-1)
+    const twoMonthsBackRange = getMonthDateRange(-2)
+
+    const [currentData, previousData, twoMonthsBackData] = await Promise.all([
+      $fetch<CategoriesResponse>(
+        `/api/categories?person=${selectedPerson.value}&startDate=${currentRange.startDate}&endDate=${currentRange.endDate}`
+      ),
+      $fetch<CategoriesResponse>(
+        `/api/categories?person=${selectedPerson.value}&startDate=${previousRange.startDate}&endDate=${previousRange.endDate}`
+      ),
+      $fetch<CategoriesResponse>(
+        `/api/categories?person=${selectedPerson.value}&startDate=${twoMonthsBackRange.startDate}&endDate=${twoMonthsBackRange.endDate}`
+      )
+    ])
+
+    historicalData.value = {
+      current: currentData,
+      previous: previousData,
+      twoMonthsBack: twoMonthsBackData
+    }
+
     hasChanges.value = false
   } catch (e: any) {
     errorMessage.value = e.data || 'Não foi possível carregar os dados. Tente novamente.'
@@ -513,26 +544,15 @@ const saveBudgets = async () => {
     const budgetsToSave: BudgetInput[] = []
 
     for (const category of availableCategories.value) {
-      const julianaAmount = budgetInputsJuliana.value[category]
-      const gabrielAmount = budgetInputsGabriel.value[category]
+      const amount = budgetInputs.value[category]
 
-      if (julianaAmount && julianaAmount > 0) {
+      if (amount && amount > 0) {
         budgetsToSave.push({
           category,
-          person: 'Juliana',
+          person: selectedPerson.value,
           month: parseInt(month),
           year: parseInt(year),
-          amount: julianaAmount,
-        })
-      }
-
-      if (gabrielAmount && gabrielAmount > 0) {
-        budgetsToSave.push({
-          category,
-          person: 'Gabriel',
-          month: parseInt(month),
-          year: parseInt(year),
-          amount: gabrielAmount,
+          amount: amount,
         })
       }
     }
@@ -548,7 +568,7 @@ const saveBudgets = async () => {
       body: budgetsToSave,
     })
 
-    successMessage.value = `${budgetsToSave.length} orçamento(s) salvos com sucesso!`
+    successMessage.value = `${budgetsToSave.length} orçamento(s) de ${selectedPerson.value} salvos com sucesso!`
     showSuccessAlert.value = true
     hasChanges.value = false
 
@@ -571,6 +591,16 @@ onMounted(() => {
 watch(selectedMonth, () => {
   if (hasChanges.value) {
     if (confirm('Você tem alterações não salvas. Deseja realmente mudar o período sem salvar?')) {
+      loadData()
+    }
+  } else {
+    loadData()
+  }
+})
+
+watch(selectedPerson, () => {
+  if (hasChanges.value) {
+    if (confirm('Você tem alterações não salvas. Deseja realmente mudar de pessoa sem salvar?')) {
       loadData()
     }
   } else {

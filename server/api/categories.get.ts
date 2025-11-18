@@ -101,26 +101,25 @@ export default defineEventHandler(async (event) => {
       budgets = await fetchBudgetsFromGoogleSheets()
 
       // If date filters are present, filter budgets to match the period
-      if (query.startDate || query.endDate) {
+      if (query.endDate) {
+        console.log('[API] 🔧 Filtering budgets by endDate')
+        const unfilteredCount = budgets.length
+
+        const endDate = new Date(query.endDate)
+        const filterYear = endDate.getFullYear()
+        const filterMonth = endDate.getMonth() + 1 // Convert 0-indexed to 1-indexed
+
+        console.log('[API] 🔍 Filter → Year:', filterYear, 'Month:', filterMonth)
+
         budgets = budgets.filter(budget => {
-          const budgetDate = new Date(budget.year, budget.month - 1, 1)
+          const match = budget.year === filterYear && budget.month === filterMonth
+          
+          console.log('[API] 🔍 Budget:', budget.category, 'Person:', budget.person, '→ Year:', budget.year, 'Month:', budget.month, '→ Match?', match)
 
-          if (query.startDate) {
-            const startDate = new Date(query.startDate)
-            if (budgetDate < new Date(startDate.getFullYear(), startDate.getMonth(), 1)) {
-              return false
-            }
-          }
-
-          if (query.endDate) {
-            const endDate = new Date(query.endDate)
-            if (budgetDate > new Date(endDate.getFullYear(), endDate.getMonth(), 1)) {
-              return false
-            }
-          }
-
-          return true
+          return match
         })
+
+        console.log(`[API] Filtered budgets: ${unfilteredCount} → ${budgets.length}`)
       }
 
       console.log('[API] Fetched budgets for period:', budgets.length)
@@ -236,11 +235,9 @@ function processCategoriesData(
   // Calculate total amount for percentage calculations
   const totalAmount = filteredTransactions.reduce((sum, t) => sum + t.amount, 0)
 
-  // Build categories array with budget information
-  const categories: CategoryData[] = []
-  categoryMap.forEach((data, name) => {
-    // Find budgets for this category
-    const categoryBudgets = budgets.filter(b => b.category === name)
+  // Helper function to calculate budget info for a category
+  const calculateBudgetInfo = (categoryName: string, spent: number) => {
+    const categoryBudgets = budgets.filter(b => b.category === categoryName)
     const julianaBudget = categoryBudgets.find(b => b.person === 'Juliana')?.amount || 0
     const gabrielBudget = categoryBudgets.find(b => b.person === 'Gabriel')?.amount || 0
 
@@ -250,27 +247,23 @@ function processCategoriesData(
     let displayGabrielBudget = 0
 
     if (selectedPerson === 'Gabriel') {
-      // Show only Gabriel's budget
       totalBudget = gabrielBudget
       displayGabrielBudget = gabrielBudget
     } else if (selectedPerson === 'Juliana') {
-      // Show only Juliana's budget
       totalBudget = julianaBudget
       displayJulianaBudget = julianaBudget
     } else {
-      // Show both (Ambos or undefined)
       totalBudget = julianaBudget + gabrielBudget
       displayJulianaBudget = julianaBudget
       displayGabrielBudget = gabrielBudget
     }
 
     // Calculate budget metrics if budget exists
-    let budgetInfo = undefined
     if (totalBudget > 0) {
-      const remaining = totalBudget - data.total
-      const percentageUsed = (data.total / totalBudget) * 100
+      const remaining = totalBudget - spent
+      const percentageUsed = (spent / totalBudget) * 100
 
-      budgetInfo = {
+      return {
         juliana: displayJulianaBudget,
         gabriel: displayGabrielBudget,
         total: totalBudget,
@@ -278,6 +271,17 @@ function processCategoriesData(
         percentageUsed: percentageUsed
       }
     }
+
+    return undefined
+  }
+
+  // Build categories array with budget information
+  const categories: CategoryData[] = []
+  const processedCategories = new Set<string>()
+
+  // First, process categories with transactions
+  categoryMap.forEach((data, name) => {
+    const budgetInfo = calculateBudgetInfo(name, data.total)
 
     categories.push({
       name,
@@ -290,6 +294,29 @@ function processCategoriesData(
       ) : [],
       budget: budgetInfo
     })
+
+    processedCategories.add(name)
+  })
+
+  // Then, add categories that have budgets but no transactions
+  budgets.forEach(budget => {
+    if (!processedCategories.has(budget.category)) {
+      const budgetInfo = calculateBudgetInfo(budget.category, 0)
+
+      if (budgetInfo) {
+        categories.push({
+          name: budget.category,
+          count: 0,
+          total: 0,
+          percentage: 0,
+          average: 0,
+          transactions: [],
+          budget: budgetInfo
+        })
+
+        processedCategories.add(budget.category)
+      }
+    }
   })
 
   // Sort categories by total (descending)

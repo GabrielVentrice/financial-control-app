@@ -177,19 +177,20 @@ async function ensureBudgetSheetExists(): Promise<void> {
  * Otherwise, a new budget will be created.
  *
  * Row Structure: Category | Person | Month | Year | Amount | Created At | Updated At
+ *
+ * ⚡ OPTIMIZED: Uses batch operations to update/append multiple budgets in a single API call
  */
 export async function saveBudgetsToGoogleSheets(budgets: BudgetInput[]): Promise<Budget[]> {
   const config = useRuntimeConfig()
 
   try {
+    const startTime = Date.now()
+
     // Ensure the Budgets sheet exists
     await ensureBudgetSheetExists()
 
     const sheets = createSheetsClient()
     const spreadsheetId = config.public.googleSpreadsheetId
-
-    // Fetch existing budgets
-    const existingBudgets = await fetchBudgetsFromGoogleSheets()
 
     // Fetch all data from sheet to find row positions
     const response = await sheets.spreadsheets.values.get({
@@ -202,7 +203,9 @@ export async function saveBudgetsToGoogleSheets(budgets: BudgetInput[]): Promise
 
     console.log(`[Budgets] Found ${allRows.length - 1} existing rows in sheet`)
 
-    // Process each budget input
+    // Process all budgets and classify them as updates or new entries
+    const updatesToApply: { range: string; values: string[][] }[] = []
+    const newRowsToAppend: string[][] = []
     const savedBudgets: Budget[] = []
 
     for (const budgetInput of budgets) {
@@ -225,31 +228,11 @@ export async function saveBudgetsToGoogleSheets(budgets: BudgetInput[]): Promise
       })
 
       if (existingIndex > 0) {
-        // Update existing budget
-        console.log(`[Budgets] Updating budget for ${budgetInput.person} - ${budgetInput.category} ${budgetInput.month}/${budgetInput.year}`)
-
+        // Prepare update for existing budget
         const rowNumber = existingIndex + 1 // +1 because sheets are 1-indexed
         const createdAt = allRows[existingIndex][5] || timestamp
 
-        await sheets.spreadsheets.values.update({
-          spreadsheetId,
-          range: `${BUDGET_SHEET_NAME}!A${rowNumber}:G${rowNumber}`,
-          valueInputOption: 'RAW',
-          requestBody: {
-            values: [[
-              budgetInput.category,
-              budgetInput.person,
-              budgetInput.month.toString(),
-              budgetInput.year.toString(),
-              budgetInput.amount.toString(),
-              createdAt,
-              timestamp,
-            ]],
-          },
-        })
-
-        // Update the row in memory
-        allRows[existingIndex] = [
+        const updatedRow = [
           budgetInput.category,
           budgetInput.person,
           budgetInput.month.toString(),
@@ -258,6 +241,14 @@ export async function saveBudgetsToGoogleSheets(budgets: BudgetInput[]): Promise
           createdAt,
           timestamp,
         ]
+
+        updatesToApply.push({
+          range: `${BUDGET_SHEET_NAME}!A${rowNumber}:G${rowNumber}`,
+          values: [updatedRow],
+        })
+
+        // Update the row in memory
+        allRows[existingIndex] = updatedRow
 
         savedBudgets.push({
           id: budgetId,
@@ -269,26 +260,21 @@ export async function saveBudgetsToGoogleSheets(budgets: BudgetInput[]): Promise
           createdAt,
           updatedAt: timestamp,
         })
-      } else {
-        // Create new budget
-        console.log(`[Budgets] Creating new budget for ${budgetInput.person} - ${budgetInput.category} ${budgetInput.month}/${budgetInput.year}`)
 
-        await sheets.spreadsheets.values.append({
-          spreadsheetId,
-          range: BUDGET_RANGE,
-          valueInputOption: 'RAW',
-          requestBody: {
-            values: [[
-              budgetInput.category,
-              budgetInput.person,
-              budgetInput.month.toString(),
-              budgetInput.year.toString(),
-              budgetInput.amount.toString(),
-              timestamp,
-              timestamp,
-            ]],
-          },
-        })
+        console.log(`[Budgets] Prepared update for ${budgetInput.person} - ${budgetInput.category} ${budgetInput.month}/${budgetInput.year}`)
+      } else {
+        // Prepare new budget row
+        const newRow = [
+          budgetInput.category,
+          budgetInput.person,
+          budgetInput.month.toString(),
+          budgetInput.year.toString(),
+          budgetInput.amount.toString(),
+          timestamp,
+          timestamp,
+        ]
+
+        newRowsToAppend.push(newRow)
 
         savedBudgets.push({
           id: budgetId,
@@ -300,10 +286,46 @@ export async function saveBudgetsToGoogleSheets(budgets: BudgetInput[]): Promise
           createdAt: timestamp,
           updatedAt: timestamp,
         })
+
+        console.log(`[Budgets] Prepared new budget for ${budgetInput.person} - ${budgetInput.category} ${budgetInput.month}/${budgetInput.year}`)
       }
     }
 
-    console.log(`[Budgets] Saved ${savedBudgets.length} budgets to Google Sheets`)
+    // Batch update all existing budgets in a single API call
+    if (updatesToApply.length > 0) {
+      console.log(`[Budgets] ⚡ Batch updating ${updatesToApply.length} budgets in a single API call...`)
+
+      await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          valueInputOption: 'RAW',
+          data: updatesToApply,
+        },
+      })
+
+      console.log(`[Budgets] ✅ Batch updated ${updatesToApply.length} budgets`)
+    }
+
+    // Append all new budgets in a single API call
+    if (newRowsToAppend.length > 0) {
+      console.log(`[Budgets] ⚡ Batch appending ${newRowsToAppend.length} new budgets in a single API call...`)
+
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: BUDGET_RANGE,
+        valueInputOption: 'RAW',
+        requestBody: {
+          values: newRowsToAppend,
+        },
+      })
+
+      console.log(`[Budgets] ✅ Batch appended ${newRowsToAppend.length} new budgets`)
+    }
+
+    const elapsedTime = Date.now() - startTime
+    console.log(`[Budgets] 🚀 Saved ${savedBudgets.length} budgets to Google Sheets in ${elapsedTime}ms`)
+    console.log(`[Budgets] Performance: ${updatesToApply.length} updates + ${newRowsToAppend.length} new entries in ${updatesToApply.length > 0 || newRowsToAppend.length > 0 ? (updatesToApply.length > 0 && newRowsToAppend.length > 0 ? '2' : '1') : '0'} API call(s)`)
+
     return savedBudgets
   } catch (error: any) {
     console.error('[Budgets] Error saving budgets to Google Sheets:', error)

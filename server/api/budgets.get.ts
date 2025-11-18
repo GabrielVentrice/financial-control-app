@@ -78,54 +78,6 @@ export default defineEventHandler(async (event): Promise<BudgetsResponse> => {
       console.log(`[API] Filtered by year ${year}:`, budgets.length)
     }
 
-    // If month/year filter was applied but no budgets found, use the most recent previous month
-    if (query.month && query.year && budgets.length === 0) {
-      const requestedMonth = parseInt(query.month)
-      const requestedYear = parseInt(query.year)
-      const requestedDate = new Date(requestedYear, requestedMonth - 1, 1)
-
-      console.log(`[API] No budgets found for ${requestedMonth}/${requestedYear}, searching for most recent previous month...`)
-
-      // Fetch all budgets again (without month/year filter)
-      let allBudgets = await fetchBudgetsFromGoogleSheets()
-
-      // Apply other filters (category, person) if they were present
-      if (query.category) {
-        const categoryLower = query.category.toLowerCase()
-        allBudgets = allBudgets.filter(b => b.category.toLowerCase().includes(categoryLower))
-      }
-
-      if (query.person) {
-        allBudgets = allBudgets.filter(b => b.person === query.person)
-      }
-
-      // Find budgets from months before the requested date
-      const previousBudgets = allBudgets.filter(budget => {
-        const budgetDate = new Date(budget.year, budget.month - 1, 1)
-        return budgetDate < requestedDate
-      })
-
-      if (previousBudgets.length > 0) {
-        // Sort by date descending to get the most recent
-        previousBudgets.sort((a, b) => {
-          const dateA = new Date(a.year, a.month - 1, 1)
-          const dateB = new Date(b.year, b.month - 1, 1)
-          return dateB.getTime() - dateA.getTime()
-        })
-
-        // Get the most recent month/year
-        const mostRecentMonth = previousBudgets[0].month
-        const mostRecentYear = previousBudgets[0].year
-
-        // Get all budgets from that most recent month
-        budgets = previousBudgets.filter(b => b.month === mostRecentMonth && b.year === mostRecentYear)
-
-        console.log(`[API] ✅ Using budgets from ${mostRecentMonth}/${mostRecentYear} as fallback (${budgets.length} budgets)`)
-      } else {
-        console.log(`[API] ⚠️  No previous budgets found for fallback`)
-      }
-    }
-
     // Filter by date range if provided
     if (query.startDate || query.endDate) {
       budgets = budgets.filter(budget => {

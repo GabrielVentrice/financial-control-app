@@ -4,7 +4,7 @@ import type { Transaction } from '~/types/transaction'
 export type PersonType = 'Juliana' | 'Gabriel' | 'Ambos'
 
 // Global state for person filter
-const selectedPerson = ref<PersonType>('Ambos')
+const selectedPerson = ref<PersonType>('Gabriel')
 
 /**
  * Composable for managing person filter state
