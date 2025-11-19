@@ -75,27 +75,62 @@
         </NuxtLink>
       </nav>
 
-      <!-- Footer - Person Filter - Design suave -->
-      <div class="p-4 border-t border-gray-100 flex-shrink-0">
-        <div v-if="sidebarOpen" class="space-y-3">
-          <p class="text-xs text-gray-400 uppercase font-medium tracking-wider">
-            Filtrar por pessoa
-          </p>
-          <select
-            v-model="selectedPerson"
-            class="w-full px-4 py-3 bg-gray-50 text-gray-700 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
-          >
-            <option value="Ambos">Ambos</option>
-            <option value="Juliana">Juliana</option>
-            <option value="Gabriel">Gabriel</option>
-          </select>
+      <!-- Footer - Cache Status & Person Filter -->
+      <div class="border-t border-gray-100 flex-shrink-0">
+        <!-- Cache Status -->
+        <div class="p-4 border-b border-gray-100">
+          <div v-if="sidebarOpen" class="space-y-2">
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-gray-400 uppercase font-medium tracking-wider">
+                Status do Cache
+              </p>
+              <span class="text-lg">{{ getStatusIcon }}</span>
+            </div>
+            <div v-if="cacheStatus" class="text-xs text-gray-600 space-y-1">
+              <div class="flex items-center justify-between">
+                <span>Última atualização:</span>
+                <span class="font-medium">{{ getTimeAgo }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Transações:</span>
+                <span class="font-medium">{{ cacheStatus.transactionCount.toLocaleString('pt-BR') }}</span>
+              </div>
+              <div v-if="cacheStatus.isValid" class="flex items-center justify-between">
+                <span>Expira:</span>
+                <span class="font-medium">{{ getTimeUntilExpiry }}</span>
+              </div>
+            </div>
+            <div v-else class="text-xs text-gray-400">
+              Carregando status...
+            </div>
+          </div>
+          <div v-else class="flex justify-center" :title="cacheStatus?.message || 'Status do cache'">
+            <span class="text-lg">{{ getStatusIcon }}</span>
+          </div>
         </div>
-        <div v-else class="flex justify-center" :title="'Filtro: ' + selectedPerson">
-          <div class="w-3 h-3 rounded-full transition-colors" :class="{
-            'bg-blue-400': selectedPerson === 'Juliana',
-            'bg-blue-500': selectedPerson === 'Gabriel',
-            'bg-emerald-400': selectedPerson === 'Ambos'
-          }"></div>
+
+        <!-- Person Filter -->
+        <div class="p-4">
+          <div v-if="sidebarOpen" class="space-y-3">
+            <p class="text-xs text-gray-400 uppercase font-medium tracking-wider">
+              Filtrar por pessoa
+            </p>
+            <select
+              v-model="selectedPerson"
+              class="w-full px-4 py-3 bg-gray-50 text-gray-700 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
+            >
+              <option value="Ambos">Ambos</option>
+              <option value="Juliana">Juliana</option>
+              <option value="Gabriel">Gabriel</option>
+            </select>
+          </div>
+          <div v-else class="flex justify-center" :title="'Filtro: ' + selectedPerson">
+            <div class="w-3 h-3 rounded-full transition-colors" :class="{
+              'bg-blue-400': selectedPerson === 'Juliana',
+              'bg-blue-500': selectedPerson === 'Gabriel',
+              'bg-emerald-400': selectedPerson === 'Ambos'
+            }"></div>
+          </div>
         </div>
       </div>
     </aside>
@@ -115,6 +150,15 @@ const isOpen = ref(true)
 const isMobile = ref(false)
 const { selectedPerson: globalSelectedPerson, setPersonFilter } = usePersonFilter()
 const { toggleMobileMenu, closeMobileMenu, isMobileMenuOpen } = useMobileMenu()
+
+// Cache status
+const {
+  cacheStatus,
+  fetchCacheStatus,
+  getTimeAgo,
+  getTimeUntilExpiry,
+  getStatusIcon
+} = useCacheStatus()
 
 // Criar computed com get/set para funcionar com v-model
 const selectedPerson = computed({
@@ -173,6 +217,19 @@ onMounted(() => {
   if (process.client) {
     window.addEventListener('resize', checkScreenSize)
   }
+
+  // Fetch cache status on mount
+  fetchCacheStatus()
+
+  // Refresh cache status every 30 seconds
+  const interval = setInterval(() => {
+    fetchCacheStatus()
+  }, 30000)
+
+  // Clear interval on unmount
+  onUnmounted(() => {
+    clearInterval(interval)
+  })
 })
 
 onUnmounted(() => {

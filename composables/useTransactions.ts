@@ -1,4 +1,5 @@
 import type { Transaction, TransactionQueryParams } from '~/types/transaction'
+import type { CacheRefreshResponse } from '~/types/cache'
 
 /**
  * Composable for fetching and managing transactions
@@ -8,6 +9,7 @@ export const useTransactions = () => {
   const transactions = useState<Transaction[]>('transactions', () => [])
   const loading = useState<boolean>('transactions-loading', () => false)
   const error = useState<string | null>('transactions-error', () => null)
+  const refreshing = useState<boolean>('cache-refreshing', () => false)
 
   /**
    * Fetches transactions from the API with optional filters
@@ -89,11 +91,50 @@ export const useTransactions = () => {
     )
   }
 
+  /**
+   * Refreshes cache by forcing a fetch from Google Sheets
+   * Returns the refresh response with success status and metadata
+   */
+  const refreshCache = async (): Promise<CacheRefreshResponse> => {
+    refreshing.value = true
+    error.value = null
+
+    try {
+      const response = await $fetch<CacheRefreshResponse>('/api/cache/refresh', {
+        method: 'POST'
+      })
+
+      return response
+    } catch (e: any) {
+      error.value = e.message || 'Erro ao atualizar cache'
+      console.error('Erro ao atualizar cache:', e)
+
+      return {
+        success: false,
+        metadata: {
+          lastUpdate: new Date().toISOString(),
+          status: 'error',
+          transactionCount: 0,
+          expiresAt: new Date().toISOString(),
+          spreadsheetId: '',
+          version: 1
+        },
+        transactionCount: 0,
+        message: error.value,
+        error: error.value
+      }
+    } finally {
+      refreshing.value = false
+    }
+  }
+
   return {
     transactions: readonly(transactions),
     loading: readonly(loading),
     error: readonly(error),
+    refreshing: readonly(refreshing),
     fetchTransactions,
+    refreshCache,
     getTransactionsByDateRange,
     getTotalAmount,
     getTransactionsByOrigin,

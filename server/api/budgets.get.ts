@@ -1,5 +1,12 @@
 import type { Budget, BudgetQueryParams, BudgetsResponse } from '~/types/transaction'
 import { fetchBudgetsFromGoogleSheets } from '../utils/budgetSheets'
+import {
+  isBudgetCacheValid,
+  readBudgetCache,
+  writeBudgetCache,
+  updateBudgetCacheMetadata,
+  budgetCacheExists
+} from '../utils/budgetCacheManager'
 
 /**
  * Get budget configurations
@@ -43,14 +50,63 @@ import { fetchBudgetsFromGoogleSheets } from '../utils/budgetSheets'
  */
 export default defineEventHandler(async (event): Promise<BudgetsResponse> => {
   try {
+    // Get runtime config
+    const config = useRuntimeConfig(event)
+    const cacheConfig = config.cache
+    const spreadsheetId = config.public.googleSpreadsheetId
+
     // Parse query parameters
     const query = getQuery(event) as BudgetQueryParams
 
     console.log('[API] Fetching budgets with params:', query)
 
-    // Fetch all budgets from Google Sheets
-    let budgets = await fetchBudgetsFromGoogleSheets()
-    console.log('[API] Fetched budgets from Google Sheets:', budgets.length)
+    let budgets: Budget[] = []
+
+    // STEP 1: Check cache (if enabled)
+    if (cacheConfig.enabled) {
+      const exists = await budgetCacheExists()
+      const isValid = await isBudgetCacheValid()
+
+      if (exists && isValid) {
+        // Read from cache
+        console.log('[API] Budget cache is valid, reading from cache')
+        budgets = await readBudgetCache()
+        console.log('[API] Read budgets from cache:', budgets.length)
+      } else if (exists && !isValid) {
+        // Cache expired, fetch fresh data
+        console.log('[API] Budget cache expired, fetching fresh data from Google Sheets')
+        budgets = await fetchBudgetsFromGoogleSheets()
+
+        // Update cache
+        await writeBudgetCache(budgets)
+        await updateBudgetCacheMetadata(
+          budgets.length,
+          'fresh',
+          spreadsheetId,
+          cacheConfig.ttlMinutes
+        )
+        console.log('[API] Updated budget cache with fresh data:', budgets.length)
+      } else {
+        // Cache doesn't exist, create it
+        console.log('[API] Budget cache missing, creating initial cache')
+        budgets = await fetchBudgetsFromGoogleSheets()
+
+        // Create cache
+        await writeBudgetCache(budgets)
+        await updateBudgetCacheMetadata(
+          budgets.length,
+          'fresh',
+          spreadsheetId,
+          cacheConfig.ttlMinutes
+        )
+        console.log('[API] Created budget cache with data:', budgets.length)
+      }
+    } else {
+      // Cache disabled, fetch directly
+      console.log('[API] Budget cache disabled, fetching from Google Sheets')
+      budgets = await fetchBudgetsFromGoogleSheets()
+      console.log('[API] Fetched budgets from Google Sheets:', budgets.length)
+    }
 
     // Apply filters
     if (query.category) {

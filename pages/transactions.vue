@@ -9,8 +9,8 @@
             {{ selectedPerson }}
           </span>
         </div>
-        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading">
-          Atualizar
+        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading || refreshing">
+          {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
         </BaseButton>
       </header>
 
@@ -260,13 +260,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import type { Transaction } from '~/types/transaction'
+import type { CacheRefreshResponse } from '~/types/cache'
 
 // Composables
 const { selectedPerson } = usePersonFilter()
+const { fetchCacheStatus } = useCacheStatus()
 
 // State
 const transactions = ref<Transaction[]>([])
 const loading = ref(false)
+const refreshing = ref(false)
 const error = ref<string | null>(null)
 const searchTerm = ref('')
 const startDate = ref('')
@@ -366,7 +369,8 @@ const formatCurrencyCompact = (value: number) => {
   }).format(value)
 }
 
-const refreshData = async () => {
+// Load data from cache (no refresh)
+const loadData = async () => {
   loading.value = true
   error.value = null
 
@@ -378,6 +382,37 @@ const refreshData = async () => {
     console.error('Error fetching transactions:', e)
   } finally {
     loading.value = false
+  }
+}
+
+// Refresh cache and reload data
+const refreshData = async () => {
+  refreshing.value = true
+  loading.value = true
+  error.value = null
+
+  try {
+    // First, refresh the cache
+    const cacheResponse = await $fetch<CacheRefreshResponse>('/api/cache/refresh', {
+      method: 'POST'
+    })
+
+    if (cacheResponse.success) {
+      console.log('Cache atualizado:', cacheResponse.message)
+    }
+
+    // Then fetch transactions from cache
+    const response = await $fetch<Transaction[]>('/api/transactions')
+    transactions.value = response
+
+    // Update cache status
+    await fetchCacheStatus()
+  } catch (e) {
+    error.value = 'Não foi possível carregar os dados. Tente novamente.'
+    console.error('Error fetching transactions:', e)
+  } finally {
+    loading.value = false
+    refreshing.value = false
   }
 }
 
@@ -402,7 +437,7 @@ const nextPage = () => {
 
 // Lifecycle
 onMounted(() => {
-  refreshData()
+  loadData() // Load from cache, no automatic refresh
 })
 
 // Watch for filters changes - reset to page 1

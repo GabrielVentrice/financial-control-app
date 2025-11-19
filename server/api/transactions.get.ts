@@ -3,6 +3,13 @@ import { fetchTransactionsFromGoogleSheets } from '../utils/googleSheets'
 import { enrichTransactionsWithPerson } from '../utils/personIdentifier'
 import { processInstallments } from '../utils/installmentProcessor'
 import { applyFilters, validateQueryParams } from '../utils/transactionFilters'
+import {
+  isCacheValid,
+  readCache,
+  writeCache,
+  updateCacheMetadata,
+  cacheExists
+} from '../utils/cacheManager'
 
 /**
  * Get financial transactions from Google Sheets
@@ -67,6 +74,11 @@ import { applyFilters, validateQueryParams } from '../utils/transactionFilters'
  */
 export default defineEventHandler(async (event) => {
   try {
+    // Get runtime config
+    const config = useRuntimeConfig(event)
+    const cacheConfig = config.cache
+    const spreadsheetId = config.public.googleSpreadsheetId
+
     // Parse query parameters
     const query = getQuery(event) as TransactionQueryParams
 
@@ -82,9 +94,55 @@ export default defineEventHandler(async (event) => {
 
     console.log('[API] Fetching transactions with params:', query)
 
-    // STEP 1: Fetch raw data from Google Sheets
-    let transactions = await fetchTransactionsFromGoogleSheets()
-    console.log('[API] Fetched transactions from Google Sheets:', transactions.length)
+    let transactions: Transaction[] = []
+    let fromCache = false
+
+    // STEP 1: Check cache (if enabled)
+    if (cacheConfig.enabled) {
+      const exists = await cacheExists()
+      const isValid = await isCacheValid()
+
+      if (exists && isValid) {
+        // Read from cache
+        console.log('[API] Cache is valid, reading from cache')
+        transactions = await readCache()
+        fromCache = true
+        console.log('[API] Read transactions from cache:', transactions.length)
+      } else if (exists && !isValid) {
+        // Cache expired, fetch fresh data
+        console.log('[API] Cache expired, fetching fresh data from Google Sheets')
+        transactions = await fetchTransactionsFromGoogleSheets()
+
+        // Update cache
+        await writeCache(transactions)
+        await updateCacheMetadata(
+          transactions.length,
+          'fresh',
+          spreadsheetId,
+          cacheConfig.ttlMinutes
+        )
+        console.log('[API] Updated cache with fresh data:', transactions.length)
+      } else {
+        // Cache doesn't exist, create it
+        console.log('[API] Cache missing, creating initial cache')
+        transactions = await fetchTransactionsFromGoogleSheets()
+
+        // Create cache
+        await writeCache(transactions)
+        await updateCacheMetadata(
+          transactions.length,
+          'fresh',
+          spreadsheetId,
+          cacheConfig.ttlMinutes
+        )
+        console.log('[API] Created cache with data:', transactions.length)
+      }
+    } else {
+      // Cache disabled, fetch directly
+      console.log('[API] Cache disabled, fetching from Google Sheets')
+      transactions = await fetchTransactionsFromGoogleSheets()
+      console.log('[API] Fetched transactions from Google Sheets:', transactions.length)
+    }
 
     // STEP 2: Enrich with person identification
     transactions = enrichTransactionsWithPerson(transactions)

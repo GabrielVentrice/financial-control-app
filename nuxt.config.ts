@@ -8,6 +8,13 @@ export default defineNuxtConfig({
     googleClientEmail: '',
     googlePrivateKey: '',
 
+    // Cache configuration (server-side only)
+    cache: {
+      enabled: true,
+      ttlMinutes: 60,
+      autoRefresh: false
+    },
+
     // Public keys (client-side accessible)
     public: {
       googleSpreadsheetId: '',

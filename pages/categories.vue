@@ -9,8 +9,8 @@
             {{ selectedPerson }}
           </span>
         </div>
-        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading">
-          Atualizar
+        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading || refreshing">
+          {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
         </BaseButton>
       </header>
 
@@ -232,13 +232,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import type { CategoriesResponse } from '~/types/transaction'
+import type { CacheRefreshResponse } from '~/types/cache'
 
 // Composables
 const { selectedPerson } = usePersonFilter()
+const { fetchCacheStatus } = useCacheStatus()
 
 // State
 const categoriesData = ref<CategoriesResponse | null>(null)
 const loading = ref(false)
+const refreshing = ref(false)
 const error = ref<string | null>(null)
 const expandedCategory = ref<string | null>(null)
 
@@ -505,7 +508,8 @@ const getBudgetTextColor = (percentageUsed: number): string => {
   return 'text-emerald-500'
 }
 
-const refreshData = async () => {
+// Load data from cache (no refresh)
+const loadData = async () => {
   loading.value = true
   error.value = null
 
@@ -534,16 +538,61 @@ const refreshData = async () => {
   }
 }
 
+// Refresh cache and reload data
+const refreshData = async () => {
+  refreshing.value = true
+  loading.value = true
+  error.value = null
+
+  try {
+    // First, refresh the cache
+    const cacheResponse = await $fetch<CacheRefreshResponse>('/api/cache/refresh', {
+      method: 'POST'
+    })
+
+    if (cacheResponse.success) {
+      console.log('Cache atualizado:', cacheResponse.message)
+    }
+
+    // Then fetch categories data
+    const params = new URLSearchParams()
+
+    if (selectedPerson.value !== 'Ambos') {
+      params.append('person', selectedPerson.value)
+    }
+
+    const [year, month] = selectedMonth.value.split('-')
+    const startDate = `${year}-${month}-01`
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
+    const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`
+
+    params.append('startDate', startDate)
+    params.append('endDate', endDate)
+    params.append('includeTransactions', 'true')
+
+    const response = await $fetch<CategoriesResponse>(`/api/categories?${params.toString()}`)
+    categoriesData.value = response
+
+    // Update cache status
+    await fetchCacheStatus()
+  } catch (e: any) {
+    error.value = e.data || 'Não foi possível carregar os dados. Tente novamente.'
+  } finally {
+    loading.value = false
+    refreshing.value = false
+  }
+}
+
 // Lifecycle
 onMounted(() => {
-  refreshData()
+  loadData() // Load from cache, no automatic refresh
 })
 
 watch(selectedPerson, () => {
-  refreshData()
+  loadData() // Just reload from cache
 })
 
 watch(selectedMonth, () => {
-  refreshData()
+  loadData() // Just reload from cache
 })
 </script>

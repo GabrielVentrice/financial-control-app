@@ -9,8 +9,8 @@
             {{ selectedPerson }}
           </span>
         </div>
-        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading">
-          Atualizar
+        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading || refreshing">
+          {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
         </BaseButton>
       </header>
 
@@ -261,11 +261,13 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 // Composables
 const { selectedPerson } = usePersonFilter()
 const { processInstallments } = useInstallments()
+const { fetchCacheStatus } = useCacheStatus()
 
 // State
 const rawTransactions = ref<Transaction[]>([])
 const transactions = ref<Transaction[]>([])
 const loading = ref(false)
+const refreshing = ref(false)
 const error = ref<string | null>(null)
 
 // ===== CONFIGURAÇÃO: Categorias de Custos Fixos =====
@@ -571,7 +573,8 @@ const getCellClass = (value: number | undefined) => {
   return 'text-gray-700 font-normal'
 }
 
-const refreshData = async () => {
+// Load data from cache (no refresh)
+const loadData = async () => {
   loading.value = true
   error.value = null
 
@@ -588,8 +591,41 @@ const refreshData = async () => {
   }
 }
 
+// Refresh cache and reload data
+const refreshData = async () => {
+  refreshing.value = true
+  loading.value = true
+  error.value = null
+
+  try {
+    // First, refresh the cache
+    const cacheResponse = await $fetch('/api/cache/refresh', {
+      method: 'POST'
+    })
+
+    if (cacheResponse.success) {
+      console.log('Cache atualizado:', cacheResponse.message)
+    }
+
+    // Then fetch transactions from cache
+    const response = await $fetch<Transaction[]>('/api/transactions')
+    rawTransactions.value = response
+
+    const processed = processInstallments(response)
+    transactions.value = processed
+
+    // Update cache status
+    await fetchCacheStatus()
+  } catch (e) {
+    error.value = 'Não foi possível carregar os dados. Tente novamente.'
+  } finally {
+    loading.value = false
+    refreshing.value = false
+  }
+}
+
 // Lifecycle
 onMounted(() => {
-  refreshData()
+  loadData() // Load from cache, no automatic refresh
 })
 </script>

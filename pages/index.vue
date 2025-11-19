@@ -10,8 +10,8 @@
             {{ selectedPerson }}
           </span>
         </div>
-        <BaseButton size="sm" variant="secondary" @click="refresh" :loading="loading">
-          Atualizar
+        <BaseButton size="sm" variant="secondary" @click="refresh" :loading="loading || refreshing">
+          {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
         </BaseButton>
       </header>
 
@@ -237,9 +237,15 @@ const {
   loading,
   error,
   fetchTransactions,
+  refreshCache,
+  refreshing
 } = useTransactions()
 
 const { selectedPerson } = usePersonFilter()
+
+const {
+  fetchCacheStatus
+} = useCacheStatus()
 
 const {
   getCurrentMonthStats,
@@ -273,7 +279,24 @@ const smartInsights = computed(() => getSmartInsights([...filteredTransactions.v
 
 // Methods
 const refresh = async () => {
-  await fetchTransactions()
+  try {
+    // First, refresh the cache (fetch fresh data from Google Sheets)
+    const result = await refreshCache()
+
+    if (result.success) {
+      console.log('Cache atualizado com sucesso:', result.message)
+    } else {
+      console.error('Erro ao atualizar cache:', result.error)
+    }
+
+    // Then, fetch transactions (will read from fresh cache)
+    await fetchTransactions()
+
+    // Update cache status display
+    await fetchCacheStatus()
+  } catch (e) {
+    console.error('Erro durante atualização:', e)
+  }
 }
 
 const formatDate = (dateString: string) => {

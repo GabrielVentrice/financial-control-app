@@ -7,8 +7,8 @@
           <h1 class="text-2xl font-normal tracking-tight text-gray-800">Orçamento</h1>
         </div>
         <div class="flex items-center gap-3">
-          <BaseButton size="sm" variant="secondary" @click="loadData" :loading="loading">
-            Atualizar
+          <BaseButton size="sm" variant="secondary" @click="loadData" :loading="loading || refreshing">
+            {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
           </BaseButton>
           <BaseButton
             size="sm"
@@ -257,9 +257,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import type { BudgetsResponse, CategoriesResponse, BudgetInput, CategoryData } from '~/types/transaction'
+import type { CacheRefreshResponse } from '~/types/cache'
+
+// Composables
+const { fetchCacheStatus } = useCacheStatus()
 
 // State
 const loading = ref(false)
+const refreshing = ref(false)
 const saving = ref(false)
 const copying = ref(false)
 const errorMessage = ref<string | null>(null)
@@ -475,15 +480,104 @@ const getMonthDateRange = (monthOffset: number = 0) => {
   return { startDate, endDate }
 }
 
-const loadData = async () => {
+// Load data from cache (no refresh)
+const loadDataFromCache = async () => {
   loading.value = true
   clearMessages()
 
   try {
     const [year, month] = selectedMonth.value.split('-')
 
-    // Fetch all categories
+    // Fetch all categories (from cache)
     const categoriesResponse = await $fetch<CategoriesResponse>(`/api/categories`)
+
+    const allCategories = categoriesResponse.categories
+      .map(cat => cat.name)
+      .filter(name => !EXCLUDED_CATEGORIES.some(excluded =>
+        excluded.toLowerCase() === name.toLowerCase()
+      ))
+      .sort()
+
+    availableCategories.value = allCategories
+
+    // Fetch existing budgets for selected month (from cache)
+    const budgetsResponse = await $fetch<BudgetsResponse>(
+      `/api/budgets?month=${month}&year=${year}`
+    )
+
+    // Initialize budget inputs for current person
+    const inputs: Record<string, number> = {}
+
+    for (const category of allCategories) {
+      const personBudget = budgetsResponse.budgets.find(
+        b => b.category === category && b.person === selectedPerson.value
+      )
+
+      inputs[category] = personBudget?.amount || 0
+    }
+
+    budgetInputs.value = inputs
+
+    // Fetch historical spending data (current month, -1, -2) from cache
+    const currentRange = getMonthDateRange(0)
+    const previousRange = getMonthDateRange(-1)
+    const twoMonthsBackRange = getMonthDateRange(-2)
+
+    const [currentData, previousData, twoMonthsBackData] = await Promise.all([
+      $fetch<CategoriesResponse>(
+        `/api/categories?person=${selectedPerson.value}&startDate=${currentRange.startDate}&endDate=${currentRange.endDate}`
+      ),
+      $fetch<CategoriesResponse>(
+        `/api/categories?person=${selectedPerson.value}&startDate=${previousRange.startDate}&endDate=${previousRange.endDate}`
+      ),
+      $fetch<CategoriesResponse>(
+        `/api/categories?person=${selectedPerson.value}&startDate=${twoMonthsBackRange.startDate}&endDate=${twoMonthsBackRange.endDate}`
+      )
+    ])
+
+    historicalData.value = {
+      current: currentData,
+      previous: previousData,
+      twoMonthsBack: twoMonthsBackData
+    }
+
+    hasChanges.value = false
+  } catch (e: any) {
+    errorMessage.value = e.data || 'Não foi possível carregar os dados. Tente novamente.'
+    showErrorAlert.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+// Refresh both caches and reload data
+const loadData = async () => {
+  refreshing.value = true
+  loading.value = true
+  clearMessages()
+
+  try {
+    // First, refresh both caches (transactions and budgets)
+    const [transactionCacheResponse, budgetCacheResponse] = await Promise.all([
+      $fetch<CacheRefreshResponse>('/api/cache/refresh', { method: 'POST' }),
+      $fetch<CacheRefreshResponse>('/api/budgets/cache/refresh', { method: 'POST' })
+    ])
+
+    if (transactionCacheResponse.success) {
+      console.log('Transaction cache atualizado:', transactionCacheResponse.message)
+    }
+
+    if (budgetCacheResponse.success) {
+      console.log('Budget cache atualizado:', budgetCacheResponse.message)
+    }
+
+    const [year, month] = selectedMonth.value.split('-')
+
+    // Fetch all categories (from cache)
+    const categoriesResponse = await $fetch<CategoriesResponse>(`/api/categories`)
+
+    // Update cache status display
+    await fetchCacheStatus()
 
     const allCategories = categoriesResponse.categories
       .map(cat => cat.name)
@@ -541,6 +635,7 @@ const loadData = async () => {
     showErrorAlert.value = true
   } finally {
     loading.value = false
+    refreshing.value = false
   }
 }
 
@@ -639,26 +734,26 @@ const copyFromPreviousMonth = async () => {
 
 // Lifecycle
 onMounted(() => {
-  loadData()
+  loadDataFromCache() // Load from cache, no automatic refresh
 })
 
 watch(selectedMonth, () => {
   if (hasChanges.value) {
     if (confirm('Você tem alterações não salvas. Deseja realmente mudar o período sem salvar?')) {
-      loadData()
+      loadDataFromCache() // Just reload from cache
     }
   } else {
-    loadData()
+    loadDataFromCache() // Just reload from cache
   }
 })
 
 watch(selectedPerson, () => {
   if (hasChanges.value) {
     if (confirm('Você tem alterações não salvas. Deseja realmente mudar de pessoa sem salvar?')) {
-      loadData()
+      loadDataFromCache() // Just reload from cache
     }
   } else {
-    loadData()
+    loadDataFromCache() // Just reload from cache
   }
 })
 </script>

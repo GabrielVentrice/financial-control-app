@@ -37,4 +37,7 @@ logs
 .env.*
 !.env.example
 
+# Cache files (local CSV cache)
+server/cache/
+
 
