@@ -1,9 +1,12 @@
 <template>
   <div class="bg-gray-50/50 rounded-xl px-6 py-5 transition-colors duration-200 hover:bg-gray-50">
     <!-- Label - Suave e pequeno -->
-    <p class="text-xs font-medium text-gray-400 mb-3 tracking-wide uppercase">
-      {{ label }}
-    </p>
+    <div class="flex items-center gap-2 mb-3">
+      <span v-if="icon" class="text-lg">{{ icon }}</span>
+      <p class="text-xs font-medium text-gray-400 tracking-wide uppercase">
+        {{ label }}
+      </p>
+    </div>
 
     <!-- Main Value - Hierarquia por TAMANHO, não peso -->
     <div class="flex items-baseline gap-3 mb-3">
@@ -71,6 +74,7 @@ interface Props {
   invertTrendColors?: boolean
   secondaryStat?: SecondaryStat
   tertiaryStat?: SecondaryStat
+  icon?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -88,8 +92,9 @@ const formattedValue = computed(() => {
 
   switch (props.format) {
     case 'currency':
-      // Sem símbolo R$ para visual mais limpo
       return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
       }).format(numValue)

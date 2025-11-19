@@ -41,22 +41,14 @@
         <template v-else>
           <!-- Summary Cards - Layout mais compacto -->
           <section>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <LightStatCard
-                label="Total"
-                :value="totalAmount"
-                format="currency"
-                value-color="primary"
-                size="sm"
-                :secondary-stat="{ label: totalTransactions + ' transações', value: '' }"
-              />
-
+            <div class="grid grid-cols-2 gap-3">
               <LightStatCard
                 label="Fixos"
                 :value="custosFixosTotal"
                 format="currency"
                 value-color="info"
                 size="sm"
+                icon="📌"
                 :secondary-stat="{ label: custosFixosCategoriesCount + ' categorias', value: '' }"
               />
 
@@ -66,15 +58,8 @@
                 format="currency"
                 value-color="warning"
                 size="sm"
+                icon="📅"
                 :secondary-stat="{ label: gastosComprometidosCategoriesCount + ' categorias', value: '' }"
-              />
-
-              <LightStatCard
-                label="Variáveis"
-                :value="variableCostsTotal"
-                format="currency"
-                value-color="success"
-                size="sm"
               />
             </div>
           </section>
@@ -270,8 +255,13 @@ const selectedMonth = ref(getCurrentMonth())
 // Computed
 const categories = computed(() => {
   const cats = categoriesData.value?.categories || []
-  // Sort by total amount (highest to lowest)
-  return [...cats].sort((a, b) => b.total - a.total)
+  // Sort by budget remaining (highest to lowest)
+  // Categories without budget will be sorted to the end
+  return [...cats].sort((a, b) => {
+    const aRemaining = a.budget?.remaining ?? -Infinity
+    const bRemaining = b.budget?.remaining ?? -Infinity
+    return bRemaining - aRemaining
+  })
 })
 const totalAmount = computed(() => categoriesData.value?.totals.total || 0)
 const totalTransactions = computed(() => categories.value.reduce((sum, cat) => sum + cat.count, 0))
