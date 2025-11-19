@@ -128,94 +128,121 @@
               <div
                 v-for="category in categories"
                 :key="category.name"
-                class="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                 @click="toggleCategory(category.name)"
               >
-                <!-- Category Header -->
-                <div class="flex items-start justify-between mb-4">
-                  <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <span class="text-2xl">{{ getCategoryIcon(category.name) }}</span>
-                    <div class="min-w-0 flex-1">
-                      <p class="text-sm font-medium text-gray-700 truncate">{{ category.name }}</p>
-                      <p class="text-xs text-gray-400 mt-0.5">{{ category.count }} transações</p>
+                <!-- MOBILE VERSION - Simplified (icon, title, remaining) -->
+                <div class="md:hidden p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                      <span class="text-3xl">{{ getCategoryIcon(category.name) }}</span>
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium text-gray-700 truncate">{{ category.name }}</p>
+                      </div>
                     </div>
-                  </div>
-                  <svg
-                    class="h-4 w-4 text-gray-400 transition-transform duration-150 flex-shrink-0 mt-1"
-                    :class="{ 'rotate-90': expandedCategory === category.name }"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-
-                <!-- Available Amount (Highlighted) -->
-                <div class="mb-3">
-                  <template v-if="category.budget">
-                    <p class="text-2xl font-semibold" :class="category.budget.remaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
-                      {{ formatCurrencyCompact(category.budget.remaining) }}
-                    </p>
-                    <p class="text-xs text-gray-400 mt-0.5">
-                      {{ category.budget.remaining >= 0 ? 'disponível' : 'excedido' }}
-                    </p>
-                    <p class="text-xs text-gray-500 mt-1">
-                      {{ formatCurrencyCompact(category.total) }} gastos de {{ formatCurrencyCompact(category.budget.total) }}
-                    </p>
-                  </template>
-                  <template v-else>
-                    <p class="text-2xl font-semibold text-gray-900">
-                      {{ formatCurrencyCompact(category.total) }}
-                    </p>
-                    <p class="text-xs text-gray-400 italic mt-0.5">
-                      Sem orçamento
-                    </p>
-                  </template>
-                </div>
-
-                <!-- Budget Progress -->
-                <template v-if="category.budget">
-                  <div class="space-y-2">
-                    <div class="flex items-center justify-between text-xs">
-                      <span class="text-gray-400">Utilizado</span>
-                      <span class="font-semibold" :class="getBudgetTextColor(category.budget.percentageUsed)">
-                        {{ category.budget.percentageUsed.toFixed(0) }}%
-                      </span>
-                    </div>
-                    <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        class="h-1.5 rounded-full transition-all"
-                        :class="getBudgetProgressColor(category.budget.percentageUsed)"
-                        :style="{ width: `${Math.min(category.budget.percentageUsed, 100)}%` }"
-                      ></div>
-                    </div>
-                  </div>
-                </template>
-
-                <!-- Expanded Transactions -->
-                <div v-if="expandedCategory === category.name" class="mt-4 pt-4 border-t border-gray-100">
-                  <h4 class="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wider">
-                    Transações ({{ getCategoryTransactions(category.name).length }})
-                  </h4>
-                  <div class="space-y-3 max-h-48 overflow-y-auto">
-                    <div
-                      v-for="transaction in getCategoryTransactions(category.name)"
-                      :key="transaction.transactionId"
-                      class="pb-3 border-b border-gray-100 last:border-0"
-                    >
-                      <div class="flex items-start justify-between gap-2">
-                        <div class="flex-1 min-w-0">
-                          <p class="text-sm text-gray-700 truncate">{{ transaction.description }}</p>
-                          <div class="flex items-center gap-2 text-xs text-gray-400 mt-1">
-                            <span>{{ formatDateCompact(transaction.date) }}</span>
-                            <span>•</span>
-                            <span class="truncate">{{ transaction.origin }}</span>
-                          </div>
-                        </div>
-                        <p class="text-sm font-semibold text-gray-900 whitespace-nowrap">
-                          {{ formatCurrencyCompact(transaction.amount) }}
+                    <div class="text-right ml-3">
+                      <template v-if="category.budget">
+                        <p class="text-lg font-semibold" :class="category.budget.remaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
+                          {{ formatCurrencyCompact(category.budget.remaining) }}
                         </p>
+                      </template>
+                      <template v-else>
+                        <p class="text-lg font-semibold text-gray-900">
+                          {{ formatCurrencyCompact(category.total) }}
+                        </p>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- DESKTOP VERSION - Full details -->
+                <div class="hidden md:block p-5">
+                  <!-- Category Header -->
+                  <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                      <span class="text-2xl">{{ getCategoryIcon(category.name) }}</span>
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium text-gray-700 truncate">{{ category.name }}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">{{ category.count }} transações</p>
+                      </div>
+                    </div>
+                    <svg
+                      class="h-4 w-4 text-gray-400 transition-transform duration-150 flex-shrink-0 mt-1"
+                      :class="{ 'rotate-90': expandedCategory === category.name }"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+
+                  <!-- Available Amount (Highlighted) -->
+                  <div class="mb-3">
+                    <template v-if="category.budget">
+                      <p class="text-2xl font-semibold" :class="category.budget.remaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
+                        {{ formatCurrencyCompact(category.budget.remaining) }}
+                      </p>
+                      <p class="text-xs text-gray-400 mt-0.5">
+                        {{ category.budget.remaining >= 0 ? 'disponível' : 'excedido' }}
+                      </p>
+                      <p class="text-xs text-gray-500 mt-1">
+                        {{ formatCurrencyCompact(category.total) }} gastos de {{ formatCurrencyCompact(category.budget.total) }}
+                      </p>
+                    </template>
+                    <template v-else>
+                      <p class="text-2xl font-semibold text-gray-900">
+                        {{ formatCurrencyCompact(category.total) }}
+                      </p>
+                      <p class="text-xs text-gray-400 italic mt-0.5">
+                        Sem orçamento
+                      </p>
+                    </template>
+                  </div>
+
+                  <!-- Budget Progress -->
+                  <template v-if="category.budget">
+                    <div class="space-y-2">
+                      <div class="flex items-center justify-between text-xs">
+                        <span class="text-gray-400">Utilizado</span>
+                        <span class="font-semibold" :class="getBudgetTextColor(category.budget.percentageUsed)">
+                          {{ category.budget.percentageUsed.toFixed(0) }}%
+                        </span>
+                      </div>
+                      <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          class="h-1.5 rounded-full transition-all"
+                          :class="getBudgetProgressColor(category.budget.percentageUsed)"
+                          :style="{ width: `${Math.min(category.budget.percentageUsed, 100)}%` }"
+                        ></div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Expanded Transactions -->
+                  <div v-if="expandedCategory === category.name" class="mt-4 pt-4 border-t border-gray-100">
+                    <h4 class="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wider">
+                      Transações ({{ getCategoryTransactions(category.name).length }})
+                    </h4>
+                    <div class="space-y-3 max-h-48 overflow-y-auto">
+                      <div
+                        v-for="transaction in getCategoryTransactions(category.name)"
+                        :key="transaction.transactionId"
+                        class="pb-3 border-b border-gray-100 last:border-0"
+                      >
+                        <div class="flex items-start justify-between gap-2">
+                          <div class="flex-1 min-w-0">
+                            <p class="text-sm text-gray-700 truncate">{{ transaction.description }}</p>
+                            <div class="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                              <span>{{ formatDateCompact(transaction.date) }}</span>
+                              <span>•</span>
+                              <span class="truncate">{{ transaction.origin }}</span>
+                            </div>
+                          </div>
+                          <p class="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                            {{ formatCurrencyCompact(transaction.amount) }}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -255,15 +282,53 @@ const getCurrentMonth = () => {
 
 const selectedMonth = ref(getCurrentMonth())
 
+// Custom category order
+const CATEGORY_ORDER = [
+  'Food',
+  'Supermarket',
+  'Transportation',
+  'Entertainment',
+  'Subscriptions/Softwares',
+  'Home & Maintenance',
+  'Medical',
+  'Personal care',
+  'Pets',
+  'Variable Expenses',
+  'Clothing',
+  'Education',
+  'Utilities',
+  'Gifts & Donations',
+  'Taxes Due',
+  'Business & Taxes',
+  'Financing',
+  'Insurance',
+  'Rent',
+  'Kids',
+  'Cleaning Services'
+]
+
 // Computed
 const categories = computed(() => {
   const cats = categoriesData.value?.categories || []
-  // Sort by budget remaining (highest to lowest)
-  // Categories without budget will be sorted to the end
+
+  // Sort by custom order
   return [...cats].sort((a, b) => {
-    const aRemaining = a.budget?.remaining ?? -Infinity
-    const bRemaining = b.budget?.remaining ?? -Infinity
-    return bRemaining - aRemaining
+    const aIndex = CATEGORY_ORDER.indexOf(a.name)
+    const bIndex = CATEGORY_ORDER.indexOf(b.name)
+
+    // If both are in the custom order, sort by their position
+    if (aIndex !== -1 && bIndex !== -1) {
+      return aIndex - bIndex
+    }
+
+    // If only 'a' is in custom order, it comes first
+    if (aIndex !== -1) return -1
+
+    // If only 'b' is in custom order, it comes first
+    if (bIndex !== -1) return 1
+
+    // If neither is in custom order, sort alphabetically
+    return a.name.localeCompare(b.name)
   })
 })
 const totalAmount = computed(() => categoriesData.value?.totals.total || 0)
