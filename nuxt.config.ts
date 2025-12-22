@@ -7,6 +7,7 @@ export default defineNuxtConfig({
     // Private keys (server-side only)
     googleClientEmail: '',
     googlePrivateKey: '',
+    googleDriveCacheFolderId: '',
 
     // Cache configuration (server-side only)
     cache: {
