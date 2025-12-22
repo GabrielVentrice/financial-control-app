@@ -26,8 +26,7 @@ async function getDriveClient(): Promise<drive_v3.Drive> {
         private_key: config.googlePrivateKey?.replace(/\\n/g, '\n'),
       },
       scopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive.appdata'
+        'https://www.googleapis.com/auth/drive'
       ],
     })
 
@@ -52,10 +51,10 @@ async function findFileByName(
     const response = await drive.files.list({
       q: query,
       fields: 'files(id, name)',
-      spaces: 'drive',
       pageSize: 1,
       supportsAllDrives: true,
-      includeItemsFromAllDrives: true
+      includeItemsFromAllDrives: true,
+      corpora: 'allDrives'
     })
 
     if (response.data.files && response.data.files.length > 0) {
@@ -70,8 +69,14 @@ async function findFileByName(
 }
 
 /**
- * Uploads or updates a file in Google Drive
- * If file exists, it updates the content. Otherwise, creates a new file.
+ * Updates a file in Google Drive (file must already exist in the folder)
+ * This works with Service Accounts on free Google accounts, avoiding quota issues.
+ * 
+ * IMPORTANT: Files must be manually created in the Drive folder first:
+ * - transactions.csv
+ * - metadata.json
+ * - budgets.csv (if using budgets)
+ * - budgets-metadata.json (if using budgets)
  */
 export async function uploadFileToDrive(
   fileName: string,
@@ -82,7 +87,7 @@ export async function uploadFileToDrive(
   const folderId = config.googleDriveCacheFolderId
 
   if (!folderId) {
-    console.warn('Google Drive folder ID not configured. Skipping Drive upload.')
+    console.warn('⚠️ Google Drive folder ID not configured. Using local cache only.')
     return false
   }
 
@@ -90,39 +95,35 @@ export async function uploadFileToDrive(
     const drive = await getDriveClient()
     const existingFileId = await findFileByName(drive, fileName, folderId)
 
+    if (!existingFileId) {
+      console.warn(`⚠️ File '${fileName}' not found in Google Drive folder.`)
+      console.warn(`📝 Please create an empty file named '${fileName}' in the Drive folder manually.`)
+      console.warn(`🔗 Folder: https://drive.google.com/drive/folders/${folderId}`)
+      return false
+    }
+
+    // Update existing file only (no creation to avoid quota issues)
     const media = {
       mimeType,
       body: content
     }
 
-    if (existingFileId) {
-      // Update existing file
-      await drive.files.update({
-        fileId: existingFileId,
-        media,
-        fields: 'id, name',
-        supportsAllDrives: true
-      })
-      console.log(`✅ Updated file '${fileName}' in Google Drive`)
-    } else {
-      // Create new file
-      const fileMetadata = {
-        name: fileName,
-        parents: [folderId]
-      }
-
-      await drive.files.create({
-        requestBody: fileMetadata,
-        media,
-        fields: 'id, name',
-        supportsAllDrives: true
-      })
-      console.log(`✅ Created file '${fileName}' in Google Drive`)
-    }
-
+    await drive.files.update({
+      fileId: existingFileId,
+      media,
+      fields: 'id, name, modifiedTime',
+      supportsAllDrives: true
+    })
+    
+    console.log(`✅ Updated file '${fileName}' in Google Drive`)
     return true
-  } catch (error) {
-    console.error(`❌ Error uploading file '${fileName}' to Google Drive:`, error)
+
+  } catch (error: any) {
+    if (error.code === 403 && error.message?.includes('storage quota')) {
+      console.error(`❌ Storage quota error for '${fileName}'. File must be created manually in Drive folder.`)
+    } else {
+      console.error(`❌ Error updating file '${fileName}':`, error.message)
+    }
     return false
   }
 }
