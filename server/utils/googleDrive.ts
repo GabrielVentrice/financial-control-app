@@ -53,7 +53,9 @@ async function findFileByName(
       q: query,
       fields: 'files(id, name)',
       spaces: 'drive',
-      pageSize: 1
+      pageSize: 1,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
     })
 
     if (response.data.files && response.data.files.length > 0) {
@@ -98,7 +100,8 @@ export async function uploadFileToDrive(
       await drive.files.update({
         fileId: existingFileId,
         media,
-        fields: 'id, name'
+        fields: 'id, name',
+        supportsAllDrives: true
       })
       console.log(`✅ Updated file '${fileName}' in Google Drive`)
     } else {
@@ -111,7 +114,8 @@ export async function uploadFileToDrive(
       await drive.files.create({
         requestBody: fileMetadata,
         media,
-        fields: 'id, name'
+        fields: 'id, name',
+        supportsAllDrives: true
       })
       console.log(`✅ Created file '${fileName}' in Google Drive`)
     }
@@ -146,7 +150,8 @@ export async function downloadFileFromDrive(fileName: string): Promise<string | 
 
     const response = await drive.files.get({
       fileId,
-      alt: 'media'
+      alt: 'media',
+      supportsAllDrives: true
     }, {
       responseType: 'stream'
     })
@@ -216,7 +221,8 @@ export async function deleteFileFromDrive(fileName: string): Promise<boolean> {
     }
 
     await drive.files.delete({
-      fileId
+      fileId,
+      supportsAllDrives: true
     })
 
     console.log(`✅ Deleted file '${fileName}' from Google Drive`)
@@ -247,7 +253,9 @@ export async function listCacheFiles(): Promise<string[]> {
       q: query,
       fields: 'files(id, name, modifiedTime)',
       spaces: 'drive',
-      orderBy: 'modifiedTime desc'
+      orderBy: 'modifiedTime desc',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
     })
 
     if (response.data.files && response.data.files.length > 0) {
