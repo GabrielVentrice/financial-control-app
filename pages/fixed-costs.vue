@@ -1,30 +1,30 @@
 <template>
   <Sidemenu>
-    <div class="bg-[#FAFBFC] text-gray-800 min-h-screen">
-      <!-- Header - Clean, sem bordas pesadas -->
-      <header class="h-16 px-6 lg:px-12 flex items-center justify-between border-b border-gray-100">
-        <div class="flex items-baseline gap-4">
-          <h1 class="text-2xl font-normal tracking-tight text-gray-800">Custos Fixos</h1>
-          <span class="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg">
+    <div class="bg-gray-50 min-h-screen">
+      <!-- Header -->
+      <header class="h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white">
+        <div class="flex items-center gap-3">
+          <h1 class="text-lg font-semibold text-gray-900">Custos Fixos</h1>
+          <span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
             {{ selectedPerson }}
           </span>
         </div>
-        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading || refreshing">
-          {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
+        <BaseButton size="sm" variant="ghost" @click="refreshData" :loading="loading || refreshing">
+          {{ refreshing ? 'Atualizando...' : 'Atualizar' }}
         </BaseButton>
       </header>
 
-      <!-- Categories Info - Light Design -->
-      <div v-if="FIXED_COST_CATEGORIES.length > 0" class="px-6 lg:px-12 py-6 bg-gray-50/50 border-b border-gray-100">
+      <!-- Categories Info -->
+      <div v-if="FIXED_COST_CATEGORIES.length > 0" class="px-6 py-4 bg-white border-b border-gray-200">
         <details class="text-sm">
-          <summary class="cursor-pointer text-gray-700 font-normal hover:text-blue-500 transition-colors">
+          <summary class="cursor-pointer text-gray-900 font-medium hover:text-accent transition-colors">
             📌 {{ FIXED_COST_CATEGORIES.length }} categorias configuradas
           </summary>
-          <div class="mt-4 flex flex-wrap gap-2">
+          <div class="mt-3 flex flex-wrap gap-2">
             <span
               v-for="category in FIXED_COST_CATEGORIES"
               :key="category"
-              class="px-2 py-1 bg-amber-50 text-amber-600 text-xs rounded-lg font-medium"
+              class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded font-medium"
             >
               {{ category }}
             </span>
@@ -33,7 +33,7 @@
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
+      <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando custos fixos..." />
 
@@ -57,7 +57,7 @@
               label="Média Mensal"
               :value="averageMonthlyTotal"
               format="currency"
-              value-color="info"
+              value-color="neutral"
               size="lg"
               :secondary-stat="{ label: '6 meses', value: '' }"
             />
@@ -66,7 +66,7 @@
               label="Categorias Ativas"
               :value="activeCategoriesCount"
               format="number"
-              value-color="primary"
+              value-color="neutral"
               size="lg"
               :secondary-stat="{ label: 'Com gastos', value: '' }"
             />

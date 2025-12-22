@@ -1,11 +1,11 @@
 <template>
   <Sidemenu>
-    <div class="bg-[#FAFBFC] text-gray-800 min-h-screen">
-      <!-- Header - Clean, sem bordas pesadas -->
-      <header class="h-16 px-6 lg:px-12 flex items-center justify-between border-b border-gray-100">
-        <div class="flex items-baseline gap-4">
-          <h1 class="text-2xl font-normal tracking-tight text-gray-800">Parcelas</h1>
-          <span class="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg">
+    <div class="bg-gray-50 min-h-screen">
+      <!-- Header -->
+      <header class="h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white">
+        <div class="flex items-center gap-3">
+          <h1 class="text-lg font-semibold text-gray-900">Parcelas</h1>
+          <span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
             {{ selectedPerson }}
           </span>
         </div>
@@ -15,7 +15,7 @@
       </header>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
+      <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando parcelas..." />
 
@@ -30,7 +30,7 @@
               label="Ativas"
               :value="activeInstallments.length"
               format="number"
-              value-color="info"
+              value-color="neutral"
               size="lg"
               :secondary-stat="{ label: 'Futuras', value: '' }"
             />
@@ -39,7 +39,7 @@
               label="Mês Atual"
               :value="currentMonthTotal"
               format="currency"
-              value-color="primary"
+              value-color="neutral"
               size="lg"
               :secondary-stat="{ label: formatMonthYear(currentMonth), value: '' }"
             />

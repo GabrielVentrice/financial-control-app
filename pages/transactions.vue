@@ -1,76 +1,76 @@
 <template>
   <Sidemenu>
-    <div class="bg-[#FAFBFC] text-gray-800 min-h-screen">
-      <!-- Header - Clean, sem bordas pesadas -->
-      <header class="h-16 px-6 lg:px-12 flex items-center justify-between border-b border-gray-100">
-        <div class="flex items-baseline gap-4">
-          <h1 class="text-2xl font-normal tracking-tight text-gray-800">Transações</h1>
-          <span class="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg">
+    <div class="bg-gray-50 min-h-screen">
+      <!-- Header - Fixed height, consistent -->
+      <header class="h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white">
+        <div class="flex items-center gap-3">
+          <h1 class="text-lg font-semibold text-gray-900">Transações</h1>
+          <span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
             {{ selectedPerson }}
           </span>
         </div>
-        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading || refreshing">
-          {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
+        <BaseButton size="sm" variant="ghost" @click="refreshData" :loading="loading || refreshing">
+          {{ refreshing ? 'Atualizando...' : 'Atualizar' }}
         </BaseButton>
       </header>
 
-      <!-- Filtros - Cards suaves, não inputs com bordas -->
-      <div class="px-6 lg:px-12 py-6 bg-gray-50/50 border-b border-gray-100">
-        <div class="max-w-[1400px] mx-auto">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Filtros - Compact area -->
+      <div class="px-6 py-4 bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
                 Buscar
               </label>
               <input
                 v-model="searchTerm"
                 type="text"
                 placeholder="Descrição..."
-                class="w-full px-4 py-3 bg-white text-gray-700 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
+                class="w-full px-3 py-2 bg-white text-gray-900 text-sm rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
               />
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
                 Data Inicial
               </label>
               <input
                 v-model="startDate"
                 type="date"
-                class="w-full px-4 py-3 bg-white text-gray-700 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
+                class="w-full px-3 py-2 bg-white text-gray-900 text-sm rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
               />
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
                 Data Final
               </label>
               <input
                 v-model="endDate"
                 type="date"
-                class="w-full px-4 py-3 bg-white text-gray-700 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
+                class="w-full px-3 py-2 bg-white text-gray-900 text-sm rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
               />
             </div>
           </div>
 
           <!-- Limpar filtros -->
-          <div v-if="startDate || endDate || searchTerm" class="mt-6 flex items-center gap-4">
+          <div v-if="startDate || endDate || searchTerm" class="mt-3 flex items-center gap-3">
             <button
               @click="clearFilters"
-              class="px-4 py-2 text-sm text-gray-600 bg-white rounded-lg hover:bg-gray-50 transition-colors"
+              class="px-3 py-1.5 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 transition-colors"
             >
               Limpar filtros
             </button>
             <div v-if="startDate || endDate" class="flex items-center gap-2 text-sm text-gray-500">
               <span>Período:</span>
-              <span class="font-medium text-gray-700">{{ dateRangeLabel }}</span>
+              <span class="font-medium text-gray-900">{{ dateRangeLabel }}</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
+      <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando..." />
 
@@ -79,107 +79,92 @@
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Stats - 3 COLUNAS principais -->
-          <section>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <LightStatCard
-                label="Total de Transações"
-                :value="filteredTransactions.length"
-                format="number"
-                value-color="primary"
-                size="lg"
-              />
+          <!-- Summary Stats - 4 columns desktop, 2 mobile -->
+          <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <LightStatCard
+              label="Total"
+              :value="filteredTransactions.length"
+              format="number"
+              value-color="neutral"
+              size="md"
+            />
 
-              <LightStatCard
-                label="Receitas"
-                :value="incomeCount"
-                format="number"
-                value-color="success"
-                size="lg"
-                :secondary-stat="{ label: 'Entradas', value: '' }"
-              />
+            <LightStatCard
+              label="Receitas"
+              :value="incomeCount"
+              format="number"
+              value-color="positive"
+              size="md"
+            />
 
-              <LightStatCard
-                label="Despesas"
-                :value="expenseCount"
-                format="number"
-                value-color="danger"
-                size="lg"
-                :secondary-stat="{ label: 'Saídas', value: '' }"
-              />
-            </div>
+            <LightStatCard
+              label="Despesas"
+              :value="expenseCount"
+              format="number"
+              value-color="negative"
+              size="md"
+            />
 
-            <!-- Secondary stats - 2 colunas -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <LightStatCard
-                label="Soma Total"
-                :value="totalAmount"
-                format="currency"
-                :value-color="totalAmount >= 0 ? 'success' : 'danger'"
-                size="md"
-              />
-
-              <LightStatCard
-                label="Valor Médio"
-                :value="filteredTransactions.length > 0 ? totalAmount / filteredTransactions.length : 0"
-                format="currency"
-                value-color="info"
-                size="md"
-              />
-            </div>
+            <LightStatCard
+              label="Saldo"
+              :value="totalAmount"
+              format="currency"
+              :value-color="totalAmount >= 0 ? 'positive' : 'negative'"
+              size="md"
+            />
           </section>
 
-          <!-- Transactions Table - Respirável com scroll interno -->
-          <section class="bg-white rounded-xl overflow-hidden shadow-sm flex flex-col" style="max-height: calc(100vh - 520px); min-height: 500px;">
+          <!-- Transactions Table -->
+          <section class="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col" style="max-height: calc(100vh - 400px); min-height: 500px;">
             <!-- Header -->
-            <div class="px-6 py-5 border-b border-gray-100 flex-shrink-0">
-              <h2 class="text-lg font-normal text-gray-700">Transações</h2>
-              <p class="text-sm text-gray-400 mt-1">{{ filteredTransactions.length }} resultados</p>
+            <div class="px-4 py-3 border-b border-gray-200 flex-shrink-0 flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-gray-900">Transações</h3>
+              <span class="text-xs text-gray-500">{{ filteredTransactions.length }} resultados</span>
             </div>
 
             <!-- Desktop Table -->
             <div class="hidden lg:block overflow-x-auto overflow-y-auto flex-1">
               <table class="min-w-full">
-                <thead class="bg-gray-50/50">
+                <thead class="bg-gray-50">
                   <tr>
-                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Data
                     </th>
-                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Origem
                     </th>
-                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Destino
                     </th>
-                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Descrição
                     </th>
-                    <th class="px-6 py-4 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                       Valor
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-gray-100">
                   <tr
                     v-for="transaction in paginatedTransactions"
                     :key="transaction.transactionId"
-                    class="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
+                    class="hover:bg-gray-50 transition-colors"
                   >
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {{ formatDateCompact(transaction.date) }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-[150px]">
+                    <td class="px-4 py-3 text-sm text-gray-600 truncate max-w-[150px]">
                       {{ transaction.origin }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-[150px]">
+                    <td class="px-4 py-3 text-sm text-gray-600 truncate max-w-[150px]">
                       {{ transaction.destination }}
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-700 truncate max-w-md">
+                    <td class="px-4 py-3 text-sm text-gray-900 truncate max-w-md">
                       {{ transaction.description }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-base font-light" :class="{
-                      'text-emerald-500': transaction.amount >= 0,
-                      'text-rose-400': transaction.amount < 0
+                    <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-semibold" :class="{
+                      'text-positive': transaction.amount >= 0,
+                      'text-negative': transaction.amount < 0
                     }">
                       {{ formatCurrencyCompact(transaction.amount) }}
                     </td>
@@ -193,23 +178,23 @@
               <div
                 v-for="transaction in paginatedTransactions"
                 :key="transaction.transactionId"
-                class="p-5 space-y-3 hover:bg-gray-50 transition-colors"
+                class="p-4 hover:bg-gray-50 transition-colors"
               >
-                <div class="flex justify-between items-start gap-3">
+                <div class="flex justify-between items-start gap-3 mb-2">
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm text-gray-700 font-normal truncate">{{ transaction.description }}</p>
-                    <p class="text-xs text-gray-400 mt-1">{{ formatDateCompact(transaction.date) }}</p>
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ transaction.description }}</p>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ formatDateCompact(transaction.date) }}</p>
                   </div>
-                  <p class="text-base font-light whitespace-nowrap" :class="{
-                    'text-emerald-500': transaction.amount >= 0,
-                    'text-rose-400': transaction.amount < 0
+                  <p class="text-sm font-semibold whitespace-nowrap" :class="{
+                    'text-positive': transaction.amount >= 0,
+                    'text-negative': transaction.amount < 0
                   }">
                     {{ formatCurrencyCompact(transaction.amount) }}
                   </p>
                 </div>
-                <div class="flex justify-between text-xs text-gray-500">
+                <div class="flex items-center gap-2 text-xs text-gray-500">
                   <span class="truncate">{{ transaction.origin }}</span>
-                  <span class="mx-2">→</span>
+                  <span>→</span>
                   <span class="truncate">{{ transaction.destination }}</span>
                 </div>
               </div>
@@ -223,28 +208,28 @@
               description="Ajuste os filtros para ver transações."
             />
 
-            <!-- Pagination - Minimalista -->
-            <div v-if="filteredTransactions.length > pageSize" class="bg-gray-50/50 px-6 py-4 flex items-center justify-between border-t border-gray-100 flex-shrink-0">
-              <div class="text-sm text-gray-500">
-                <span class="font-medium text-gray-700">{{ startIndex + 1 }}-{{ Math.min(endIndex, filteredTransactions.length) }}</span>
+            <!-- Pagination -->
+            <div v-if="filteredTransactions.length > pageSize" class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 flex-shrink-0">
+              <div class="text-sm text-gray-600">
+                <span class="font-semibold text-gray-900">{{ startIndex + 1 }}-{{ Math.min(endIndex, filteredTransactions.length) }}</span>
                 <span class="mx-1">de</span>
-                <span class="font-medium text-gray-700">{{ filteredTransactions.length }}</span>
+                <span class="font-semibold text-gray-900">{{ filteredTransactions.length }}</span>
               </div>
               <div class="flex gap-2">
                 <button
                   @click="prevPage"
                   :disabled="currentPage === 1"
-                  class="px-4 py-2 text-sm font-medium text-gray-600 bg-white rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   ← Anterior
                 </button>
-                <span class="px-4 py-2 text-sm text-gray-500">
+                <span class="px-3 py-1.5 text-sm text-gray-600">
                   {{ currentPage }} / {{ totalPages }}
                 </span>
                 <button
                   @click="nextPage"
                   :disabled="currentPage === totalPages"
-                  class="px-4 py-2 text-sm font-medium text-gray-600 bg-white rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Próxima →
                 </button>

@@ -9,85 +9,23 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // Professional Financial App Design System (Light Theme)
       colors: {
-        // Claude Dark Design System - Based on design.json
-        background: {
-          page: '#0C0C0C',
-          sidebar: '#1A1A1A',
-          card: '#1F1F1F',
-          section: '#222222',
-          hover: '#2A2A2A',
-          input: '#1F1F1F',
-        },
-        border: {
-          base: '#2E2E2E',
-          subtle: '#393939',
-        },
-        divider: '#333333',
-        text: {
-          primary: '#F3F3F3',
-          secondary: '#B0B0B0',
-          muted: '#777777',
-          inverse: '#0A0A0A',
-        },
-        accent: {
-          primary: '#FF7A45',
-          'primary-hover': '#FF8C5E',
-          info: '#7ACBD8',
-          warning: '#D1B892',
-          success: '#3DD68C',
-          danger: '#E34D4D',
-        },
-        chart: {
-          positive: '#3DD68C',
-          negative: '#E34D4D',
-          neutral: '#D1B892',
-        },
+        // Core semantic colors for financial data
+        positive: '#059669',   // emerald-600 - Income, positive trends
+        negative: '#DC2626',   // red-600 - Expenses, negative trends
+        neutral: '#2563EB',    // blue-600 - Informational
+        warning: '#D97706',    // amber-600 - Alerts
+        accent: '#4F46E5',     // indigo-600 - Actions, links
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
-        serif: ['Source Serif 4', 'Georgia', 'serif'],
-      },
-      fontWeight: {
-        normal: '400',
-        medium: '500',
-        semibold: '600',
-        bold: '700',
-      },
-      spacing: {
-        xs: '4px',
-        sm: '8px',
-        md: '12px',
-        lg: '16px',
-        xl: '24px',
-        '2xl': '32px',
-        '3xl': '48px',
-      },
-      borderRadius: {
-        sm: '6px',
-        md: '10px',
-        lg: '16px',
-      },
-      lineHeight: {
-        normal: '1.6',
-        relaxed: '1.6',
-        tight: '1.4',
-      },
-      letterSpacing: {
-        tight: '-0.01em',
-        normal: '0',
       },
       fontSize: {
-        '10': ['10px', { lineHeight: '1.5' }],
-        '11': ['11px', { lineHeight: '1.5' }],
-        '12': ['12px', { lineHeight: '1.5' }],
-        '13': ['13px', { lineHeight: '1.6' }],
-        '14': ['14px', { lineHeight: '1.6' }],
-        '15': ['15px', { lineHeight: '1.6' }],
-        '16': ['16px', { lineHeight: '1.6', letterSpacing: '-0.01em' }],
-        '18': ['18px', { lineHeight: '1.6', letterSpacing: '-0.01em' }],
-        '20': ['20px', { lineHeight: '1.5', letterSpacing: '-0.01em' }],
-        '22': ['22px', { lineHeight: '1.4', letterSpacing: '-0.01em' }],
+        // Professional KPI sizes - maximum text-3xl for largest values
+        'kpi-lg': ['1.875rem', { lineHeight: '1.2', fontWeight: '600', letterSpacing: '-0.02em' }],  // 30px
+        'kpi-md': ['1.5rem', { lineHeight: '1.3', fontWeight: '600', letterSpacing: '-0.01em' }],    // 24px
+        'kpi-sm': ['1.25rem', { lineHeight: '1.4', fontWeight: '600' }],                             // 20px
       },
     },
   },

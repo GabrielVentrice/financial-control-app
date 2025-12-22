@@ -1,10 +1,10 @@
 <template>
   <Sidemenu>
-    <div class="bg-[#FAFBFC] text-gray-800 min-h-screen">
+    <div class="bg-gray-50 min-h-screen">
       <!-- Header -->
-      <header class="h-16 px-6 lg:px-12 flex items-center justify-between border-b border-gray-100">
-        <div class="flex items-baseline gap-4">
-          <h1 class="text-2xl font-normal tracking-tight text-gray-800">Orçamento</h1>
+      <header class="h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white">
+        <div class="flex items-center gap-3">
+          <h1 class="text-lg font-semibold text-gray-900">Orçamento</h1>
         </div>
         <div class="flex items-center gap-3">
           <BaseButton size="sm" variant="secondary" @click="loadData" :loading="loading || refreshing">
@@ -26,15 +26,15 @@
       </header>
 
       <!-- Month Selector & Messages -->
-      <div class="px-6 lg:px-12 py-6 bg-gray-50/50 border-b border-gray-100 space-y-4">
+      <div class="px-6 py-4 bg-white border-b border-gray-200 space-y-4">
         <div class="flex items-center gap-4">
-          <label class="text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide whitespace-nowrap">
             Período:
           </label>
           <input
             v-model="selectedMonth"
             type="month"
-            class="px-4 py-3 text-sm bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
+            class="px-3 py-2 text-sm bg-white text-gray-900 border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
           />
           <span class="text-sm text-gray-400">{{ formattedMonth }}</span>
         </div>
@@ -60,7 +60,7 @@
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1600px] mx-auto px-6 lg:px-12 py-8 space-y-6">
+      <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando orçamentos..." />
 
@@ -91,13 +91,13 @@
           </section>
 
           <!-- Summary Cards in one row - Sticky -->
-          <section class="sticky top-0 z-10 bg-[#FAFBFC] pt-2 pb-4">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <section class="sticky top-0 z-10 bg-gray-50 pt-2 pb-4">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <LightStatCard
                 label="Total Orçado"
                 :value="currentPersonTotalBudget"
                 format="currency"
-                value-color="primary"
+                value-color="neutral"
                 size="md"
                 :secondary-stat="{ label: formatMonthCompact(), value: '' }"
               />
@@ -128,7 +128,7 @@
                 label="Categorias Configuradas"
                 :value="currentPersonCategoriesWithBudget"
                 format="number"
-                value-color="info"
+                value-color="neutral"
                 size="md"
                 :secondary-stat="{ label: 'de ' + availableCategories.length + ' disponíveis', value: '' }"
               />

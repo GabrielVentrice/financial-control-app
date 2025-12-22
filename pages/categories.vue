@@ -1,36 +1,36 @@
 <template>
   <Sidemenu>
-    <div class="bg-[#FAFBFC] text-gray-800 min-h-screen">
-      <!-- Header - Clean, sem bordas pesadas -->
-      <header class="h-16 px-6 lg:px-12 flex items-center justify-between border-b border-gray-100">
-        <div class="flex items-baseline gap-4">
-          <h1 class="text-2xl font-normal tracking-tight text-gray-800">Categorias</h1>
-          <span class="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg">
+    <div class="bg-gray-50 min-h-screen">
+      <!-- Header -->
+      <header class="h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white">
+        <div class="flex items-center gap-3">
+          <h1 class="text-lg font-semibold text-gray-900">Categorias</h1>
+          <span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
             {{ selectedPerson }}
           </span>
         </div>
-        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading || refreshing">
-          {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
+        <BaseButton size="sm" variant="ghost" @click="refreshData" :loading="loading || refreshing">
+          {{ refreshing ? 'Atualizando...' : 'Atualizar' }}
         </BaseButton>
       </header>
 
-      <!-- Month Filter - Cards suaves -->
-      <div class="px-6 lg:px-12 py-6 bg-gray-50/50 border-b border-gray-100">
-        <div class="max-w-[1400px] mx-auto flex items-center gap-4">
-          <label class="text-xs font-medium text-gray-400 uppercase tracking-wider">
+      <!-- Month Filter -->
+      <div class="px-6 py-4 bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto flex items-center gap-4">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">
             Mês
           </label>
           <input
             v-model="selectedMonth"
             type="month"
-            class="px-4 py-3 bg-white text-gray-700 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
+            class="px-3 py-2 bg-white text-gray-900 text-sm rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
           />
-          <span class="text-sm text-gray-400 ml-2">{{ formattedMonth }}</span>
+          <span class="text-sm text-gray-500 ml-2">{{ formattedMonth }}</span>
         </div>
       </div>
 
       <!-- Content -->
-      <main class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 py-8 space-y-8">
+      <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando..." />
 
@@ -46,7 +46,7 @@
                 label="Fixos"
                 :value="custosFixosTotal"
                 format="currency"
-                value-color="info"
+                value-color="neutral"
                 size="sm"
                 icon="📌"
                 :secondary-stat="{ label: custosFixosCategoriesCount + ' categorias', value: '' }"

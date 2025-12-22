@@ -1,52 +1,51 @@
 <template>
-  <div class="bg-gray-50/50 rounded-xl px-6 py-5 transition-colors duration-200 hover:bg-gray-50">
-    <!-- Label - Suave e pequeno -->
-    <div class="flex items-center gap-2 mb-3">
-      <span v-if="icon" class="text-lg">{{ icon }}</span>
-      <p class="text-xs font-medium text-gray-400 tracking-wide uppercase">
+  <div class="bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 transition-colors">
+    <!-- Label - Small, uppercase, consistent -->
+    <div class="flex items-center gap-2 mb-1">
+      <span v-if="icon" class="text-base">{{ icon }}</span>
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">
         {{ label }}
       </p>
     </div>
 
-    <!-- Main Value - Hierarquia por TAMANHO, não peso -->
-    <div class="flex items-baseline gap-3 mb-3">
-      <p :class="['font-light leading-none tracking-tight', valueSizeClass, valueColorClass]">
+    <!-- Main Value - Professional sizing with good contrast -->
+    <div class="flex items-baseline gap-2">
+      <p :class="['leading-tight', valueSizeClass, valueColorClass]">
         {{ formattedValue }}
       </p>
 
-      <!-- Trend Indicator - Minimalista -->
+      <!-- Trend Indicator - Compact -->
       <TrendIndicator
         v-if="trend !== undefined"
         :value="trend"
         :invert-colors="invertTrendColors"
         size="sm"
-        class="opacity-60"
       />
     </div>
 
-    <!-- Secondary Stats - Respirável -->
-    <div v-if="hasSecondaryStats" class="flex items-center gap-4 pt-2 border-t border-gray-100">
-      <div v-if="secondaryStat" class="flex-1 pt-2">
-        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+    <!-- Secondary Stats - Compact, readable -->
+    <div v-if="hasSecondaryStats" class="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
+      <div v-if="secondaryStat" class="flex-1">
+        <p class="text-xs text-gray-500 mb-0.5">
           {{ secondaryStat.label }}
         </p>
-        <p class="text-sm font-normal text-gray-600">
+        <p class="text-sm font-medium text-gray-900">
           {{ secondaryStat.value }}
         </p>
       </div>
 
-      <div v-if="tertiaryStat" class="flex-1 pt-2">
-        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+      <div v-if="tertiaryStat" class="flex-1">
+        <p class="text-xs text-gray-500 mb-0.5">
           {{ tertiaryStat.label }}
         </p>
-        <p class="text-sm font-normal text-gray-600">
+        <p class="text-sm font-medium text-gray-900">
           {{ tertiaryStat.value }}
         </p>
       </div>
     </div>
 
-    <!-- Bottom Slot - Para sparklines, etc -->
-    <div v-if="$slots.bottom" class="pt-3 mt-3 border-t border-gray-100">
+    <!-- Bottom Slot - For sparklines, charts, etc -->
+    <div v-if="$slots.bottom" class="mt-3 pt-3 border-t border-gray-100">
       <slot name="bottom" />
     </div>
   </div>
@@ -56,7 +55,7 @@
 import { computed } from 'vue'
 
 type Format = 'currency' | 'number' | 'percentage' | 'text'
-type ValueColor = 'primary' | 'success' | 'danger' | 'info' | 'warning' | 'default'
+type ValueColor = 'positive' | 'negative' | 'neutral' | 'warning' | 'default'
 type Size = 'sm' | 'md' | 'lg'
 
 interface SecondaryStat {
@@ -108,25 +107,24 @@ const formattedValue = computed(() => {
   }
 })
 
-// Value size - Hierarquia por tamanho, não peso!
+// Professional KPI sizing - maximum text-3xl
 const valueSizeClass = computed(() => {
   const sizes: Record<Size, string> = {
-    sm: 'text-3xl',
-    md: 'text-5xl',
-    lg: 'text-6xl'
+    sm: 'text-kpi-sm',  // 20px - font-semibold
+    md: 'text-kpi-md',  // 24px - font-semibold
+    lg: 'text-kpi-lg'   // 30px - font-semibold (maximum)
   }
   return sizes[props.size]
 })
 
-// Value color - Cores SUAVES (dessaturadas)
+// Semantic colors from design system
 const valueColorClass = computed(() => {
   const colors: Record<ValueColor, string> = {
-    primary: 'text-blue-500',      // Azul suave
-    success: 'text-emerald-500',   // Verde suave
-    danger: 'text-rose-400',       // Vermelho suave (não red-500!)
-    info: 'text-sky-500',          // Azul info suave
-    warning: 'text-amber-500',     // Amarelo suave
-    default: 'text-gray-700'       // Cinza escuro, não preto
+    positive: 'text-positive',     // emerald-600 - Income
+    negative: 'text-negative',     // red-600 - Expenses
+    neutral: 'text-neutral',       // blue-600 - Info
+    warning: 'text-warning',       // amber-600 - Alerts
+    default: 'text-gray-900'       // Dark gray for general values
   }
   return colors[props.valueColor]
 })
