@@ -134,24 +134,31 @@ function csvToTransactions(csv: string): Transaction[] {
 
 /**
  * Reads transactions from cache file
- * Tries Google Drive first, then falls back to local filesystem
+ * Tries Google Drive first, then falls back to local filesystem (development only)
  */
 export async function readCache(): Promise<Transaction[]> {
   // Try Google Drive first
-  try {
-    const config = useRuntimeConfig()
-    if (config.googleDriveCacheFolderId) {
+  const config = useRuntimeConfig()
+  if (config.googleDriveCacheFolderId) {
+    try {
       const csv = await downloadFileFromDrive(DRIVE_CACHE_FILE)
       if (csv) {
         console.log('📥 Reading cache from Google Drive')
         return csvToTransactions(csv)
       }
+      // File doesn't exist in Google Drive
+      console.log('📭 Cache not found in Google Drive')
+      return []
+    } catch (error) {
+      console.warn('⚠️  Failed to read from Google Drive:', error)
+      // Only fall back to local in development
+      if (process.env.NODE_ENV !== 'development') {
+        return []
+      }
     }
-  } catch (error) {
-    console.warn('⚠️  Failed to read from Google Drive, falling back to local:', error)
   }
 
-  // Fallback to local filesystem
+  // Fallback to local filesystem (development only)
   try {
     console.log('📁 Reading cache from local filesystem')
     const csv = await fs.readFile(CACHE_FILE, 'utf-8')
@@ -168,7 +175,7 @@ export async function readCache(): Promise<Transaction[]> {
 
 /**
  * Writes transactions to cache file
- * Saves to Google Drive and keeps local backup
+ * Saves to Google Drive when configured, otherwise falls back to local filesystem
  */
 export async function writeCache(transactions: Transaction[]): Promise<void> {
   const csv = transactionsToCSV(transactions)
@@ -180,13 +187,20 @@ export async function writeCache(transactions: Transaction[]): Promise<void> {
       const success = await uploadFileToDrive(DRIVE_CACHE_FILE, csv, 'text/csv')
       if (success) {
         console.log('📤 Cache saved to Google Drive')
+        return // Success! No need for local backup in production
       }
     } catch (error) {
-      console.warn('⚠️  Failed to save to Google Drive, will save locally only:', error)
+      console.warn('⚠️  Failed to save to Google Drive:', error)
+      // Only fall back to local in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⚠️  Falling back to local filesystem (development only)')
+      } else {
+        throw new Error('Failed to save cache to Google Drive')
+      }
     }
   }
 
-  // Always save locally as backup
+  // Save locally only in development or when Google Drive is not configured
   try {
     await ensureCacheDirectory()
     await fs.writeFile(CACHE_FILE, csv, 'utf-8')
@@ -199,23 +213,29 @@ export async function writeCache(transactions: Transaction[]): Promise<void> {
 
 /**
  * Reads cache metadata
- * Tries Google Drive first, then falls back to local filesystem
+ * Tries Google Drive first, then falls back to local filesystem (development only)
  */
 export async function getCacheMetadata(): Promise<CacheMetadata | null> {
   // Try Google Drive first
-  try {
-    const config = useRuntimeConfig()
-    if (config.googleDriveCacheFolderId) {
+  const config = useRuntimeConfig()
+  if (config.googleDriveCacheFolderId) {
+    try {
       const json = await downloadFileFromDrive(DRIVE_METADATA_FILE)
       if (json) {
         return JSON.parse(json) as CacheMetadata
       }
+      // Metadata doesn't exist in Google Drive
+      return null
+    } catch (error) {
+      console.warn('⚠️  Failed to read metadata from Google Drive:', error)
+      // Only fall back to local in development
+      if (process.env.NODE_ENV !== 'development') {
+        return null
+      }
     }
-  } catch (error) {
-    console.warn('⚠️  Failed to read metadata from Google Drive, falling back to local:', error)
   }
 
-  // Fallback to local filesystem
+  // Fallback to local filesystem (development only)
   try {
     const json = await fs.readFile(METADATA_FILE, 'utf-8')
     return JSON.parse(json) as CacheMetadata
@@ -257,13 +277,21 @@ export async function updateCacheMetadata(
   const config = useRuntimeConfig()
   if (config.googleDriveCacheFolderId) {
     try {
-      await uploadFileToDrive(DRIVE_METADATA_FILE, metadataJson, 'application/json')
+      const success = await uploadFileToDrive(DRIVE_METADATA_FILE, metadataJson, 'application/json')
+      if (success) {
+        console.log('📤 Metadata saved to Google Drive')
+        return metadata // Success! No need for local backup in production
+      }
     } catch (error) {
       console.warn('⚠️  Failed to save metadata to Google Drive:', error)
+      // Only fall back to local in development
+      if (process.env.NODE_ENV !== 'development') {
+        throw new Error('Failed to save metadata to Google Drive')
+      }
     }
   }
 
-  // Always save locally as backup
+  // Save locally only in development or when Google Drive is not configured
   try {
     await ensureCacheDirectory()
     await fs.writeFile(METADATA_FILE, metadataJson, 'utf-8')
@@ -292,7 +320,7 @@ export async function isCacheValid(): Promise<boolean> {
 
 /**
  * Checks if cache exists
- * Checks Google Drive first, then local filesystem
+ * Checks Google Drive first, then local filesystem (development only)
  */
 export async function cacheExists(): Promise<boolean> {
   // Check Google Drive first
@@ -300,15 +328,17 @@ export async function cacheExists(): Promise<boolean> {
   if (config.googleDriveCacheFolderId) {
     try {
       const exists = await fileExistsInDrive(DRIVE_CACHE_FILE)
-      if (exists) {
-        return true
-      }
+      return exists
     } catch (error) {
       console.warn('⚠️  Failed to check cache in Google Drive:', error)
+      // Only fall back to local in development
+      if (process.env.NODE_ENV !== 'development') {
+        return false
+      }
     }
   }
 
-  // Fallback to local check
+  // Fallback to local check (development only)
   try {
     await fs.access(CACHE_FILE)
     return true
@@ -319,7 +349,7 @@ export async function cacheExists(): Promise<boolean> {
 
 /**
  * Deletes cache files (for testing/debugging)
- * Clears both Google Drive and local filesystem
+ * Clears Google Drive and local filesystem (development only)
  */
 export async function clearCache(): Promise<void> {
   // Delete from Google Drive
@@ -328,17 +358,20 @@ export async function clearCache(): Promise<void> {
     try {
       await deleteFileFromDrive(DRIVE_CACHE_FILE)
       await deleteFileFromDrive(DRIVE_METADATA_FILE)
+      console.log('🗑️  Cache cleared from Google Drive')
     } catch (error) {
       console.warn('⚠️  Failed to delete cache from Google Drive:', error)
     }
   }
 
-  // Delete from local filesystem
-  try {
-    await fs.unlink(CACHE_FILE).catch(() => {})
-    await fs.unlink(METADATA_FILE).catch(() => {})
-    console.log('🗑️  Local cache cleared')
-  } catch (error) {
-    console.error('Error clearing local cache:', error)
+  // Delete from local filesystem (development only)
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      await fs.unlink(CACHE_FILE).catch(() => {})
+      await fs.unlink(METADATA_FILE).catch(() => {})
+      console.log('🗑️  Local cache cleared')
+    } catch (error) {
+      console.error('Error clearing local cache:', error)
+    }
   }
 }

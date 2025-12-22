@@ -133,24 +133,31 @@ function csvToBudgets(csv: string): Budget[] {
 
 /**
  * Reads budgets from cache file
- * Tries Google Drive first, then falls back to local filesystem
+ * Tries Google Drive first, then falls back to local filesystem (development only)
  */
 export async function readBudgetCache(): Promise<Budget[]> {
   // Try Google Drive first
-  try {
-    const config = useRuntimeConfig()
-    if (config.googleDriveCacheFolderId) {
+  const config = useRuntimeConfig()
+  if (config.googleDriveCacheFolderId) {
+    try {
       const csv = await downloadFileFromDrive(DRIVE_BUDGET_CACHE_FILE)
       if (csv) {
         console.log('📥 Reading budget cache from Google Drive')
         return csvToBudgets(csv)
       }
+      // File doesn't exist in Google Drive
+      console.log('📭 Budget cache not found in Google Drive')
+      return []
+    } catch (error) {
+      console.warn('⚠️  Failed to read budget cache from Google Drive:', error)
+      // Only fall back to local in development
+      if (process.env.NODE_ENV !== 'development') {
+        return []
+      }
     }
-  } catch (error) {
-    console.warn('⚠️  Failed to read budget cache from Google Drive, falling back to local:', error)
   }
 
-  // Fallback to local filesystem
+  // Fallback to local filesystem (development only)
   try {
     console.log('📁 Reading budget cache from local filesystem')
     const csv = await fs.readFile(BUDGET_CACHE_FILE, 'utf-8')
@@ -167,7 +174,7 @@ export async function readBudgetCache(): Promise<Budget[]> {
 
 /**
  * Writes budgets to cache file
- * Saves to Google Drive and keeps local backup
+ * Saves to Google Drive when configured, otherwise falls back to local filesystem
  */
 export async function writeBudgetCache(budgets: Budget[]): Promise<void> {
   const csv = budgetsToCSV(budgets)
@@ -179,13 +186,20 @@ export async function writeBudgetCache(budgets: Budget[]): Promise<void> {
       const success = await uploadFileToDrive(DRIVE_BUDGET_CACHE_FILE, csv, 'text/csv')
       if (success) {
         console.log('📤 Budget cache saved to Google Drive')
+        return // Success! No need for local backup in production
       }
     } catch (error) {
-      console.warn('⚠️  Failed to save budget cache to Google Drive, will save locally only:', error)
+      console.warn('⚠️  Failed to save budget cache to Google Drive:', error)
+      // Only fall back to local in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⚠️  Falling back to local filesystem (development only)')
+      } else {
+        throw new Error('Failed to save budget cache to Google Drive')
+      }
     }
   }
 
-  // Always save locally as backup
+  // Save locally only in development or when Google Drive is not configured
   try {
     await ensureBudgetCacheDirectory()
     await fs.writeFile(BUDGET_CACHE_FILE, csv, 'utf-8')
@@ -198,23 +212,29 @@ export async function writeBudgetCache(budgets: Budget[]): Promise<void> {
 
 /**
  * Reads budget cache metadata
- * Tries Google Drive first, then falls back to local filesystem
+ * Tries Google Drive first, then falls back to local filesystem (development only)
  */
 export async function getBudgetCacheMetadata(): Promise<CacheMetadata | null> {
   // Try Google Drive first
-  try {
-    const config = useRuntimeConfig()
-    if (config.googleDriveCacheFolderId) {
+  const config = useRuntimeConfig()
+  if (config.googleDriveCacheFolderId) {
+    try {
       const json = await downloadFileFromDrive(DRIVE_BUDGET_METADATA_FILE)
       if (json) {
         return JSON.parse(json) as CacheMetadata
       }
+      // Metadata doesn't exist in Google Drive
+      return null
+    } catch (error) {
+      console.warn('⚠️  Failed to read budget metadata from Google Drive:', error)
+      // Only fall back to local in development
+      if (process.env.NODE_ENV !== 'development') {
+        return null
+      }
     }
-  } catch (error) {
-    console.warn('⚠️  Failed to read budget metadata from Google Drive, falling back to local:', error)
   }
 
-  // Fallback to local filesystem
+  // Fallback to local filesystem (development only)
   try {
     const json = await fs.readFile(BUDGET_METADATA_FILE, 'utf-8')
     return JSON.parse(json) as CacheMetadata
@@ -256,13 +276,21 @@ export async function updateBudgetCacheMetadata(
   const config = useRuntimeConfig()
   if (config.googleDriveCacheFolderId) {
     try {
-      await uploadFileToDrive(DRIVE_BUDGET_METADATA_FILE, metadataJson, 'application/json')
+      const success = await uploadFileToDrive(DRIVE_BUDGET_METADATA_FILE, metadataJson, 'application/json')
+      if (success) {
+        console.log('📤 Budget metadata saved to Google Drive')
+        return metadata // Success! No need for local backup in production
+      }
     } catch (error) {
       console.warn('⚠️  Failed to save budget metadata to Google Drive:', error)
+      // Only fall back to local in development
+      if (process.env.NODE_ENV !== 'development') {
+        throw new Error('Failed to save budget metadata to Google Drive')
+      }
     }
   }
 
-  // Always save locally as backup
+  // Save locally only in development or when Google Drive is not configured
   try {
     await ensureBudgetCacheDirectory()
     await fs.writeFile(BUDGET_METADATA_FILE, metadataJson, 'utf-8')
@@ -291,7 +319,7 @@ export async function isBudgetCacheValid(): Promise<boolean> {
 
 /**
  * Checks if budget cache exists
- * Checks Google Drive first, then local filesystem
+ * Checks Google Drive first, then local filesystem (development only)
  */
 export async function budgetCacheExists(): Promise<boolean> {
   // Check Google Drive first
@@ -299,15 +327,17 @@ export async function budgetCacheExists(): Promise<boolean> {
   if (config.googleDriveCacheFolderId) {
     try {
       const exists = await fileExistsInDrive(DRIVE_BUDGET_CACHE_FILE)
-      if (exists) {
-        return true
-      }
+      return exists
     } catch (error) {
       console.warn('⚠️  Failed to check budget cache in Google Drive:', error)
+      // Only fall back to local in development
+      if (process.env.NODE_ENV !== 'development') {
+        return false
+      }
     }
   }
 
-  // Fallback to local check
+  // Fallback to local check (development only)
   try {
     await fs.access(BUDGET_CACHE_FILE)
     return true
@@ -318,7 +348,7 @@ export async function budgetCacheExists(): Promise<boolean> {
 
 /**
  * Deletes budget cache files (for testing/debugging)
- * Clears both Google Drive and local filesystem
+ * Clears Google Drive and local filesystem (development only)
  */
 export async function clearBudgetCache(): Promise<void> {
   // Delete from Google Drive
@@ -327,17 +357,20 @@ export async function clearBudgetCache(): Promise<void> {
     try {
       await deleteFileFromDrive(DRIVE_BUDGET_CACHE_FILE)
       await deleteFileFromDrive(DRIVE_BUDGET_METADATA_FILE)
+      console.log('🗑️  Budget cache cleared from Google Drive')
     } catch (error) {
       console.warn('⚠️  Failed to delete budget cache from Google Drive:', error)
     }
   }
 
-  // Delete from local filesystem
-  try {
-    await fs.unlink(BUDGET_CACHE_FILE).catch(() => {})
-    await fs.unlink(BUDGET_METADATA_FILE).catch(() => {})
-    console.log('🗑️  Local budget cache cleared')
-  } catch (error) {
-    console.error('Error clearing local budget cache:', error)
+  // Delete from local filesystem (development only)
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      await fs.unlink(BUDGET_CACHE_FILE).catch(() => {})
+      await fs.unlink(BUDGET_METADATA_FILE).catch(() => {})
+      console.log('🗑️  Local budget cache cleared')
+    } catch (error) {
+      console.error('Error clearing local budget cache:', error)
+    }
   }
 }
