@@ -13,6 +13,14 @@
           <BaseButton
             size="sm"
             variant="secondary"
+            @click="showApplyTemplateModal = true"
+            :disabled="loading || saving"
+          >
+            Aplicar Orçamento Padrão
+          </BaseButton>
+          <BaseButton
+            size="sm"
+            variant="secondary"
             @click="copyFromPreviousMonth"
             :loading="copying"
             :disabled="loading || saving"
@@ -250,6 +258,128 @@
           </div>
         </template>
       </main>
+
+      <!-- Apply Template Modal -->
+      <div
+        v-if="showApplyTemplateModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        @click.self="showApplyTemplateModal = false"
+      >
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <!-- Modal Header -->
+          <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-2xl">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-gray-900">
+                Aplicar Orçamento Padrão - {{ selectedPerson }} - {{ formattedMonth }}
+              </h3>
+              <button
+                @click="showApplyTemplateModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="px-6 py-6 space-y-6">
+            <!-- Loading State -->
+            <div v-if="applyingTemplate" class="text-center py-8">
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <p class="text-gray-600">Aplicando template...</p>
+            </div>
+
+            <!-- Preview -->
+            <template v-else-if="templatePreview">
+              <!-- Total Income -->
+              <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-green-800">Ganhos Detectados no Mês:</span>
+                  <span class="text-2xl font-bold text-green-700">
+                    {{ formatCurrency(templatePreview.totalIncome) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Templates Applied -->
+              <div>
+                <h4 class="text-sm font-semibold text-gray-900 mb-3">Categorias a Preencher:</h4>
+
+                <div v-if="templatePreview.templatesApplied.filter(t => t.applied).length === 0" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p class="text-sm text-yellow-800">
+                    ⚠️ Todas as categorias já têm orçamento configurado manualmente. Nenhum orçamento será criado.
+                  </p>
+                </div>
+
+                <div v-else class="space-y-2 bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                  <div
+                    v-for="template in templatePreview.templatesApplied"
+                    :key="template.category"
+                    class="flex items-center justify-between py-2 px-3 bg-white rounded border"
+                    :class="template.applied ? 'border-green-200' : 'border-gray-200 opacity-50'"
+                  >
+                    <div class="flex items-center space-x-2">
+                      <span class="text-xl">{{ getCategoryIcon(template.category) }}</span>
+                      <span class="text-sm font-medium text-gray-900">{{ template.category }}</span>
+                      <span class="text-xs text-gray-500">{{ template.percentage.toFixed(1) }}%</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="text-sm font-semibold" :class="template.applied ? 'text-green-700' : 'text-gray-400'">
+                        {{ formatCurrency(template.calculatedAmount) }}
+                      </span>
+                      <p v-if="!template.applied && template.reason" class="text-xs text-gray-500">
+                        {{ template.reason }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Total -->
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-blue-800">Total a Criar:</span>
+                  <span class="text-xl font-bold text-blue-700">
+                    {{ templatePreview.budgetsCreated }} orçamento(s)
+                  </span>
+                </div>
+              </div>
+
+              <!-- Warning -->
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p class="text-xs text-gray-600">
+                  ⚠️ Categorias com orçamento manual não serão sobrescritas.
+                </p>
+              </div>
+            </template>
+
+            <!-- No Income Found -->
+            <div v-else-if="templateError" class="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p class="text-sm text-red-800">{{ templateError }}</p>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex items-center justify-end space-x-3">
+            <button
+              @click="showApplyTemplateModal = false"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              v-if="templatePreview && templatePreview.budgetsCreated > 0"
+              @click="confirmApplyTemplate"
+              :disabled="applyingTemplate"
+              class="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Confirmar e Aplicar
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </Sidemenu>
 </template>
@@ -258,9 +388,11 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import type { BudgetsResponse, CategoriesResponse, BudgetInput, CategoryData } from '~/types/transaction'
 import type { CacheRefreshResponse } from '~/types/cache'
+import type { ApplyTemplateResponse } from '~/types/budgetTemplate'
 
 // Composables
 const { fetchCacheStatus } = useCacheStatus()
+const { applyTemplate } = useBudgetTemplates()
 
 // State
 const loading = ref(false)
@@ -274,6 +406,12 @@ const showErrorAlert = ref(false)
 const searchQuery = ref('')
 const hasChanges = ref(false)
 const selectedPerson = ref<'Juliana' | 'Gabriel'>('Gabriel')
+
+// Apply Template Modal State
+const showApplyTemplateModal = ref(false)
+const applyingTemplate = ref(false)
+const templatePreview = ref<ApplyTemplateResponse | null>(null)
+const templateError = ref<string | null>(null)
 
 // Get current month in YYYY-MM format
 const getCurrentMonth = () => {
@@ -732,6 +870,50 @@ const copyFromPreviousMonth = async () => {
   }
 }
 
+// Apply Template Functions
+const loadTemplatePreview = async () => {
+  applyingTemplate.value = true
+  templatePreview.value = null
+  templateError.value = null
+
+  try {
+    const [year, month] = selectedMonth.value.split('-')
+
+    const response = await applyTemplate({
+      person: selectedPerson.value,
+      month: parseInt(month),
+      year: parseInt(year),
+    })
+
+    if (response) {
+      if (response.success) {
+        templatePreview.value = response
+      } else {
+        templateError.value = response.message
+      }
+    }
+  } catch (e: any) {
+    templateError.value = e.data?.message || e.data || 'Erro ao carregar preview do template.'
+  } finally {
+    applyingTemplate.value = false
+  }
+}
+
+const confirmApplyTemplate = async () => {
+  // Close modal and reload data
+  showApplyTemplateModal.value = false
+
+  successMessage.value = templatePreview.value?.message || 'Template aplicado com sucesso!'
+  showSuccessAlert.value = true
+
+  // Reset template state
+  templatePreview.value = null
+  templateError.value = null
+
+  // Reload data to show the newly created budgets
+  await loadDataFromCache()
+}
+
 // Lifecycle
 onMounted(() => {
   loadDataFromCache() // Load from cache, no automatic refresh
@@ -754,6 +936,13 @@ watch(selectedPerson, () => {
     }
   } else {
     loadDataFromCache() // Just reload from cache
+  }
+})
+
+watch(showApplyTemplateModal, (newValue) => {
+  if (newValue) {
+    // Load template preview when modal opens
+    loadTemplatePreview()
   }
 })
 </script>

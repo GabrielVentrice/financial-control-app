@@ -342,5 +342,6 @@ const menuItems = [
   { label: 'Parcelas', path: '/installments', icon: CalendarIcon },
   { label: 'Custos Fixos', path: '/fixed-costs', icon: FixedCostIcon },
   { label: 'Orçamento', path: '/budget', icon: BudgetIcon },
+  { label: 'Templates de Orçamento', path: '/budget-templates', icon: BudgetIcon },
 ]
 </script>

@@ -44,14 +44,56 @@ export function identifyPerson(origin: string): PersonType {
 }
 
 /**
+ * Identifies person from destination field (used for income transactions)
+ * Pattern matching is case-insensitive and uses substring matching
+ */
+export function identifyPersonFromDestination(destination: string): PersonType {
+  const destinationLower = destination.toLowerCase()
+
+  // Check if destination matches Juliana's patterns
+  if (JULIANA_PATTERNS.some(pattern => destinationLower.includes(pattern.toLowerCase()))) {
+    return 'Juliana'
+  }
+
+  // Check if destination matches Gabriel's patterns
+  if (GABRIEL_PATTERNS.some(pattern => destinationLower.includes(pattern.toLowerCase()))) {
+    return 'Gabriel'
+  }
+
+  // Return null if no match
+  return null
+}
+
+/**
+ * Checks if a transaction is an income transaction (destination is a bank account)
+ */
+function isIncomeTransaction(destination: string): boolean {
+  return destination.toLowerCase().includes('bank account')
+}
+
+/**
  * Enriches transactions with person identification
  * Adds a 'person' field to each transaction
+ * 
+ * For income transactions (destination = Bank Account), identifies person from destination
+ * For expense transactions, identifies person from origin
  */
 export function enrichTransactionsWithPerson(transactions: Transaction[]): Transaction[] {
-  return transactions.map(transaction => ({
-    ...transaction,
-    person: identifyPerson(transaction.origin),
-  }))
+  return transactions.map(transaction => {
+    // For income transactions, identify person from destination (Bank Account)
+    if (isIncomeTransaction(transaction.destination)) {
+      return {
+        ...transaction,
+        person: identifyPersonFromDestination(transaction.destination),
+      }
+    }
+    
+    // For expense transactions, identify person from origin
+    return {
+      ...transaction,
+      person: identifyPerson(transaction.origin),
+    }
+  })
 }
 
 /**
