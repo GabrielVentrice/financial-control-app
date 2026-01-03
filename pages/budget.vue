@@ -910,7 +910,7 @@ const confirmApplyTemplate = async () => {
   templatePreview.value = null
   templateError.value = null
 
-  // Reload data to show the newly created budgets
+  // Reload data from cache (cache was already refreshed by apply-template endpoint)
   await loadDataFromCache()
 }
 

@@ -2,6 +2,7 @@ import type { ApplyTemplateRequest, ApplyTemplateResponse } from '~/types/budget
 import type { BudgetInput } from '~/types/transaction'
 import { fetchBudgetTemplatesFromGoogleSheets } from '~/server/utils/budgetTemplateSheets'
 import { fetchBudgetsFromGoogleSheets, saveBudgetsToGoogleSheets } from '~/server/utils/budgetSheets'
+import { writeBudgetCache, updateBudgetCacheMetadata } from '~/server/utils/budgetCacheManager'
 
 /**
  * Apply budget template for a specific month/year
@@ -181,6 +182,19 @@ export default defineEventHandler(async (event): Promise<ApplyTemplateResponse> 
       budgetsCreated = savedBudgets.length
 
       console.log(`[API] Successfully created ${budgetsCreated} budgets`)
+
+      // STEP 5.1: Refresh budget cache after saving
+      console.log(`[API] Step 5.1: Refreshing budget cache...`)
+      const config = useRuntimeConfig()
+      const allBudgetsRefresh = await fetchBudgetsFromGoogleSheets()
+      await writeBudgetCache(allBudgetsRefresh)
+      await updateBudgetCacheMetadata(
+        allBudgetsRefresh.length,
+        'fresh',
+        config.public.googleSpreadsheetId,
+        config.cache.ttlMinutes
+      )
+      console.log(`[API] Budget cache refreshed with ${allBudgetsRefresh.length} budgets`)
     } else {
       console.log(`[API] Step 5: No new budgets to create (all categories already have budgets)`)
     }
