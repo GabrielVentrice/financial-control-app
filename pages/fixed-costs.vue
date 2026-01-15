@@ -241,7 +241,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -253,22 +253,25 @@ import {
   Legend,
   type ChartOptions
 } from 'chart.js'
-import type { Transaction } from '~/types/transaction'
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
-// Composables
+// Composables - transactions fetched automatically via SSR
+const {
+  transactions: rawTransactions,
+  loading,
+  error,
+  refreshing,
+  refreshCache
+} = useTransactions()
+
 const { selectedPerson } = usePersonFilter()
 const { processInstallments } = useInstallments()
 const { fetchCacheStatus } = useCacheStatus()
 
-// State
-const rawTransactions = ref<Transaction[]>([])
-const transactions = ref<Transaction[]>([])
-const loading = ref(false)
-const refreshing = ref(false)
-const error = ref<string | null>(null)
+// Process installments to expand them across months
+const transactions = computed(() => processInstallments(rawTransactions.value))
 
 // ===== CONFIGURAÇÃO: Categorias de Custos Fixos =====
 const FIXED_COST_CATEGORIES = [
@@ -573,59 +576,22 @@ const getCellClass = (value: number | undefined) => {
   return 'text-gray-700 font-normal'
 }
 
-// Load data from cache (no refresh)
-const loadData = async () => {
-  loading.value = true
-  error.value = null
-
-  try {
-    const response = await $fetch<Transaction[]>('/api/transactions')
-    rawTransactions.value = response
-
-    const processed = processInstallments(response)
-    transactions.value = processed
-  } catch (e) {
-    error.value = 'Não foi possível carregar os dados. Tente novamente.'
-  } finally {
-    loading.value = false
-  }
-}
-
 // Refresh cache and reload data
 const refreshData = async () => {
-  refreshing.value = true
-  loading.value = true
-  error.value = null
-
   try {
-    // First, refresh the cache
-    const cacheResponse = await $fetch('/api/cache/refresh', {
-      method: 'POST'
-    })
+    // Refresh cache - this automatically reloads transactions
+    const result = await refreshCache()
 
-    if (cacheResponse.success) {
-      console.log('Cache atualizado:', cacheResponse.message)
+    if (result.success) {
+      console.log('Cache atualizado:', result.message)
     }
 
-    // Then fetch transactions from cache
-    const response = await $fetch<Transaction[]>('/api/transactions')
-    rawTransactions.value = response
-
-    const processed = processInstallments(response)
-    transactions.value = processed
-
-    // Update cache status
+    // Update cache status display
     await fetchCacheStatus()
   } catch (e) {
-    error.value = 'Não foi possível carregar os dados. Tente novamente.'
-  } finally {
-    loading.value = false
-    refreshing.value = false
+    console.error('Error refreshing data:', e)
   }
 }
 
-// Lifecycle
-onMounted(() => {
-  loadData() // Load from cache, no automatic refresh
-})
+// No onMounted needed - useAsyncData fetches data on SSR automatically
 </script>

@@ -9,7 +9,7 @@
             {{ selectedPerson }}
           </span>
         </div>
-        <BaseButton size="sm" variant="ghost" @click="refreshData" :loading="loading || refreshing">
+        <BaseButton size="sm" variant="ghost" @click="refreshCacheAndData" :loading="loading || refreshing">
           {{ refreshing ? 'Atualizando...' : 'Atualizar' }}
         </BaseButton>
       </header>
@@ -257,20 +257,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { CategoriesResponse } from '~/types/transaction'
 import type { CacheRefreshResponse } from '~/types/cache'
 
 // Composables
 const { selectedPerson } = usePersonFilter()
 const { fetchCacheStatus } = useCacheStatus()
-
-// State
-const categoriesData = ref<CategoriesResponse | null>(null)
-const loading = ref(false)
-const refreshing = ref(false)
-const error = ref<string | null>(null)
-const expandedCategory = ref<string | null>(null)
 
 // Get current month in YYYY-MM format
 const getCurrentMonth = () => {
@@ -280,7 +273,50 @@ const getCurrentMonth = () => {
   return `${year}-${month}`
 }
 
+// Local state
 const selectedMonth = ref(getCurrentMonth())
+const expandedCategory = ref<string | null>(null)
+const refreshing = ref(false)
+
+// Build query object for API
+const queryObject = computed(() => {
+  const query: Record<string, string> = {}
+
+  if (selectedPerson.value !== 'Ambos') {
+    query.person = selectedPerson.value
+  }
+
+  const [year, month] = selectedMonth.value.split('-')
+  const startDate = `${year}-${month}-01`
+  const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
+  const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`
+
+  query.startDate = startDate
+  query.endDate = endDate
+  query.includeTransactions = 'true'
+
+  return query
+})
+
+// Use useAsyncData for SSR support
+const {
+  data: categoriesData,
+  status,
+  error: fetchError,
+  refresh: refreshData
+} = useAsyncData<CategoriesResponse>(
+  'categories',
+  () => $fetch<CategoriesResponse>('/api/categories', { query: queryObject.value }),
+  {
+    default: () => null,
+    watch: [queryObject],
+    immediate: true
+  }
+)
+
+// Computed states
+const loading = computed(() => status.value === 'pending')
+const error = computed(() => fetchError.value?.message || null)
 
 // Custom category order
 const CATEGORY_ORDER = [
@@ -573,41 +609,9 @@ const getBudgetTextColor = (percentageUsed: number): string => {
   return 'text-emerald-500'
 }
 
-// Load data from cache (no refresh)
-const loadData = async () => {
-  loading.value = true
-  error.value = null
-
-  try {
-    const params = new URLSearchParams()
-
-    if (selectedPerson.value !== 'Ambos') {
-      params.append('person', selectedPerson.value)
-    }
-
-    const [year, month] = selectedMonth.value.split('-')
-    const startDate = `${year}-${month}-01`
-    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
-    const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`
-
-    params.append('startDate', startDate)
-    params.append('endDate', endDate)
-    params.append('includeTransactions', 'true')
-
-    const response = await $fetch<CategoriesResponse>(`/api/categories?${params.toString()}`)
-    categoriesData.value = response
-  } catch (e: any) {
-    error.value = e.data || 'Não foi possível carregar os dados. Tente novamente.'
-  } finally {
-    loading.value = false
-  }
-}
-
 // Refresh cache and reload data
-const refreshData = async () => {
+const refreshCacheAndData = async () => {
   refreshing.value = true
-  loading.value = true
-  error.value = null
 
   try {
     // First, refresh the cache
@@ -619,45 +623,18 @@ const refreshData = async () => {
       console.log('Cache atualizado:', cacheResponse.message)
     }
 
-    // Then fetch categories data
-    const params = new URLSearchParams()
+    // Then refresh categories data
+    await refreshData()
 
-    if (selectedPerson.value !== 'Ambos') {
-      params.append('person', selectedPerson.value)
-    }
-
-    const [year, month] = selectedMonth.value.split('-')
-    const startDate = `${year}-${month}-01`
-    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
-    const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`
-
-    params.append('startDate', startDate)
-    params.append('endDate', endDate)
-    params.append('includeTransactions', 'true')
-
-    const response = await $fetch<CategoriesResponse>(`/api/categories?${params.toString()}`)
-    categoriesData.value = response
-
-    // Update cache status
+    // Update cache status display
     await fetchCacheStatus()
   } catch (e: any) {
-    error.value = e.data || 'Não foi possível carregar os dados. Tente novamente.'
+    console.error('Erro ao atualizar:', e)
   } finally {
-    loading.value = false
     refreshing.value = false
   }
 }
 
-// Lifecycle
-onMounted(() => {
-  loadData() // Load from cache, no automatic refresh
-})
-
-watch(selectedPerson, () => {
-  loadData() // Just reload from cache
-})
-
-watch(selectedMonth, () => {
-  loadData() // Just reload from cache
-})
+// No onMounted needed - useAsyncData fetches data on SSR automatically
+// Watches are also handled by useAsyncData via the watch option
 </script>

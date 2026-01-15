@@ -243,19 +243,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import type { Transaction } from '~/types/transaction'
-import type { CacheRefreshResponse } from '~/types/cache'
+import { ref, computed, watch } from 'vue'
 
-// Composables
+// Composables - transactions fetched automatically via SSR
+const {
+  transactions,
+  loading,
+  error,
+  refreshing,
+  refreshCache
+} = useTransactions()
+
 const { selectedPerson } = usePersonFilter()
 const { fetchCacheStatus } = useCacheStatus()
 
-// State
-const transactions = ref<Transaction[]>([])
-const loading = ref(false)
-const refreshing = ref(false)
-const error = ref<string | null>(null)
+// Local filter state
 const searchTerm = ref('')
 const startDate = ref('')
 const endDate = ref('')
@@ -354,50 +356,20 @@ const formatCurrencyCompact = (value: number) => {
   }).format(value)
 }
 
-// Load data from cache (no refresh)
-const loadData = async () => {
-  loading.value = true
-  error.value = null
-
-  try {
-    const response = await $fetch<Transaction[]>('/api/transactions')
-    transactions.value = response
-  } catch (e) {
-    error.value = 'Não foi possível carregar os dados. Tente novamente.'
-    console.error('Error fetching transactions:', e)
-  } finally {
-    loading.value = false
-  }
-}
-
 // Refresh cache and reload data
 const refreshData = async () => {
-  refreshing.value = true
-  loading.value = true
-  error.value = null
-
   try {
-    // First, refresh the cache
-    const cacheResponse = await $fetch<CacheRefreshResponse>('/api/cache/refresh', {
-      method: 'POST'
-    })
+    // Refresh cache - this automatically reloads transactions
+    const result = await refreshCache()
 
-    if (cacheResponse.success) {
-      console.log('Cache atualizado:', cacheResponse.message)
+    if (result.success) {
+      console.log('Cache atualizado:', result.message)
     }
 
-    // Then fetch transactions from cache
-    const response = await $fetch<Transaction[]>('/api/transactions')
-    transactions.value = response
-
-    // Update cache status
+    // Update cache status display
     await fetchCacheStatus()
   } catch (e) {
-    error.value = 'Não foi possível carregar os dados. Tente novamente.'
-    console.error('Error fetching transactions:', e)
-  } finally {
-    loading.value = false
-    refreshing.value = false
+    console.error('Error refreshing data:', e)
   }
 }
 
@@ -420,10 +392,7 @@ const nextPage = () => {
   }
 }
 
-// Lifecycle
-onMounted(() => {
-  loadData() // Load from cache, no automatic refresh
-})
+// No onMounted needed - useAsyncData fetches data on SSR automatically
 
 // Watch for filters changes - reset to page 1
 watch([searchTerm, startDate, endDate, selectedPerson], () => {

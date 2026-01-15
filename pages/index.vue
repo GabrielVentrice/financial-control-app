@@ -100,14 +100,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 
-// Composables
+// Composables - transactions now fetched automatically via SSR
 const {
   transactions,
   loading,
   error,
-  fetchTransactions,
   refreshCache,
   refreshing
 } = useTransactions()
@@ -149,7 +148,7 @@ const smartInsights = computed(() => getSmartInsights([...filteredTransactions.v
 // Methods
 const refresh = async () => {
   try {
-    // First, refresh the cache (fetch fresh data from Google Sheets)
+    // Refresh the cache and automatically reload transactions
     const result = await refreshCache()
 
     if (result.success) {
@@ -157,9 +156,6 @@ const refresh = async () => {
     } else {
       console.error('Erro ao atualizar cache:', result.error)
     }
-
-    // Then, fetch transactions (will read from fresh cache)
-    await fetchTransactions()
 
     // Update cache status display
     await fetchCacheStatus()
@@ -179,8 +175,5 @@ const formatTrendText = (trend: number): string => {
   return `${sign}${formatPercentage(abs, 1)}`
 }
 
-// Lifecycle
-onMounted(() => {
-  fetchTransactions()
-})
+// No onMounted needed - useAsyncData fetches data on SSR automatically
 </script>

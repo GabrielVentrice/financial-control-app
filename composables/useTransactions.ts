@@ -2,111 +2,83 @@ import type { Transaction, TransactionQueryParams } from '~/types/transaction'
 import type { CacheRefreshResponse } from '~/types/cache'
 
 /**
- * Composable for fetching and managing transactions
- * All filtering is now done server-side via query parameters
+ * Composable for fetching and managing transactions using SSR
+ * Uses useAsyncData for automatic SSR hydration - data loads on server
+ * All filtering is done server-side via query parameters
  */
-export const useTransactions = () => {
-  const transactions = useState<Transaction[]>('transactions', () => [])
-  const loading = useState<boolean>('transactions-loading', () => false)
-  const error = useState<string | null>('transactions-error', () => null)
+export const useTransactions = (initialParams?: MaybeRef<TransactionQueryParams>) => {
+  // Convert to reactive ref if needed
+  const params = isRef(initialParams) ? initialParams : ref(initialParams)
+
+  // Create unique cache key based on parameters
+  const cacheKey = computed(() => {
+    const p = unref(params) || {}
+    return `transactions-${JSON.stringify(p)}`
+  })
+
+  // Build query object for $fetch
+  const queryObject = computed(() => {
+    const p = unref(params)
+    if (!p) return {}
+
+    const query: Record<string, string> = {}
+    if (p.person) query.person = p.person
+    if (p.startDate) query.startDate = p.startDate
+    if (p.endDate) query.endDate = p.endDate
+    if (p.searchTerm) query.searchTerm = p.searchTerm
+    if (p.origin) query.origin = p.origin
+    if (p.destination) query.destination = p.destination
+    if (p.processInstallments !== undefined) {
+      query.processInstallments = String(p.processInstallments)
+    }
+    return query
+  })
+
+  // Use useAsyncData for SSR support - data fetches on server
+  const {
+    data: transactions,
+    status,
+    error: fetchError,
+    refresh: refreshData,
+    execute
+  } = useAsyncData<Transaction[]>(
+    cacheKey.value,
+    () => $fetch<Transaction[]>('/api/transactions', {
+      query: queryObject.value
+    }),
+    {
+      default: () => [],
+      watch: [queryObject], // Re-fetch when params change
+      immediate: true // Fetch immediately on SSR
+    }
+  )
+
+  // Computed states
+  const loading = computed(() => status.value === 'pending')
+  const error = computed(() => fetchError.value?.message || null)
+
+  // Refreshing state for cache refresh
   const refreshing = useState<boolean>('cache-refreshing', () => false)
 
   /**
-   * Fetches transactions from the API with optional filters
-   * All filtering is performed server-side for better performance
-   *
-   * @param params - Query parameters for filtering
-   */
-  const fetchTransactions = async (params?: TransactionQueryParams) => {
-    loading.value = true
-    error.value = null
-
-    try {
-      // Build query string from parameters
-      const queryParams = new URLSearchParams()
-
-      if (params?.person) queryParams.append('person', params.person)
-      if (params?.startDate) queryParams.append('startDate', params.startDate)
-      if (params?.endDate) queryParams.append('endDate', params.endDate)
-      if (params?.searchTerm) queryParams.append('searchTerm', params.searchTerm)
-      if (params?.origin) queryParams.append('origin', params.origin)
-      if (params?.destination) queryParams.append('destination', params.destination)
-      if (params?.processInstallments !== undefined) {
-        queryParams.append('processInstallments', String(params.processInstallments))
-      }
-
-      const url = queryParams.toString()
-        ? `/api/transactions?${queryParams.toString()}`
-        : '/api/transactions'
-
-      const data = await $fetch<Transaction[]>(url)
-      transactions.value = data
-    } catch (e: any) {
-      error.value = e.message || 'Erro ao carregar transações'
-      console.error('Erro ao buscar transações:', e)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  /**
-   * Helper: Get total amount from a list of transactions
-   * This is a client-side calculation on already-filtered data
-   */
-  const getTotalAmount = (filteredTransactions?: Transaction[]) => {
-    const txs = filteredTransactions || transactions.value
-    return txs.reduce((sum, t) => sum + t.amount, 0)
-  }
-
-  /**
-   * Helper: Client-side filter by date range (for already-fetched data)
-   * Prefer using fetchTransactions with startDate/endDate params for server-side filtering
-   */
-  const getTransactionsByDateRange = (startDate: string, endDate: string) => {
-    return transactions.value.filter((t) => {
-      const transactionDate = new Date(t.date)
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      return transactionDate >= start && transactionDate <= end
-    })
-  }
-
-  /**
-   * Helper: Client-side filter by origin (for already-fetched data)
-   * Prefer using fetchTransactions with origin param for server-side filtering
-   */
-  const getTransactionsByOrigin = (origin: string) => {
-    return transactions.value.filter((t) =>
-      t.origin.toLowerCase().includes(origin.toLowerCase())
-    )
-  }
-
-  /**
-   * Helper: Client-side filter by description (for already-fetched data)
-   * Prefer using fetchTransactions with searchTerm param for server-side filtering
-   */
-  const getTransactionsByDescription = (searchTerm: string) => {
-    return transactions.value.filter((t) =>
-      t.description.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }
-
-  /**
    * Refreshes cache by forcing a fetch from Google Sheets
-   * Returns the refresh response with success status and metadata
+   * Then refreshes the client data automatically
    */
   const refreshCache = async (): Promise<CacheRefreshResponse> => {
     refreshing.value = true
-    error.value = null
 
     try {
       const response = await $fetch<CacheRefreshResponse>('/api/cache/refresh', {
         method: 'POST'
       })
 
+      if (response.success) {
+        // Refresh the transactions data after cache update
+        await refreshData()
+      }
+
       return response
     } catch (e: any) {
-      error.value = e.message || 'Erro ao atualizar cache'
       console.error('Erro ao atualizar cache:', e)
 
       return {
@@ -120,21 +92,73 @@ export const useTransactions = () => {
           version: 1
         },
         transactionCount: 0,
-        message: error.value,
-        error: error.value
+        message: e.message || 'Erro ao atualizar cache',
+        error: e.message || 'Erro ao atualizar cache'
       }
     } finally {
       refreshing.value = false
     }
   }
 
+  /**
+   * Helper: Get total amount from a list of transactions
+   * This is a client-side calculation on already-filtered data
+   */
+  const getTotalAmount = (filteredTransactions?: Transaction[]) => {
+    const txs = filteredTransactions || transactions.value || []
+    return txs.reduce((sum, t) => sum + t.amount, 0)
+  }
+
+  /**
+   * Helper: Client-side filter by date range (for already-fetched data)
+   */
+  const getTransactionsByDateRange = (startDate: string, endDate: string) => {
+    return (transactions.value || []).filter((t) => {
+      const transactionDate = new Date(t.date)
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      return transactionDate >= start && transactionDate <= end
+    })
+  }
+
+  /**
+   * Helper: Client-side filter by origin (for already-fetched data)
+   */
+  const getTransactionsByOrigin = (origin: string) => {
+    return (transactions.value || []).filter((t) =>
+      t.origin.toLowerCase().includes(origin.toLowerCase())
+    )
+  }
+
+  /**
+   * Helper: Client-side filter by description (for already-fetched data)
+   */
+  const getTransactionsByDescription = (searchTerm: string) => {
+    return (transactions.value || []).filter((t) =>
+      t.description.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }
+
+  /**
+   * Manual fetch - for backward compatibility
+   * With useAsyncData, data is fetched automatically, but this allows manual refresh
+   */
+  const fetchTransactions = async (newParams?: TransactionQueryParams) => {
+    if (newParams && isRef(params)) {
+      params.value = newParams
+    }
+    await refreshData()
+  }
+
   return {
-    transactions: readonly(transactions),
-    loading: readonly(loading),
-    error: readonly(error),
+    transactions: computed(() => transactions.value || []),
+    loading,
+    error,
     refreshing: readonly(refreshing),
-    fetchTransactions,
+    refresh: refreshData,
     refreshCache,
+    fetchTransactions, // Backward compatibility
+    execute,
     getTransactionsByDateRange,
     getTotalAmount,
     getTransactionsByOrigin,

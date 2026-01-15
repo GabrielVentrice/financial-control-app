@@ -1,6 +1,9 @@
 import { google } from 'googleapis'
 import type { Transaction, SheetRow } from '~/types/transaction'
 
+const TRANSACTIONS_SHEET_NAME = 'Fluxo' // Nome da aba na planilha do Google Sheets
+const TRANSACTIONS_RANGE = `${TRANSACTIONS_SHEET_NAME}!A1:I` // Colunas A até I (Transaction Id, Status, Date, Origin, Destination, Description, Amount, Recorded at, Remote Id)
+
 /**
  * Fetches raw transaction data from Google Sheets
  * This is the single source of truth for transaction data
@@ -24,7 +27,7 @@ export async function fetchTransactionsFromGoogleSheets(): Promise<Transaction[]
     // Fetch data from spreadsheet
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'A1:H', // All columns from A to H
+      range: TRANSACTIONS_RANGE,
     })
 
     const rows = response.data.values
