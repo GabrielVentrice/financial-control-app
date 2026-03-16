@@ -64,6 +64,7 @@ const { formatCurrency, formatMonthName } = useFormatters()
 const { getCurrentMonthStats } = useDashboardAnalytics()
 
 const EXCLUDED_CATEGORIES = ['adjustment']
+const EXCLUDED_DESCRIPTIONS = ['pagamento debito automatico']
 
 // Helper to check if transaction is income
 const isIncome = (transaction: Transaction): boolean => {
@@ -93,7 +94,7 @@ const getMonthStats = (monthOffset: number = 0) => {
     .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
   const expenses = monthTransactions
-    .filter(t => isExpense(t) && !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()))
+    .filter(t => isExpense(t) && !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()) && !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase()))
     .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
   return {

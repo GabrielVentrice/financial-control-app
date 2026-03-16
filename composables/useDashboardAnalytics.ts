@@ -51,6 +51,7 @@ export interface SmartInsight {
 
 export const useDashboardAnalytics = () => {
   const EXCLUDED_CATEGORIES = ['adjustment']
+  const EXCLUDED_DESCRIPTIONS = ['pagamento debito automatico']
 
   // Helper function to check if transaction is income
   const isIncome = (transaction: Transaction): boolean => {
@@ -80,7 +81,7 @@ export const useDashboardAnalytics = () => {
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
     const expenses = monthTransactions
-      .filter(t => isExpense(t) && !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()))
+      .filter(t => isExpense(t) && !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()) && !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase()))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
     return {
@@ -173,6 +174,7 @@ export const useDashboardAnalytics = () => {
       const category = t.destination || 'Sem categoria'
       // Exclude unwanted categories
       if (EXCLUDED_CATEGORIES.includes(category.toLowerCase())) return
+      if (EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase())) return
       const existing = categoryMap.get(category) || { total: 0, count: 0 }
       categoryMap.set(category, {
         total: existing.total + Math.abs(t.amount),
@@ -208,7 +210,7 @@ export const useDashboardAnalytics = () => {
         return date.getMonth() === currentMonth &&
                date.getFullYear() === currentYear &&
                isExpense(t) &&
-               !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase())
+               !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()) && !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase())
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }
