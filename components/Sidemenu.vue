@@ -7,24 +7,24 @@
       @click="closeSidebar"
     ></div>
 
-    <!-- Sidebar - Narrower, no right border -->
+    <!-- Sidebar - Hairline border-right for separation -->
     <aside
       :class="[
         'fixed lg:sticky top-0 left-0 h-screen z-50 flex flex-col transition-all duration-300 ease-in-out',
-        'bg-white',
+        'bg-white border-r border-gray-100',
         isMobile
           ? (sidebarOpen ? 'w-56 translate-x-0' : 'w-56 -translate-x-full')
           : (sidebarOpen ? 'w-56' : 'w-16')
       ]"
     >
-      <!-- Logo/Header -->
+      <!-- Logo/Header - span, not h1 -->
       <div class="h-16 px-5 flex items-center justify-between flex-shrink-0">
-        <h1
+        <span
           v-if="sidebarOpen"
-          class="text-[15px] font-medium text-[#374151] truncate transition-opacity duration-200"
+          class="text-[15px] font-medium text-gray-600 truncate transition-opacity duration-200"
         >
           Controle Financeiro
-        </h1>
+        </span>
         <button
           @click="toggleSidebar"
           class="p-2 rounded-lg hover:bg-gray-50 transition-colors text-gray-400 hover:text-gray-700 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
@@ -48,23 +48,22 @@
         </button>
       </div>
 
-      <!-- Navigation - Typography-only active state -->
+      <!-- Navigation - Active = bg + font-medium, Hover = bg -->
       <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 space-y-0.5">
         <NuxtLink
           v-for="item in menuItems"
           :key="item.path"
           :to="item.path"
           @click="handleNavigation"
-          class="flex items-center gap-3 h-10 px-3 rounded-lg transition-all duration-200 ease-out group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+          class="flex items-center gap-3 h-10 px-3 rounded-lg transition-all duration-150 ease-out group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
           :class="$route.path === item.path
-            ? 'text-[#111111]'
-            : 'text-[#9CA3AF] hover:text-[#374151]'"
+            ? 'text-[#111111] bg-gray-100/70 font-medium'
+            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
         >
           <component :is="item.icon" class="h-5 w-5 flex-shrink-0" stroke-width="1.5" />
           <span
             v-if="sidebarOpen"
             class="text-[13px] truncate"
-            :class="$route.path === item.path ? 'font-semibold' : 'font-normal'"
           >
             {{ item.label }}
           </span>
@@ -84,7 +83,7 @@
           <select
             id="person-filter"
             v-model="selectedPerson"
-            class="w-full px-3 py-2.5 bg-gray-50 text-[#374151] text-[13px] rounded-lg border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 transition-all"
+            class="w-full px-3 py-2.5 bg-gray-50 text-gray-600 text-[13px] rounded-lg border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 transition-all"
           >
             <option value="Ambos">Ambos</option>
             <option value="Juliana">Juliana</option>
@@ -118,7 +117,6 @@ const route = useRoute()
 const { selectedPerson: globalSelectedPerson, setPersonFilter } = usePersonFilter()
 const { toggleMobileMenu, closeMobileMenu, isMobileMenuOpen } = useMobileMenu()
 
-// Criar computed com get/set para funcionar com v-model
 const selectedPerson = computed({
   get: () => globalSelectedPerson.value,
   set: (value: PersonType) => {
@@ -126,7 +124,6 @@ const selectedPerson = computed({
   }
 })
 
-// Detectar tamanho da tela
 const checkScreenSize = () => {
   if (process.client) {
     const wasMobile = isMobile.value
@@ -166,7 +163,6 @@ const sidebarOpen = computed(() => {
   return isMobile.value ? isMobileMenuOpen.value : isOpen.value
 })
 
-// Lifecycle
 onMounted(() => {
   checkScreenSize()
   if (process.client) {

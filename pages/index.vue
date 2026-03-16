@@ -1,16 +1,16 @@
 <template>
   <Sidemenu>
     <div class="bg-[#FAFBFC] min-h-screen">
-      <!-- Header - Clean and minimal -->
-      <header class="h-14 px-6 flex items-center justify-between bg-white">
+      <!-- Header - sticky with bottom border -->
+      <header class="h-14 px-6 flex items-center justify-between bg-white border-b border-gray-100 sticky top-0 z-10">
         <div>
-          <h1 class="text-[15px] font-medium text-[#111111]">Dashboard</h1>
-          <p class="text-[13px] text-[#9CA3AF]">{{ getCurrentMonthName() }}</p>
+          <h1 class="text-lg font-semibold text-[#111111] tracking-tight">Dashboard</h1>
+          <p class="text-[13px] text-gray-500 mt-0.5">{{ getCurrentMonthName() }}</p>
         </div>
         <button
           @click="refresh"
           :disabled="loading || refreshing"
-          class="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           title="Atualizar dados"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -20,7 +20,7 @@
       </header>
 
       <!-- Content -->
-      <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <main class="max-w-7xl mx-auto px-6 py-8">
         <!-- Loading State -->
         <LoadingState v-if="loading" message="Carregando dados financeiros..." />
 
@@ -29,8 +29,8 @@
 
         <!-- Dashboard Content -->
         <template v-else>
-          <!-- Smart Insights - Demoted to muted caption lines -->
-          <div v-if="smartInsights.length > 0" class="space-y-0">
+          <!-- Smart Insights -->
+          <div v-if="smartInsights.length > 0" class="space-y-0 mb-6">
             <LightInsightCard
               v-for="(insight, index) in smartInsights.slice(0, 2)"
               :key="index"
@@ -41,9 +41,8 @@
             />
           </div>
 
-          <!-- Hero KPIs - Borderless, breathing -->
-          <section class="grid grid-cols-1 md:grid-cols-3">
-            <!-- Saldo Disponivel -->
+          <!-- Hero KPIs - divide-x for visual separation -->
+          <section class="grid grid-cols-1 md:grid-cols-3 divide-x divide-gray-100">
             <LightStatCard
               label="Saldo Disponivel"
               :value="monthlyStats.balance"
@@ -57,7 +56,6 @@
               }"
             />
 
-            <!-- Gastado este mes -->
             <LightStatCard
               label="Gastado este Mes"
               :value="monthlyStats.expenses"
@@ -72,7 +70,6 @@
               }"
             />
 
-            <!-- Receitas -->
             <LightStatCard
               label="Receitas"
               :value="monthlyStats.income"
@@ -87,17 +84,17 @@
             />
           </section>
 
-          <!-- Cash Flow Chart - No card wrapper, directly on page -->
-          <section class="mt-6">
+          <!-- Cash Flow Chart - contained card, larger gap from KPIs -->
+          <section class="mt-10">
             <DashboardCashFlowChart :transactions="filteredTransactions" />
           </section>
 
-          <!-- Categories + Expenses List -->
-          <section class="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6">
-            <!-- Categories List - Left column -->
+          <!-- Categories + Expenses List - wider ratio, larger gap -->
+          <section class="mt-10 grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-8">
+            <!-- Categories List -->
             <div class="overflow-hidden">
               <div class="px-1 py-3">
-                <h3 class="text-[13px] font-medium text-[#9CA3AF]">Categorias</h3>
+                <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Categorias</h2>
               </div>
               <div v-if="allCategories.length > 0" class="space-y-0.5 max-h-[500px] overflow-y-auto">
                 <!-- "Todas" option -->
@@ -105,11 +102,11 @@
                   @click="selectedCategory = null"
                   class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left transition-colors duration-150"
                   :class="selectedCategory === null
-                    ? 'text-[#111111]'
-                    : 'text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F5F5F5]'"
+                    ? 'text-[#111111] bg-gray-50 font-medium'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50/50'"
                 >
-                  <span class="text-[13px]" :class="selectedCategory === null ? 'font-semibold' : 'font-normal'">Todas</span>
-                  <span class="text-[13px]" :class="selectedCategory === null ? 'font-medium text-[#374151]' : 'text-[#9CA3AF]'">
+                  <span class="text-[13px]">Todas</span>
+                  <span class="text-[13px]" :class="selectedCategory === null ? 'text-gray-700' : 'text-gray-500'">
                     {{ formatCurrency(totalExpenses) }}
                   </span>
                 </button>
@@ -120,32 +117,32 @@
                   @click="selectedCategory = category.name"
                   class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left transition-colors duration-150"
                   :class="selectedCategory === category.name
-                    ? 'text-[#111111]'
-                    : 'text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F5F5F5]'"
+                    ? 'text-[#111111] bg-gray-50 font-medium'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50/50'"
                 >
                   <div class="flex items-center gap-2 min-w-0">
-                    <span class="text-[13px] truncate" :class="selectedCategory === category.name ? 'font-semibold' : 'font-normal'">{{ category.name }}</span>
-                    <span class="text-[11px] text-[#9CA3AF]">
+                    <span class="text-[13px] truncate">{{ category.name }}</span>
+                    <span class="text-[11px] text-gray-400">
                       {{ category.count }}
                     </span>
                   </div>
-                  <span class="text-[13px] whitespace-nowrap ml-2" :class="selectedCategory === category.name ? 'font-medium text-[#374151]' : 'text-[#9CA3AF]'">
+                  <span class="text-[13px] whitespace-nowrap ml-2" :class="selectedCategory === category.name ? 'text-gray-700' : 'text-gray-500'">
                     {{ formatCurrency(category.total) }}
                   </span>
                 </button>
               </div>
               <div v-else class="p-8 text-center">
-                <p class="text-[13px] text-[#9CA3AF]">Nenhum gasto registrado</p>
+                <p class="text-[13px] text-gray-500">Nenhum gasto registrado</p>
               </div>
             </div>
 
-            <!-- Expenses List - Right column, whitespace separation -->
+            <!-- Expenses List -->
             <div class="overflow-hidden">
               <div class="px-1 py-3 flex items-center justify-between">
-                <h3 class="text-[13px] font-medium text-[#9CA3AF]">
+                <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {{ selectedCategory ? `Gastos - ${selectedCategory}` : 'Todos os Gastos' }}
-                </h3>
-                <span class="text-[11px] text-[#9CA3AF]">
+                </h2>
+                <span class="text-[11px] text-gray-500">
                   {{ displayedExpenses.length }} {{ displayedExpenses.length === 1 ? 'transacao' : 'transacoes' }}
                 </span>
               </div>
@@ -153,13 +150,14 @@
                 <div
                   v-for="expense in displayedExpenses"
                   :key="expense.transactionId"
-                  class="px-3 py-5 flex items-center justify-between hover:bg-[#F5F5F5] transition-colors duration-150 rounded-md"
+                  class="px-3 py-3 flex items-center justify-between hover:bg-gray-50/80 transition-colors duration-150 rounded-lg cursor-default"
+                  :title="expense.description"
                 >
                   <div class="min-w-0 flex-1">
-                    <p class="text-[15px] font-medium text-[#374151] truncate">{{ expense.description }}</p>
-                    <div class="flex items-center gap-2 mt-1">
-                      <span class="text-[13px] text-[#9CA3AF]">{{ formatDate(expense.date) }}</span>
-                      <span class="text-[13px] text-[#9CA3AF]">{{ expense.destination || 'Sem categoria' }}</span>
+                    <p class="text-[15px] font-medium text-gray-700 truncate">{{ expense.description }}</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <span class="text-[13px] text-gray-500">{{ formatDate(expense.date) }}</span>
+                      <span class="text-[13px] text-gray-500">{{ expense.destination || 'Sem categoria' }}</span>
                     </div>
                   </div>
                   <span class="text-[15px] font-semibold text-[#111111] whitespace-nowrap ml-4">
@@ -168,7 +166,7 @@
                 </div>
               </div>
               <div v-else class="p-8 text-center">
-                <p class="text-[13px] text-[#9CA3AF]">Nenhum gasto encontrado</p>
+                <p class="text-[13px] text-gray-500">Nenhum gasto encontrado</p>
               </div>
             </div>
           </section>
@@ -181,7 +179,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-// Composables - transactions now fetched automatically via SSR
 const {
   transactions,
   loading,
@@ -205,10 +202,8 @@ const {
 
 const { formatCurrency, formatMonthName, formatPercentage, formatDate } = useFormatters()
 
-// State
 const selectedCategory = ref<string | null>(null)
 
-// Computed - Filter transactions by person
 const filteredTransactions = computed(() => {
   let filtered = transactions.value
 
@@ -221,7 +216,6 @@ const filteredTransactions = computed(() => {
   return filtered
 })
 
-// Dashboard Analytics
 const monthlyStats = computed(() => getCurrentMonthStats([...filteredTransactions.value]))
 const allCategories = computed(() => getAllCategories([...filteredTransactions.value]))
 const smartInsights = computed(() => getSmartInsights([...filteredTransactions.value]))
@@ -240,7 +234,6 @@ const displayedExpenses = computed(() => {
   })
 })
 
-// Methods
 const refresh = async () => {
   try {
     const result = await refreshCache()

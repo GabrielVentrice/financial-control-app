@@ -1,10 +1,10 @@
 <template>
   <div class="inline-flex items-center gap-1.5">
-    <!-- Colored dot instead of arrow -->
+    <!-- Colored dot -->
     <span class="w-1.5 h-1.5 rounded-full" :class="dotClass"></span>
 
     <!-- Percentage -->
-    <span class="text-[12px] leading-none font-normal text-[#9CA3AF]">
+    <span class="text-[12px] leading-none font-normal text-gray-500">
       {{ formattedValue }}
     </span>
   </div>
@@ -28,7 +28,6 @@ const props = withDefaults(defineProps<Props>(), {
   invertColors: false
 })
 
-// Determine trend type
 const trendType = computed<TrendType>(() => {
   if (props.type) return props.type
   if (props.value > 0) return 'positive'
@@ -36,14 +35,12 @@ const trendType = computed<TrendType>(() => {
   return 'neutral'
 })
 
-// Format value - cap at 999%
 const formattedValue = computed(() => {
   const absValue = Math.abs(props.value)
   if (absValue > 999) return '+999%'
   return `${absValue.toFixed(1)}%`
 })
 
-// Dot color
 const dotClass = computed(() => {
   if (trendType.value === 'neutral') return 'bg-gray-300'
 

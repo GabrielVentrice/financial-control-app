@@ -2,15 +2,15 @@
   <Sidemenu>
     <div class="bg-[#FAFBFC] min-h-screen">
       <!-- Header -->
-      <header class="h-14 px-6 flex items-center justify-between bg-white">
+      <header class="h-14 px-6 flex items-center justify-between bg-white border-b border-gray-100 sticky top-0 z-10">
         <div>
-          <h1 class="text-[15px] font-medium text-[#111111]">Transacoes</h1>
-          <p class="text-[13px] text-[#9CA3AF]">{{ selectedPerson }}</p>
+          <h1 class="text-lg font-semibold text-[#111111] tracking-tight">Transacoes</h1>
+          <p class="text-[13px] text-gray-500 mt-0.5">{{ selectedPerson }}</p>
         </div>
         <button
           @click="refreshData"
           :disabled="loading || refreshing"
-          class="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           title="Atualizar dados"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -28,7 +28,7 @@
                 v-model="searchTerm"
                 type="text"
                 placeholder="Buscar descricao..."
-                class="w-full px-3 py-2 bg-gray-50 text-[#374151] text-[13px] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+                class="w-full px-3 py-2 bg-gray-50 text-gray-700 text-[13px] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
               />
             </div>
 
@@ -36,7 +36,7 @@
               <input
                 v-model="startDate"
                 type="date"
-                class="w-full px-3 py-2 bg-gray-50 text-[#374151] text-[13px] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+                class="w-full px-3 py-2 bg-gray-50 text-gray-700 text-[13px] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
               />
             </div>
 
@@ -44,7 +44,7 @@
               <input
                 v-model="endDate"
                 type="date"
-                class="w-full px-3 py-2 bg-gray-50 text-[#374151] text-[13px] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+                class="w-full px-3 py-2 bg-gray-50 text-gray-700 text-[13px] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
               />
             </div>
           </div>
@@ -53,12 +53,12 @@
           <div v-if="startDate || endDate || searchTerm" class="mt-3 flex items-center gap-3">
             <button
               @click="clearFilters"
-              class="px-3 py-1.5 text-[13px] text-[#9CA3AF] hover:text-[#374151] transition-colors"
+              class="px-3 py-1.5 text-[13px] text-gray-500 hover:text-gray-700 transition-colors"
             >
               Limpar filtros
             </button>
-            <div v-if="startDate || endDate" class="text-[13px] text-[#9CA3AF]">
-              <span class="font-medium text-[#374151]">{{ dateRangeLabel }}</span>
+            <div v-if="startDate || endDate" class="text-[13px] text-gray-500">
+              <span class="font-medium text-gray-700">{{ dateRangeLabel }}</span>
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@
         <!-- Content -->
         <template v-else>
           <!-- Summary Stats -->
-          <section class="grid grid-cols-2 lg:grid-cols-4">
+          <section class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100">
             <LightStatCard
               label="Total"
               :value="filteredTransactions.length"
@@ -113,8 +113,8 @@
           <section class="overflow-hidden flex flex-col" style="max-height: calc(100vh - 400px); min-height: 500px;">
             <!-- Header -->
             <div class="px-1 py-3 flex-shrink-0 flex items-center justify-between">
-              <h3 class="text-[13px] font-medium text-[#9CA3AF]">Transacoes</h3>
-              <span class="text-[11px] text-[#9CA3AF]">{{ filteredTransactions.length }} resultados</span>
+              <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Transacoes</h2>
+              <span class="text-[11px] text-gray-500">{{ filteredTransactions.length }} resultados</span>
             </div>
 
             <!-- Desktop Table -->
@@ -122,19 +122,19 @@
               <table class="min-w-full">
                 <thead>
                   <tr>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF]">
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
                       Data
                     </th>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF]">
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
                       Origem
                     </th>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF]">
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
                       Destino
                     </th>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF]">
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
                       Descricao
                     </th>
-                    <th class="px-4 py-3 text-right text-[11px] font-normal text-[#9CA3AF]">
+                    <th class="px-4 py-3 text-right text-[11px] font-normal text-gray-500">
                       Valor
                     </th>
                   </tr>
@@ -143,21 +143,21 @@
                   <tr
                     v-for="transaction in paginatedTransactions"
                     :key="transaction.transactionId"
-                    class="hover:bg-[#F5F5F5] transition-colors"
+                    class="hover:bg-gray-50/80 transition-colors"
                   >
-                    <td class="px-4 py-5 whitespace-nowrap text-[13px] text-[#9CA3AF]">
+                    <td class="px-4 py-3.5 whitespace-nowrap text-[13px] text-gray-500">
                       {{ formatDateCompact(transaction.date) }}
                     </td>
-                    <td class="px-4 py-5 text-[13px] text-[#9CA3AF] truncate max-w-[150px]">
+                    <td class="px-4 py-3.5 text-[13px] text-gray-500 truncate max-w-[150px]">
                       {{ transaction.origin }}
                     </td>
-                    <td class="px-4 py-5 text-[13px] text-[#9CA3AF] truncate max-w-[150px]">
+                    <td class="px-4 py-3.5 text-[13px] text-gray-500 truncate max-w-[150px]">
                       {{ transaction.destination }}
                     </td>
-                    <td class="px-4 py-5 text-[15px] font-medium text-[#374151] truncate max-w-md">
+                    <td class="px-4 py-3.5 text-[15px] font-medium text-gray-700 truncate max-w-md">
                       {{ transaction.description }}
                     </td>
-                    <td class="px-4 py-5 whitespace-nowrap text-right text-[15px] font-semibold" :class="{
+                    <td class="px-4 py-3.5 whitespace-nowrap text-right text-[15px] font-semibold" :class="{
                       'text-positive': transaction.amount >= 0,
                       'text-negative': transaction.amount < 0
                     }">
@@ -173,12 +173,12 @@
               <div
                 v-for="transaction in paginatedTransactions"
                 :key="transaction.transactionId"
-                class="px-4 py-5 hover:bg-[#F5F5F5] transition-colors"
+                class="px-4 py-3.5 hover:bg-gray-50/80 transition-colors"
               >
                 <div class="flex justify-between items-start gap-3 mb-2">
                   <div class="min-w-0 flex-1">
-                    <p class="text-[15px] font-medium text-[#374151] truncate">{{ transaction.description }}</p>
-                    <p class="text-[13px] text-[#9CA3AF] mt-0.5">{{ formatDateCompact(transaction.date) }}</p>
+                    <p class="text-[15px] font-medium text-gray-700 truncate">{{ transaction.description }}</p>
+                    <p class="text-[13px] text-gray-500 mt-0.5">{{ formatDateCompact(transaction.date) }}</p>
                   </div>
                   <p class="text-[15px] font-semibold whitespace-nowrap" :class="{
                     'text-positive': transaction.amount >= 0,
@@ -187,7 +187,7 @@
                     {{ formatCurrencyCompact(transaction.amount) }}
                   </p>
                 </div>
-                <div class="flex items-center gap-2 text-[13px] text-[#9CA3AF]">
+                <div class="flex items-center gap-2 text-[13px] text-gray-500">
                   <span class="truncate">{{ transaction.origin }}</span>
                   <span>→</span>
                   <span class="truncate">{{ transaction.destination }}</span>
@@ -205,26 +205,26 @@
 
             <!-- Pagination -->
             <div v-if="filteredTransactions.length > pageSize" class="px-4 py-3 flex items-center justify-between flex-shrink-0">
-              <div class="text-[13px] text-[#9CA3AF]">
-                <span class="font-medium text-[#374151]">{{ startIndex + 1 }}-{{ Math.min(endIndex, filteredTransactions.length) }}</span>
+              <div class="text-[13px] text-gray-500">
+                <span class="font-medium text-gray-700">{{ startIndex + 1 }}-{{ Math.min(endIndex, filteredTransactions.length) }}</span>
                 <span class="mx-1">de</span>
-                <span class="font-medium text-[#374151]">{{ filteredTransactions.length }}</span>
+                <span class="font-medium text-gray-700">{{ filteredTransactions.length }}</span>
               </div>
               <div class="flex gap-2">
                 <button
                   @click="prevPage"
                   :disabled="currentPage === 1"
-                  class="px-3 py-1.5 text-[13px] text-[#9CA3AF] hover:text-[#374151] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  class="px-3 py-1.5 text-[13px] text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   ← Anterior
                 </button>
-                <span class="px-3 py-1.5 text-[13px] text-[#9CA3AF]">
+                <span class="px-3 py-1.5 text-[13px] text-gray-500">
                   {{ currentPage }} / {{ totalPages }}
                 </span>
                 <button
                   @click="nextPage"
                   :disabled="currentPage === totalPages"
-                  class="px-3 py-1.5 text-[13px] text-[#9CA3AF] hover:text-[#374151] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  class="px-3 py-1.5 text-[13px] text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Proxima →
                 </button>

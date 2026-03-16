@@ -2,15 +2,15 @@
   <Sidemenu>
     <div class="bg-[#FAFBFC] min-h-screen">
       <!-- Header -->
-      <header class="h-14 px-6 flex items-center justify-between bg-white">
+      <header class="h-14 px-6 flex items-center justify-between bg-white border-b border-gray-100 sticky top-0 z-10">
         <div>
-          <h1 class="text-[15px] font-medium text-[#111111]">Custos Fixos</h1>
-          <p class="text-[13px] text-[#9CA3AF]">{{ selectedPerson }}</p>
+          <h1 class="text-lg font-semibold text-[#111111] tracking-tight">Custos Fixos</h1>
+          <p class="text-[13px] text-gray-500">{{ selectedPerson }}</p>
         </div>
         <button
           @click="refreshData"
           :disabled="loading || refreshing"
-          class="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           title="Atualizar dados"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -22,14 +22,14 @@
       <!-- Categories Info -->
       <div v-if="FIXED_COST_CATEGORIES.length > 0" class="px-6 py-3 bg-white">
         <details class="text-[13px]">
-          <summary class="cursor-pointer text-[#9CA3AF] hover:text-[#374151] transition-colors">
+          <summary class="cursor-pointer text-gray-500 hover:text-gray-700 transition-colors">
             {{ FIXED_COST_CATEGORIES.length }} categorias configuradas
           </summary>
           <div class="mt-3 flex flex-wrap gap-2">
             <span
               v-for="category in FIXED_COST_CATEGORIES"
               :key="category"
-              class="px-2 py-1 bg-gray-50 text-[#9CA3AF] text-[11px] rounded"
+              class="px-2 py-1 bg-gray-50 text-gray-500 text-[11px] rounded"
             >
               {{ category }}
             </span>
@@ -48,7 +48,7 @@
         <!-- Content -->
         <template v-else>
           <!-- Summary Cards -->
-          <section class="grid grid-cols-1 md:grid-cols-3">
+          <section class="grid grid-cols-1 md:grid-cols-3 divide-x divide-gray-100">
             <LightStatCard
               label="Mes Atual"
               :value="currentMonthTotal"
@@ -82,8 +82,8 @@
             <!-- Chart -->
             <div class="px-6 py-5">
               <div class="mb-5">
-                <h2 class="text-[15px] font-medium text-[#374151]">Evolucao dos Custos Fixos</h2>
-                <p class="text-[13px] text-[#9CA3AF] mt-1">Ultimos 6 meses</p>
+                <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Evolucao dos Custos Fixos</h2>
+                <p class="text-[13px] text-gray-500 mt-1">Ultimos 6 meses</p>
               </div>
               <div class="h-64">
                 <Bar
@@ -97,8 +97,8 @@
             <!-- Detailed Table -->
             <div class="overflow-hidden flex flex-col" style="max-height: 400px;">
               <div class="px-1 py-3 flex-shrink-0">
-                <h2 class="text-[15px] font-medium text-[#374151]">Detalhamento</h2>
-                <p class="text-[13px] text-[#9CA3AF] mt-1">Valores mensais</p>
+                <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Detalhamento</h2>
+                <p class="text-[13px] text-gray-500 mt-1">Valores mensais</p>
               </div>
 
               <!-- Desktop Table -->
@@ -106,20 +106,20 @@
               <table class="min-w-full">
                 <thead>
                   <tr>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF] sticky left-0 bg-[#FAFBFC] z-10">
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500 sticky left-0 bg-[#FAFBFC] z-10">
                       Categoria
                     </th>
                     <th
                       v-for="month in monthLabels"
                       :key="month"
-                      class="px-4 py-3 text-right text-[11px] font-normal text-[#9CA3AF] whitespace-nowrap"
+                      class="px-4 py-3 text-right text-[11px] font-normal text-gray-500 whitespace-nowrap"
                     >
                       {{ month }}
                     </th>
-                    <th class="px-4 py-3 text-right text-[11px] font-normal text-[#9CA3AF] whitespace-nowrap">
+                    <th class="px-4 py-3 text-right text-[11px] font-normal text-gray-500 whitespace-nowrap">
                       Total
                     </th>
-                    <th class="px-4 py-3 text-right text-[11px] font-normal text-[#9CA3AF] whitespace-nowrap">
+                    <th class="px-4 py-3 text-right text-[11px] font-normal text-gray-500 whitespace-nowrap">
                       Media
                     </th>
                   </tr>
@@ -128,10 +128,10 @@
                   <tr
                     v-for="category in categoryBreakdown"
                     :key="category.name"
-                    class="hover:bg-[#F5F5F5] transition-colors"
+                    class="hover:bg-gray-50/80 transition-colors"
                   >
                     <td class="px-4 py-5 whitespace-nowrap sticky left-0 bg-[#FAFBFC]">
-                      <span class="text-[13px] font-normal text-[#374151]">{{ category.name }}</span>
+                      <span class="text-[13px] font-normal text-gray-700">{{ category.name }}</span>
                     </td>
                     <td
                       v-for="month in monthLabels"
@@ -144,20 +144,20 @@
                     <td class="px-4 py-5 whitespace-nowrap text-right text-[15px] font-medium text-[#111111]">
                       {{ formatCurrencyCompact(category.total) }}
                     </td>
-                    <td class="px-4 py-5 whitespace-nowrap text-right text-[13px] text-[#9CA3AF]">
+                    <td class="px-4 py-5 whitespace-nowrap text-right text-[13px] text-gray-500">
                       {{ formatCurrencyCompact(category.average) }}
                     </td>
                   </tr>
 
                   <!-- Total Row -->
                   <tr class="font-normal border-t border-gray-200">
-                    <td class="px-4 py-5 whitespace-nowrap sticky left-0 bg-[#FAFBFC] text-[13px] text-[#374151] font-medium">
+                    <td class="px-4 py-5 whitespace-nowrap sticky left-0 bg-[#FAFBFC] text-[13px] text-gray-700 font-medium">
                       TOTAL
                     </td>
                     <td
                       v-for="month in monthLabels"
                       :key="month"
-                      class="px-4 py-5 whitespace-nowrap text-right text-[13px] text-[#374151]"
+                      class="px-4 py-5 whitespace-nowrap text-right text-[13px] text-gray-700"
                     >
                       {{ formatCurrencyCompact(getMonthTotal(month)) }}
                     </td>
@@ -181,8 +181,8 @@
               >
                 <div class="flex items-start justify-between">
                   <div class="min-w-0 flex-1">
-                    <h3 class="text-[13px] font-medium text-[#374151] truncate">{{ category.name }}</h3>
-                    <div class="flex items-center gap-2 text-[11px] text-[#9CA3AF]">
+                    <h3 class="text-[13px] font-medium text-gray-700 truncate">{{ category.name }}</h3>
+                    <div class="flex items-center gap-2 text-[11px] text-gray-500">
                       <span>Total: {{ formatCurrencyCompact(category.total) }}</span>
                       <span>Media: {{ formatCurrencyCompact(category.average) }}</span>
                     </div>
@@ -195,7 +195,7 @@
                     :key="month"
                     class="flex justify-between p-1.5 bg-gray-50 rounded"
                   >
-                    <span class="text-[#9CA3AF]">{{ month }}:</span>
+                    <span class="text-gray-500">{{ month }}:</span>
                     <span
                       :class="getCellClass(category.monthlyTotals[last6Months[index]])"
                       class="font-medium"
@@ -208,14 +208,14 @@
 
               <!-- Mobile Total -->
               <div class="p-3 space-y-2">
-                <h3 class="text-[13px] font-semibold text-[#374151]">TOTAL GERAL</h3>
+                <h3 class="text-[13px] font-semibold text-gray-700">TOTAL GERAL</h3>
                 <div class="grid grid-cols-2 gap-3 text-[12px]">
                   <div class="text-right">
-                    <span class="text-[#9CA3AF]">Total: </span>
+                    <span class="text-gray-500">Total: </span>
                     <span class="font-semibold text-[#111111]">{{ formatCurrencyCompact(grandTotal) }}</span>
                   </div>
                   <div class="text-right">
-                    <span class="text-[#9CA3AF]">Media: </span>
+                    <span class="text-gray-500">Media: </span>
                     <span class="font-semibold text-[#111111]">{{ formatCurrencyCompact(averageMonthlyTotal) }}</span>
                   </div>
                 </div>
@@ -539,9 +539,9 @@ const formatCurrentMonthCompact = () => {
 
 const getCellClass = (value: number | undefined) => {
   if (!value || value === 0) {
-    return 'text-[#9CA3AF]'
+    return 'text-gray-500'
   }
-  return 'text-[#374151] font-normal'
+  return 'text-gray-700 font-normal'
 }
 
 // Refresh cache and reload data

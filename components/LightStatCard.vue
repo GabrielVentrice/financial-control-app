@@ -1,29 +1,29 @@
 <template>
-  <div class="py-10 px-5" role="region" :aria-label="ariaDescription">
-    <!-- Label - 13px, regular, muted -->
-    <p class="text-[13px] font-normal text-[#9CA3AF] mb-2">
+  <div class="py-6 px-6" role="region" :aria-label="ariaDescription">
+    <!-- Label - 13px, regular, accessible gray -->
+    <p class="text-[13px] font-normal text-gray-500 mb-2">
       {{ label }}
     </p>
 
-    <!-- Hero Value - 36px/28px/20px, semibold, dark -->
+    <!-- Hero Value -->
     <p :class="['leading-tight', valueSizeClass, valueColorClass]">
       {{ formattedValue }}
     </p>
 
     <!-- Context line - trend as colored dot + percentage, or secondary stat -->
     <div class="mt-2">
-      <p v-if="trend !== undefined" class="text-[12px] text-[#9CA3AF] flex items-center gap-1.5">
+      <p v-if="trend !== undefined" class="text-[12px] text-gray-500 flex items-center gap-1.5">
         <span :class="['w-1.5 h-1.5 rounded-full inline-block', trendDotColor]"></span>
         {{ formattedTrend }}
       </p>
-      <p v-if="secondaryStat" class="text-[13px] font-normal text-[#9CA3AF]">
+      <p v-if="secondaryStat" class="text-[13px] font-normal text-gray-500">
         <span v-if="secondaryStat.value">{{ secondaryStat.value }}</span>
         <span v-if="secondaryStat.value && secondaryStat.label"> · </span>
         <span v-if="secondaryStat.label">{{ secondaryStat.label }}</span>
       </p>
     </div>
 
-    <!-- Bottom Slot - For sparklines, charts, etc -->
+    <!-- Bottom Slot -->
     <div v-if="$slots.bottom" class="mt-4">
       <slot name="bottom" />
     </div>
@@ -62,7 +62,6 @@ const props = withDefaults(defineProps<Props>(), {
   invertTrendColors: false
 })
 
-// Format value based on type
 const formattedValue = computed(() => {
   if (props.format === 'text') return String(props.value)
 
@@ -86,7 +85,6 @@ const formattedValue = computed(() => {
   }
 })
 
-// Size classes
 const valueSizeClass = computed(() => {
   const sizes: Record<Size, string> = {
     sm: 'text-kpi-sm',
@@ -96,7 +94,6 @@ const valueSizeClass = computed(() => {
   return sizes[props.size]
 })
 
-// Semantic colors
 const valueColorClass = computed(() => {
   const colors: Record<ValueColor, string> = {
     positive: 'text-positive',
@@ -109,7 +106,6 @@ const valueColorClass = computed(() => {
   return colors[props.valueColor]
 })
 
-// Trend formatting - colored dot instead of arrow glyph
 const trendDotColor = computed(() => {
   if (props.trend === undefined) return ''
   const isPositive = props.trend >= 0
@@ -124,7 +120,6 @@ const formattedTrend = computed(() => {
   return `${capped}% vs mes anterior`
 })
 
-// Accessible description
 const ariaDescription = computed(() => {
   let desc = `${props.label}: ${formattedValue.value}`
   if (props.trend !== undefined) {

@@ -2,15 +2,15 @@
   <Sidemenu>
     <div class="bg-[#FAFBFC] min-h-screen">
       <!-- Header -->
-      <header class="h-14 px-6 flex items-center justify-between bg-white">
+      <header class="h-14 px-6 flex items-center justify-between bg-white border-b border-gray-100 sticky top-0 z-10">
         <div>
-          <h1 class="text-[15px] font-medium text-[#111111]">Categorias</h1>
-          <p class="text-[13px] text-[#9CA3AF]">{{ selectedPerson }}</p>
+          <h1 class="text-lg font-semibold text-[#111111] tracking-tight">Categorias</h1>
+          <p class="text-[13px] text-gray-500">{{ selectedPerson }}</p>
         </div>
         <button
           @click="refreshCacheAndData"
           :disabled="loading || refreshing"
-          class="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           title="Atualizar dados"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -25,9 +25,9 @@
           <input
             v-model="selectedMonth"
             type="month"
-            class="px-3 py-2 bg-white text-[#374151] text-[13px] rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
+            class="px-3 py-2 bg-white text-gray-700 text-[13px] rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
           />
-          <span class="text-[13px] text-[#9CA3AF] ml-2">{{ formattedMonth }}</span>
+          <span class="text-[13px] text-gray-500 ml-2">{{ formattedMonth }}</span>
         </div>
       </div>
 
@@ -43,7 +43,7 @@
         <template v-else>
           <!-- Summary Cards -->
           <section>
-            <div class="grid grid-cols-2">
+            <div class="grid grid-cols-2 divide-x divide-gray-100">
               <LightStatCard
                 label="Fixos"
                 :value="custosFixosTotal"
@@ -69,14 +69,14 @@
             <div class="space-y-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h2 class="text-[15px] font-medium text-[#374151]">Orcamento Total</h2>
-                  <p class="text-[13px] text-[#9CA3AF] mt-0.5">{{ categoriesWithBudget.length }} categorias orcadas</p>
+                  <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Orcamento Total</h2>
+                  <p class="text-[13px] text-gray-500 mt-0.5">{{ categoriesWithBudget.length }} categorias orcadas</p>
                 </div>
                 <div class="text-right">
                   <p class="text-kpi-md text-[#111111]">
                     {{ formatCurrencyCompact(totalUsed) }}
                   </p>
-                  <p class="text-[13px] text-[#9CA3AF]">
+                  <p class="text-[13px] text-gray-500">
                     de {{ formatCurrencyCompact(totalBudget) }}
                   </p>
                 </div>
@@ -84,7 +84,7 @@
 
               <div class="space-y-2">
                 <div class="flex items-center justify-between text-[13px]">
-                  <span class="text-[#9CA3AF]">Progresso geral</span>
+                  <span class="text-gray-500">Progresso geral</span>
                   <span class="font-semibold" :class="getBudgetTextColor(totalBudgetPercentage)">
                     {{ totalBudgetPercentage.toFixed(1) }}%
                   </span>
@@ -97,7 +97,7 @@
                   ></div>
                 </div>
                 <div class="flex items-center justify-between text-[13px]">
-                  <span class="text-[#9CA3AF]">Restante:</span>
+                  <span class="text-gray-500">Restante:</span>
                   <span class="font-semibold" :class="totalBudgetRemaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
                     {{ formatCurrencyCompact(totalBudgetRemaining) }}
                   </span>
@@ -109,8 +109,8 @@
           <!-- Categories List -->
           <section>
             <div class="mb-4">
-              <h2 class="text-[15px] font-medium text-[#374151]">Gastos por Categoria</h2>
-              <p class="text-[13px] text-[#9CA3AF] mt-0.5">{{ categories.length }} categorias</p>
+              <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Gastos por Categoria</h2>
+              <p class="text-[13px] text-gray-500 mt-0.5">{{ categories.length }} categorias</p>
             </div>
 
             <!-- Empty State -->
@@ -126,14 +126,14 @@
               <div
                 v-for="category in categories"
                 :key="category.name"
-                class="rounded-xl cursor-pointer hover:bg-[#F5F5F5] transition-colors"
+                class="rounded-xl cursor-pointer hover:bg-gray-50/80 transition-colors"
                 @click="toggleCategory(category.name)"
               >
                 <!-- MOBILE VERSION -->
                 <div class="md:hidden p-4">
                   <div class="flex items-center justify-between">
                     <div class="min-w-0 flex-1">
-                      <p class="text-[15px] font-semibold text-[#374151] truncate">{{ category.name }}</p>
+                      <p class="text-[15px] font-semibold text-gray-700 truncate">{{ category.name }}</p>
                     </div>
                     <div class="text-right ml-3">
                       <template v-if="category.budget">
@@ -154,8 +154,8 @@
                 <div class="hidden md:block p-5">
                   <!-- Category Header - no emoji, no chevron -->
                   <div class="mb-3">
-                    <p class="text-[15px] font-semibold text-[#374151]">{{ category.name }}</p>
-                    <p class="text-[13px] text-[#9CA3AF] mt-0.5">{{ category.count }} transacoes</p>
+                    <p class="text-[15px] font-semibold text-gray-700">{{ category.name }}</p>
+                    <p class="text-[13px] text-gray-500 mt-0.5">{{ category.count }} transacoes</p>
                   </div>
 
                   <!-- Amount -->
@@ -164,7 +164,7 @@
                       <p class="text-kpi-md" :class="category.budget.remaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
                         {{ formatCurrencyCompact(category.budget.remaining) }}
                       </p>
-                      <p class="text-[13px] text-[#9CA3AF] mt-1">
+                      <p class="text-[13px] text-gray-500 mt-1">
                         {{ formatCurrencyCompact(category.total) }} gastos de {{ formatCurrencyCompact(category.budget.total) }}
                       </p>
                     </template>
@@ -179,7 +179,7 @@
                   <template v-if="category.budget">
                     <div class="space-y-2">
                       <div class="flex items-center justify-between text-[11px]">
-                        <span class="text-[#9CA3AF]">Utilizado</span>
+                        <span class="text-gray-500">Utilizado</span>
                         <span class="font-semibold" :class="getBudgetTextColor(category.budget.percentageUsed)">
                           {{ category.budget.percentageUsed.toFixed(0) }}%
                         </span>
@@ -196,7 +196,7 @@
 
                   <!-- Expanded Transactions -->
                   <div v-if="expandedCategory === category.name" class="mt-4 pt-4 border-t border-gray-100">
-                    <h4 class="text-[11px] font-medium text-[#9CA3AF] mb-3">
+                    <h4 class="text-[11px] font-medium text-gray-500 mb-3">
                       Transacoes ({{ getCategoryTransactions(category.name).length }})
                     </h4>
                     <div class="space-y-0 max-h-48 overflow-y-auto">
@@ -207,8 +207,8 @@
                       >
                         <div class="flex items-start justify-between gap-2">
                           <div class="flex-1 min-w-0">
-                            <p class="text-[13px] text-[#374151] truncate">{{ transaction.description }}</p>
-                            <div class="flex items-center gap-2 text-[11px] text-[#9CA3AF] mt-1">
+                            <p class="text-[13px] text-gray-700 truncate">{{ transaction.description }}</p>
+                            <div class="flex items-center gap-2 text-[11px] text-gray-500 mt-1">
                               <span>{{ formatDateCompact(transaction.date) }}</span>
                               <span>·</span>
                               <span class="truncate">{{ transaction.origin }}</span>

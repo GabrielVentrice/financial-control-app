@@ -1,12 +1,12 @@
 <template>
-  <div>
-    <!-- Header - inline with chart, no card wrapper -->
+  <div class="bg-white border border-gray-100 rounded-xl p-6">
+    <!-- Header -->
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-[13px] font-medium text-[#9CA3AF]">Fluxo de Caixa</h3>
-      <span class="text-[11px] text-[#9CA3AF]">Ultimos 6 meses</span>
+      <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fluxo de Caixa</h2>
+      <span class="text-[11px] text-gray-500">Ultimos 6 meses</span>
     </div>
 
-    <!-- Chart Container - directly on page background -->
+    <!-- Chart Container -->
     <div class="h-64">
       <Bar
         v-if="chartData"
@@ -15,19 +15,19 @@
       />
     </div>
 
-    <!-- Legend - Minimal -->
+    <!-- Legend -->
     <div class="mt-4 flex items-center justify-center gap-6">
       <div class="flex items-center gap-2">
         <div class="w-2.5 h-2.5 rounded-sm bg-positive"></div>
-        <span class="text-[11px] text-[#9CA3AF]">Receitas</span>
+        <span class="text-[11px] text-gray-500">Receitas</span>
       </div>
       <div class="flex items-center gap-2">
         <div class="w-2.5 h-2.5 rounded-sm" style="background-color: rgba(220, 38, 38, 0.7)"></div>
-        <span class="text-[11px] text-[#9CA3AF]">Despesas</span>
+        <span class="text-[11px] text-gray-500">Despesas</span>
       </div>
       <div class="flex items-center gap-2">
         <div class="w-2.5 h-2.5 rounded-sm bg-gray-300"></div>
-        <span class="text-[11px] text-[#9CA3AF]">Saldo</span>
+        <span class="text-[11px] text-gray-500">Saldo</span>
       </div>
     </div>
   </div>
@@ -49,7 +49,6 @@ import {
 } from 'chart.js'
 import type { Transaction } from '~/types/transaction'
 
-// Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 interface Props {
@@ -64,18 +63,15 @@ const { getCurrentMonthStats } = useDashboardAnalytics()
 const EXCLUDED_CATEGORIES = ['adjustment']
 const EXCLUDED_DESCRIPTIONS = ['pagamento debito automatico']
 
-// Helper to check if transaction is income
 const isIncome = (transaction: Transaction): boolean => {
   return transaction.destination.toLowerCase().includes('bank account')
 }
 
-// Helper to check if transaction is expense
 const isExpense = (transaction: Transaction): boolean => {
   const originLower = transaction.origin.toLowerCase()
   return originLower.includes('bank account') || originLower.includes('credit card')
 }
 
-// Get stats for a specific month offset
 const getMonthStats = (monthOffset: number = 0) => {
   const now = new Date()
   const targetDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
@@ -103,7 +99,6 @@ const getMonthStats = (monthOffset: number = 0) => {
   }
 }
 
-// Prepare chart data for last 6 months
 const chartData = computed<ChartData<'bar'>>(() => {
   const last6Months = [-5, -4, -3, -2, -1, 0].map(offset => getMonthStats(offset))
 
@@ -122,7 +117,7 @@ const chartData = computed<ChartData<'bar'>>(() => {
       {
         label: 'Despesas',
         data: last6Months.map(m => m.expenses),
-        backgroundColor: 'rgba(220, 38, 38, 0.7)', // Flat solid at 70% opacity
+        backgroundColor: 'rgba(220, 38, 38, 0.7)',
         borderColor: 'rgba(220, 38, 38, 0.7)',
         borderWidth: 0,
         borderRadius: 4,
@@ -141,7 +136,6 @@ const chartData = computed<ChartData<'bar'>>(() => {
   }
 })
 
-// Chart.js options - Clean and professional
 const chartOptions = computed<ChartOptions<'bar'>>(() => ({
   responsive: true,
   maintainAspectRatio: false,
@@ -181,7 +175,7 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
         display: false
       },
       ticks: {
-        color: '#9CA3AF',
+        color: '#6B7280',
         font: {
           size: 11,
           family: 'Inter, sans-serif'
@@ -198,7 +192,7 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
         dash: [4, 4]
       },
       ticks: {
-        color: '#9CA3AF',
+        color: '#6B7280',
         font: {
           size: 11,
           family: 'Inter, sans-serif'

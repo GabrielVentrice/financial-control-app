@@ -4,8 +4,8 @@
     <span :class="['w-1.5 h-1.5 rounded-full flex-shrink-0', dotColorClass]"></span>
 
     <!-- Content - single line of muted caption text -->
-    <p class="text-[13px] text-[#9CA3AF] leading-relaxed">
-      <span class="text-[#374151] font-medium">{{ title }}</span>
+    <p class="text-[13px] text-gray-500 leading-relaxed">
+      <span class="text-gray-700 font-medium">{{ title }}</span>
       <span v-if="value !== undefined" class="ml-1">{{ formattedValue }}</span>
       <span v-if="message" class="ml-1">— {{ message }}</span>
     </p>
@@ -27,7 +27,6 @@ interface Props {
 
 const props = defineProps<Props>()
 
-// Small colored dot
 const dotColorClass = computed(() => {
   const colors: Record<InsightType, string> = {
     success: 'bg-emerald-400',
@@ -38,7 +37,6 @@ const dotColorClass = computed(() => {
   return colors[props.type]
 })
 
-// Format value
 const formattedValue = computed(() => {
   if (props.value === undefined) return ''
 

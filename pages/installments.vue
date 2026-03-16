@@ -2,15 +2,15 @@
   <Sidemenu>
     <div class="bg-[#FAFBFC] min-h-screen">
       <!-- Header -->
-      <header class="h-14 px-6 flex items-center justify-between bg-white">
+      <header class="h-14 px-6 flex items-center justify-between bg-white border-b border-gray-100 sticky top-0 z-10">
         <div>
-          <h1 class="text-[15px] font-medium text-[#111111]">Parcelas</h1>
-          <p class="text-[13px] text-[#9CA3AF]">{{ selectedPerson }}</p>
+          <h1 class="text-lg font-semibold text-[#111111] tracking-tight">Parcelas</h1>
+          <p class="text-[13px] text-gray-500">{{ selectedPerson }}</p>
         </div>
         <button
           @click="refreshData"
           :disabled="loading || refreshing"
-          class="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           title="Atualizar dados"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -30,7 +30,7 @@
         <!-- Content -->
         <template v-else>
           <!-- Summary Cards -->
-          <section class="grid grid-cols-1 md:grid-cols-3">
+          <section class="grid grid-cols-1 md:grid-cols-3 divide-x divide-gray-100">
             <LightStatCard
               label="Ativas"
               :value="activeInstallments.length"
@@ -62,8 +62,8 @@
           <!-- Chart -->
           <section class="px-6 py-5">
             <div class="mb-5">
-              <h2 class="text-[15px] font-medium text-[#374151]">Parcelas por Mes</h2>
-              <p class="text-[13px] text-[#9CA3AF] mt-1">6 meses atras → 6 meses a frente</p>
+              <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Parcelas por Mes</h2>
+              <p class="text-[13px] text-gray-500 mt-1">6 meses atras → 6 meses a frente</p>
             </div>
             <div class="h-56">
               <Bar :data="chartData" :options="chartOptions" />
@@ -72,7 +72,7 @@
 
           <!-- Active Installments List -->
           <section class="space-y-5">
-            <h2 class="text-[15px] font-medium text-[#374151]">Parcelas Ativas ({{ activeInstallments.length }})</h2>
+            <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Parcelas Ativas ({{ activeInstallments.length }})</h2>
             <EmptyState
               v-if="activeInstallments.length === 0"
               icon="📅"
@@ -83,12 +83,12 @@
               <div
                 v-for="installment in activeInstallments"
                 :key="installment.key"
-                class="rounded-xl px-6 py-5 hover:bg-[#F5F5F5] transition-colors"
+                class="rounded-xl px-6 py-5 hover:bg-gray-50/80 transition-colors"
               >
                 <div class="flex flex-col gap-4">
                   <div class="flex-1 min-w-0">
-                    <h3 class="font-medium text-[#374151] text-[15px] mb-2 truncate">{{ installment.description }}</h3>
-                    <div class="flex flex-wrap gap-4 text-[13px] text-[#9CA3AF]">
+                    <h3 class="font-medium text-gray-700 text-[15px] mb-2 truncate">{{ installment.description }}</h3>
+                    <div class="flex flex-wrap gap-4 text-[13px] text-gray-500">
                       <span>{{ installment.origin }}</span>
                       <span>{{ formatCurrencyCompact(installment.amount) }}/mes</span>
                     </div>
@@ -96,7 +96,7 @@
                   <div class="flex items-center justify-between">
                     <div class="text-kpi-md text-[#111111]">
                       {{ installment.paid }}/{{ installment.total }}
-                      <span class="text-[13px] text-[#9CA3AF] ml-2">{{ installment.remaining }} restantes</span>
+                      <span class="text-[13px] text-gray-500 ml-2">{{ installment.remaining }} restantes</span>
                     </div>
                     <div class="flex-1 max-w-xs ml-4">
                       <div class="w-full bg-gray-100 rounded-full h-[2px]">
@@ -110,12 +110,12 @@
                 </div>
                 <div class="mt-4 pt-3 border-t border-gray-100 grid grid-cols-2 gap-4 text-[13px]">
                   <div>
-                    <span class="text-[#9CA3AF]">Primeira:</span>
-                    <span class="text-[#374151] ml-2">{{ formatDateCompact(installment.firstDate) }}</span>
+                    <span class="text-gray-500">Primeira:</span>
+                    <span class="text-gray-700 ml-2">{{ formatDateCompact(installment.firstDate) }}</span>
                   </div>
                   <div>
-                    <span class="text-[#9CA3AF]">Ultima:</span>
-                    <span class="text-[#374151] ml-2">{{ formatDateCompact(installment.lastDate) }}</span>
+                    <span class="text-gray-500">Ultima:</span>
+                    <span class="text-gray-700 ml-2">{{ formatDateCompact(installment.lastDate) }}</span>
                   </div>
                 </div>
               </div>
@@ -125,7 +125,7 @@
           <!-- Monthly Breakdown -->
           <section class="overflow-hidden flex flex-col" style="max-height: 500px;">
             <div class="px-1 py-3 flex-shrink-0">
-              <h2 class="text-[15px] font-medium text-[#374151]">Detalhamento Mensal</h2>
+              <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Detalhamento Mensal</h2>
             </div>
 
             <!-- Desktop Table -->
@@ -133,13 +133,13 @@
               <table class="min-w-full">
                 <thead>
                   <tr>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF]">
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
                       Mes
                     </th>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF]">
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
                       Qtd. Parcelas
                     </th>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF]">
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
                       Total
                     </th>
                   </tr>
@@ -148,22 +148,22 @@
                   <tr
                     v-for="month in monthlyBreakdown"
                     :key="month.monthKey"
-                    class="hover:bg-[#F5F5F5] transition-colors"
+                    class="hover:bg-gray-50/80 transition-colors"
                     :class="{ 'bg-gray-50': month.monthKey === currentMonth }"
                   >
                     <td class="px-4 py-5 whitespace-nowrap">
                       <div class="flex items-center gap-3">
                         <span
                           v-if="month.monthKey === currentMonth"
-                          class="px-2 py-1 text-[11px] font-medium rounded-lg bg-gray-100 text-[#374151]"
+                          class="px-2 py-1 text-[11px] font-medium rounded-lg bg-gray-100 text-gray-700"
                         >
                           Atual
                         </span>
-                        <span class="text-[13px] text-[#374151]">{{ formatMonthYearCompact(month.monthKey) }}</span>
+                        <span class="text-[13px] text-gray-700">{{ formatMonthYearCompact(month.monthKey) }}</span>
                       </div>
                     </td>
                     <td class="px-4 py-5 whitespace-nowrap">
-                      <span class="text-[13px] text-[#9CA3AF]">
+                      <span class="text-[13px] text-gray-500">
                         {{ month.count }}
                       </span>
                     </td>
@@ -189,19 +189,19 @@
                   <div class="flex items-center gap-3">
                     <span
                       v-if="month.monthKey === currentMonth"
-                      class="px-2 py-1 text-[11px] font-medium rounded-lg bg-gray-100 text-[#374151]"
+                      class="px-2 py-1 text-[11px] font-medium rounded-lg bg-gray-100 text-gray-700"
                     >
                       Atual
                     </span>
-                    <span class="text-[13px] text-[#374151]">{{ formatMonthYearCompact(month.monthKey) }}</span>
+                    <span class="text-[13px] text-gray-700">{{ formatMonthYearCompact(month.monthKey) }}</span>
                   </div>
                   <div class="text-[15px] font-medium text-[#111111]">
                     {{ formatCurrencyCompact(month.total) }}
                   </div>
                 </div>
                 <div class="flex justify-between items-center text-[13px]">
-                  <span class="text-[#9CA3AF]">Parcelas:</span>
-                  <span class="text-[#9CA3AF]">
+                  <span class="text-gray-500">Parcelas:</span>
+                  <span class="text-gray-500">
                     {{ month.count }}
                   </span>
                 </div>
