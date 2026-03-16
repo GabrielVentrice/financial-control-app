@@ -1,51 +1,30 @@
 <template>
-  <div class="bg-white rounded-lg border border-gray-200 pt-5 pb-6 px-5 hover:border-gray-300 transition-colors" role="region" :aria-label="ariaDescription">
-    <!-- Label - Small, uppercase, consistent -->
-    <div class="flex items-center gap-2 mb-1">
-      <span v-if="icon" class="text-base">{{ icon }}</span>
-      <p class="text-xs font-medium text-gray-600 uppercase" style="letter-spacing: 0.08em">
-        {{ label }}
+  <div class="py-10 px-5" role="region" :aria-label="ariaDescription">
+    <!-- Label - 13px, regular, muted -->
+    <p class="text-[13px] font-normal text-[#9CA3AF] mb-2">
+      {{ label }}
+    </p>
+
+    <!-- Hero Value - 36px/28px/20px, semibold, dark -->
+    <p :class="['leading-tight', valueSizeClass, valueColorClass]">
+      {{ formattedValue }}
+    </p>
+
+    <!-- Context line - trend as colored dot + percentage, or secondary stat -->
+    <div class="mt-2">
+      <p v-if="trend !== undefined" class="text-[12px] text-[#9CA3AF] flex items-center gap-1.5">
+        <span :class="['w-1.5 h-1.5 rounded-full inline-block', trendDotColor]"></span>
+        {{ formattedTrend }}
       </p>
-    </div>
-
-    <!-- Main Value - Professional sizing with good contrast -->
-    <div class="flex items-baseline gap-2">
-      <p :class="['leading-tight', valueSizeClass, valueColorClass]">
-        {{ formattedValue }}
+      <p v-if="secondaryStat" class="text-[13px] font-normal text-[#9CA3AF]">
+        <span v-if="secondaryStat.value">{{ secondaryStat.value }}</span>
+        <span v-if="secondaryStat.value && secondaryStat.label"> · </span>
+        <span v-if="secondaryStat.label">{{ secondaryStat.label }}</span>
       </p>
-
-      <!-- Trend Indicator - Compact -->
-      <TrendIndicator
-        v-if="trend !== undefined"
-        :value="trend"
-        :invert-colors="invertTrendColors"
-        size="sm"
-      />
-    </div>
-
-    <!-- Secondary Stats - Compact, readable -->
-    <div v-if="hasSecondaryStats" class="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
-      <div v-if="secondaryStat" class="flex-1">
-        <p class="text-[11px] text-gray-400 uppercase tracking-wider mb-0.5">
-          {{ secondaryStat.label }}
-        </p>
-        <p class="text-[13px] font-medium text-gray-700">
-          {{ secondaryStat.value }}
-        </p>
-      </div>
-
-      <div v-if="tertiaryStat" class="flex-1">
-        <p class="text-[11px] text-gray-400 uppercase tracking-wider mb-0.5">
-          {{ tertiaryStat.label }}
-        </p>
-        <p class="text-[13px] font-medium text-gray-700">
-          {{ tertiaryStat.value }}
-        </p>
-      </div>
     </div>
 
     <!-- Bottom Slot - For sparklines, charts, etc -->
-    <div v-if="$slots.bottom" class="mt-3 pt-3 border-t border-gray-100">
+    <div v-if="$slots.bottom" class="mt-4">
       <slot name="bottom" />
     </div>
   </div>
@@ -55,7 +34,7 @@
 import { computed } from 'vue'
 
 type Format = 'currency' | 'number' | 'percentage' | 'text'
-type ValueColor = 'positive' | 'negative' | 'neutral' | 'warning' | 'default'
+type ValueColor = 'positive' | 'negative' | 'neutral' | 'warning' | 'default' | 'success'
 type Size = 'sm' | 'md' | 'lg'
 
 interface SecondaryStat {
@@ -69,7 +48,7 @@ interface Props {
   format?: Format
   valueColor?: ValueColor
   size?: Size
-  trend?: number // Percentage change
+  trend?: number
   invertTrendColors?: boolean
   secondaryStat?: SecondaryStat
   tertiaryStat?: SecondaryStat
@@ -107,34 +86,45 @@ const formattedValue = computed(() => {
   }
 })
 
-// Professional KPI sizing - maximum text-3xl
+// Size classes
 const valueSizeClass = computed(() => {
   const sizes: Record<Size, string> = {
-    sm: 'text-kpi-sm',  // 20px - font-semibold
-    md: 'text-kpi-md',  // 24px - font-semibold
-    lg: 'text-kpi-lg'   // 30px - font-semibold (maximum)
+    sm: 'text-kpi-sm',
+    md: 'text-kpi-md',
+    lg: 'text-kpi-lg'
   }
   return sizes[props.size]
 })
 
-// Semantic colors from design system
+// Semantic colors
 const valueColorClass = computed(() => {
   const colors: Record<ValueColor, string> = {
-    positive: 'text-positive',     // emerald-600 - Income
-    negative: 'text-negative',     // red-600 - Expenses
-    neutral: 'text-neutral',       // blue-600 - Info
-    warning: 'text-warning',       // amber-600 - Alerts
-    default: 'text-gray-900'       // Dark gray for general values
+    positive: 'text-positive',
+    negative: 'text-negative',
+    neutral: 'text-[#111111]',
+    warning: 'text-warning',
+    success: 'text-positive',
+    default: 'text-[#111111]'
   }
   return colors[props.valueColor]
 })
 
-// Check if has secondary stats
-const hasSecondaryStats = computed(() => {
-  return props.secondaryStat || props.tertiaryStat
+// Trend formatting - colored dot instead of arrow glyph
+const trendDotColor = computed(() => {
+  if (props.trend === undefined) return ''
+  const isPositive = props.trend >= 0
+  const shouldBeGreen = props.invertTrendColors ? !isPositive : isPositive
+  return shouldBeGreen ? 'bg-emerald-400' : 'bg-rose-400'
 })
 
-// Accessible description for screen readers
+const formattedTrend = computed(() => {
+  if (props.trend === undefined) return ''
+  const abs = Math.abs(props.trend)
+  const capped = abs > 999 ? '+999' : abs.toFixed(1)
+  return `${capped}% vs mes anterior`
+})
+
+// Accessible description
 const ariaDescription = computed(() => {
   let desc = `${props.label}: ${formattedValue.value}`
   if (props.trend !== undefined) {

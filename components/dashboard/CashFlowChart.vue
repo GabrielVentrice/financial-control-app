@@ -1,35 +1,33 @@
 <template>
-  <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-    <!-- Header -->
-    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-      <h3 class="text-sm font-semibold text-gray-900">Fluxo de Caixa</h3>
-      <span class="text-xs text-gray-500">Últimos 6 meses</span>
+  <div>
+    <!-- Header - inline with chart, no card wrapper -->
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-[13px] font-medium text-[#9CA3AF]">Fluxo de Caixa</h3>
+      <span class="text-[11px] text-[#9CA3AF]">Ultimos 6 meses</span>
     </div>
 
-    <!-- Chart Container -->
-    <div class="p-4">
-      <div class="h-64">
-        <Bar
-          v-if="chartData"
-          :data="chartData"
-          :options="chartOptions"
-        />
-      </div>
+    <!-- Chart Container - directly on page background -->
+    <div class="h-64">
+      <Bar
+        v-if="chartData"
+        :data="chartData"
+        :options="chartOptions"
+      />
     </div>
 
-    <!-- Legend - Minimal and clean -->
-    <div class="px-4 pb-4 flex items-center justify-center gap-6">
+    <!-- Legend - Minimal -->
+    <div class="mt-4 flex items-center justify-center gap-6">
       <div class="flex items-center gap-2">
-        <div class="w-3 h-3 rounded-sm bg-positive"></div>
-        <span class="text-xs text-gray-600">Receitas</span>
+        <div class="w-2.5 h-2.5 rounded-sm bg-positive"></div>
+        <span class="text-[11px] text-[#9CA3AF]">Receitas</span>
       </div>
       <div class="flex items-center gap-2">
-        <div class="w-3 h-3 rounded-sm bg-negative"></div>
-        <span class="text-xs text-gray-600">Despesas</span>
+        <div class="w-2.5 h-2.5 rounded-sm" style="background-color: rgba(220, 38, 38, 0.7)"></div>
+        <span class="text-[11px] text-[#9CA3AF]">Despesas</span>
       </div>
       <div class="flex items-center gap-2">
-        <div class="w-3 h-3 rounded-sm bg-gray-300"></div>
-        <span class="text-xs text-gray-600">Saldo</span>
+        <div class="w-2.5 h-2.5 rounded-sm bg-gray-300"></div>
+        <span class="text-[11px] text-[#9CA3AF]">Saldo</span>
       </div>
     </div>
   </div>
@@ -53,34 +51,6 @@ import type { Transaction } from '~/types/transaction'
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
-
-// Create stripe pattern for Despesas (color-blind accessible)
-const createStripePattern = (color: string): CanvasPattern | string => {
-  if (typeof document === 'undefined') return color
-  const canvas = document.createElement('canvas')
-  canvas.width = 10
-  canvas.height = 10
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return color
-  ctx.fillStyle = color
-  ctx.fillRect(0, 0, 10, 10)
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)'
-  ctx.lineWidth = 2
-  ctx.beginPath()
-  ctx.moveTo(0, 10)
-  ctx.lineTo(10, 0)
-  ctx.stroke()
-  ctx.beginPath()
-  ctx.moveTo(-2, 2)
-  ctx.lineTo(2, -2)
-  ctx.stroke()
-  ctx.beginPath()
-  ctx.moveTo(8, 12)
-  ctx.lineTo(12, 8)
-  ctx.stroke()
-  const pattern = ctx.createPattern(canvas, 'repeat')
-  return pattern || color
-}
 
 interface Props {
   transactions: Transaction[]
@@ -143,7 +113,7 @@ const chartData = computed<ChartData<'bar'>>(() => {
       {
         label: 'Receitas',
         data: last6Months.map(m => m.income),
-        backgroundColor: '#059669', // positive color
+        backgroundColor: '#059669',
         borderColor: '#059669',
         borderWidth: 0,
         borderRadius: 4,
@@ -152,16 +122,16 @@ const chartData = computed<ChartData<'bar'>>(() => {
       {
         label: 'Despesas',
         data: last6Months.map(m => m.expenses),
-        backgroundColor: createStripePattern('#DC2626'),
-        borderColor: '#DC2626',
-        borderWidth: 1,
+        backgroundColor: 'rgba(220, 38, 38, 0.7)', // Flat solid at 70% opacity
+        borderColor: 'rgba(220, 38, 38, 0.7)',
+        borderWidth: 0,
         borderRadius: 4,
         maxBarThickness: 40
       },
       {
         label: 'Saldo',
         data: last6Months.map(m => m.balance),
-        backgroundColor: '#D1D5DB', // gray-300
+        backgroundColor: '#D1D5DB',
         borderColor: '#D1D5DB',
         borderWidth: 0,
         borderRadius: 4,
@@ -181,11 +151,11 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
   },
   plugins: {
     legend: {
-      display: false // Using custom legend below
+      display: false
     },
     tooltip: {
-      backgroundColor: '#1F2937', // gray-800
-      titleColor: '#F9FAFB', // gray-50
+      backgroundColor: '#1F2937',
+      titleColor: '#F9FAFB',
       bodyColor: '#F9FAFB',
       padding: 12,
       cornerRadius: 8,
@@ -211,7 +181,7 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
         display: false
       },
       ticks: {
-        color: '#6B7280', // gray-500
+        color: '#9CA3AF',
         font: {
           size: 11,
           family: 'Inter, sans-serif'
@@ -220,7 +190,7 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
     },
     y: {
       grid: {
-        color: '#F3F4F6', // gray-100
+        color: '#F3F4F6',
         drawBorder: false
       },
       border: {
@@ -228,13 +198,12 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
         dash: [4, 4]
       },
       ticks: {
-        color: '#6B7280', // gray-500
+        color: '#9CA3AF',
         font: {
           size: 11,
           family: 'Inter, sans-serif'
         },
         callback: (value) => {
-          // Format ticks as compact currency
           const numValue = typeof value === 'number' ? value : 0
           if (Math.abs(numValue) >= 1000) {
             return formatCurrency(numValue, { compact: true })

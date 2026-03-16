@@ -1,44 +1,14 @@
 <template>
-  <div
-    :class="[
-      'flex items-start gap-4 px-5 py-4 rounded-xl transition-all duration-300',
-      backgroundClass,
-      'hover:shadow-sm'
-    ]"
-  >
-    <!-- Icon with aria-label for screen readers -->
-    <div :class="['flex-shrink-0 text-sm leading-none mt-1 opacity-70', iconColorClass]" role="img" :aria-label="iconAriaLabel">
-      {{ icon }}
-    </div>
+  <div class="flex items-center gap-3 px-1 py-2">
+    <!-- Colored dot indicator -->
+    <span :class="['w-1.5 h-1.5 rounded-full flex-shrink-0', dotColorClass]"></span>
 
-    <!-- Content -->
-    <div class="flex-1 min-w-0">
-      <div class="flex items-start justify-between gap-3">
-        <div class="flex-1 min-w-0">
-          <!-- Title - Semibold for clear hierarchy -->
-          <p class="text-sm font-semibold text-gray-700 leading-relaxed mb-1">
-            {{ title }}
-          </p>
-
-          <!-- Message - Cor suave -->
-          <p class="text-[13px] text-gray-500 leading-relaxed">
-            {{ message }}
-          </p>
-        </div>
-
-        <!-- Value Badge - Pequeno e suave -->
-        <div v-if="value !== undefined" class="flex-shrink-0">
-          <span :class="['text-sm font-medium whitespace-nowrap', iconColorClass]">
-            {{ formattedValue }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Action slot -->
-      <div v-if="$slots.action" class="mt-3">
-        <slot name="action" />
-      </div>
-    </div>
+    <!-- Content - single line of muted caption text -->
+    <p class="text-[13px] text-[#9CA3AF] leading-relaxed">
+      <span class="text-[#374151] font-medium">{{ title }}</span>
+      <span v-if="value !== undefined" class="ml-1">{{ formattedValue }}</span>
+      <span v-if="message" class="ml-1">— {{ message }}</span>
+    </p>
   </div>
 </template>
 
@@ -51,56 +21,21 @@ interface Props {
   type: InsightType
   title: string
   message: string
-  value?: number // Optional monetary value
+  value?: number
   customIcon?: string
 }
 
 const props = defineProps<Props>()
 
-// Icons based on type - Símbolos simples
-const icon = computed(() => {
-  if (props.customIcon) return props.customIcon
-
-  const icons: Record<InsightType, string> = {
-    success: '✓',
-    warning: '⚠',
-    danger: '✕',
-    info: 'ℹ'
-  }
-  return icons[props.type]
-})
-
-// Aria labels for icons
-const iconAriaLabel = computed(() => {
-  const labels: Record<InsightType, string> = {
-    success: 'Status positivo',
-    warning: 'Aviso',
-    danger: 'Alerta',
-    info: 'Informacao'
-  }
-  return labels[props.type]
-})
-
-// Color classes - SUAVES, dessaturadas
-const iconColorClass = computed(() => {
+// Small colored dot
+const dotColorClass = computed(() => {
   const colors: Record<InsightType, string> = {
-    success: 'text-emerald-500',
-    warning: 'text-amber-500',
-    danger: 'text-rose-400',     // rose-400, não red-500!
-    info: 'text-blue-500'
+    success: 'bg-emerald-400',
+    warning: 'bg-amber-400',
+    danger: 'bg-rose-400',
+    info: 'bg-blue-400'
   }
   return colors[props.type]
-})
-
-// Background - Solid subtle bg + left border accent
-const backgroundClass = computed(() => {
-  const backgrounds: Record<InsightType, string> = {
-    success: 'bg-emerald-50 border-l-2 border-emerald-400',
-    warning: 'bg-amber-50 border-l-2 border-amber-400',
-    danger: 'bg-rose-50 border-l-2 border-rose-400',
-    info: 'bg-blue-50 border-l-2 border-blue-400'
-  }
-  return backgrounds[props.type]
 })
 
 // Format value

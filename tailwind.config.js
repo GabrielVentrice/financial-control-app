@@ -22,9 +22,9 @@ module.exports = {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
       },
       fontSize: {
-        'kpi-lg': ['2.5rem', { lineHeight: '1.1', fontWeight: '700', letterSpacing: '-0.02em' }],    // 40px
-        'kpi-md': ['1.75rem', { lineHeight: '1.2', fontWeight: '700', letterSpacing: '-0.01em' }],   // 28px
-        'kpi-sm': ['1.375rem', { lineHeight: '1.3', fontWeight: '700' }],                            // 22px
+        'kpi-lg': ['2.25rem', { lineHeight: '1.1', fontWeight: '600', letterSpacing: '-0.02em' }],   // 36px
+        'kpi-md': ['1.75rem', { lineHeight: '1.2', fontWeight: '600', letterSpacing: '-0.01em' }],   // 28px
+        'kpi-sm': ['1.25rem', { lineHeight: '1.3', fontWeight: '600' }],                             // 20px
       },
     },
   },

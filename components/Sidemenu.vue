@@ -7,21 +7,21 @@
       @click="closeSidebar"
     ></div>
 
-    <!-- Sidebar - Design Suave -->
+    <!-- Sidebar - Narrower, no right border -->
     <aside
       :class="[
         'fixed lg:sticky top-0 left-0 h-screen z-50 flex flex-col transition-all duration-300 ease-in-out',
-        'bg-white border-r border-gray-100',
+        'bg-white',
         isMobile
-          ? (sidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full')
-          : (sidebarOpen ? 'w-72' : 'w-20')
+          ? (sidebarOpen ? 'w-56 translate-x-0' : 'w-56 -translate-x-full')
+          : (sidebarOpen ? 'w-56' : 'w-16')
       ]"
     >
-      <!-- Logo/Header - Mais espaço, menos peso -->
-      <div class="h-20 px-6 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
+      <!-- Logo/Header -->
+      <div class="h-16 px-5 flex items-center justify-between flex-shrink-0">
         <h1
           v-if="sidebarOpen"
-          class="text-xl font-normal text-gray-800 truncate transition-opacity duration-200"
+          class="text-[15px] font-medium text-[#374151] truncate transition-opacity duration-200"
         >
           Controle Financeiro
         </h1>
@@ -48,24 +48,27 @@
         </button>
       </div>
 
-      <!-- Navigation - Mais espaço, design suave -->
-      <nav class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2">
+      <!-- Navigation - Typography-only active state -->
+      <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 space-y-0.5">
         <NuxtLink
           v-for="item in menuItems"
           :key="item.path"
           :to="item.path"
           @click="handleNavigation"
-          class="flex items-center gap-3 h-12 px-4 rounded-xl hover:bg-gray-50 transition-all duration-200 ease-out text-gray-600 hover:text-gray-800 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-          active-class="bg-blue-50 text-blue-600"
+          class="flex items-center gap-3 h-10 px-3 rounded-lg transition-all duration-200 ease-out group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+          :class="$route.path === item.path
+            ? 'text-[#111111]'
+            : 'text-[#9CA3AF] hover:text-[#374151]'"
         >
           <component :is="item.icon" class="h-5 w-5 flex-shrink-0" stroke-width="1.5" />
           <span
             v-if="sidebarOpen"
-            class="font-normal text-sm truncate"
+            class="text-[13px] truncate"
+            :class="$route.path === item.path ? 'font-semibold' : 'font-normal'"
           >
             {{ item.label }}
           </span>
-          <!-- Tooltip for collapsed state - Design suave -->
+          <!-- Tooltip for collapsed state -->
           <span
             v-if="!sidebarOpen && !isMobile"
             class="absolute left-full ml-3 px-3 py-2 bg-gray-800 rounded-lg text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg"
@@ -75,63 +78,25 @@
         </NuxtLink>
       </nav>
 
-      <!-- Footer - Cache Status & Person Filter -->
-      <div class="border-t border-gray-200 mt-auto flex-shrink-0">
-        <!-- Cache Status -->
-        <div class="p-4 border-b border-gray-100">
-          <div v-if="sidebarOpen" class="space-y-2">
-            <div class="flex items-center justify-between">
-              <p class="text-xs text-gray-500 uppercase font-medium tracking-wider">
-                Status do Cache
-              </p>
-              <span class="text-lg">{{ getStatusIcon }}</span>
-            </div>
-            <div v-if="cacheStatus" class="text-xs text-gray-600 space-y-1">
-              <div class="flex items-center justify-between">
-                <span>Última atualização:</span>
-                <span class="font-medium">{{ getTimeAgo }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span>Transações:</span>
-                <span class="font-medium">{{ cacheStatus.transactionCount.toLocaleString('pt-BR') }}</span>
-              </div>
-              <div v-if="cacheStatus.isValid" class="flex items-center justify-between">
-                <span>Expira:</span>
-                <span class="font-medium">{{ getTimeUntilExpiry }}</span>
-              </div>
-            </div>
-            <div v-else class="text-xs text-gray-500">
-              Carregando status...
-            </div>
-          </div>
-          <div v-else class="flex justify-center" :title="cacheStatus?.message || 'Status do cache'">
-            <span class="text-lg">{{ getStatusIcon }}</span>
-          </div>
+      <!-- Footer - Person Filter only, no label -->
+      <div class="mt-auto flex-shrink-0 p-4">
+        <div v-if="sidebarOpen">
+          <select
+            id="person-filter"
+            v-model="selectedPerson"
+            class="w-full px-3 py-2.5 bg-gray-50 text-[#374151] text-[13px] rounded-lg border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 transition-all"
+          >
+            <option value="Ambos">Ambos</option>
+            <option value="Juliana">Juliana</option>
+            <option value="Gabriel">Gabriel</option>
+          </select>
         </div>
-
-        <!-- Person Filter -->
-        <div class="p-4">
-          <div v-if="sidebarOpen" class="space-y-3">
-            <label for="person-filter" class="text-xs text-gray-500 uppercase font-medium tracking-wider block">
-              Filtrar por pessoa
-            </label>
-            <select
-              id="person-filter"
-              v-model="selectedPerson"
-              class="w-full px-4 py-3 bg-gray-50 text-gray-700 text-sm rounded-xl border border-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 transition-all"
-            >
-              <option value="Ambos">Ambos</option>
-              <option value="Juliana">Juliana</option>
-              <option value="Gabriel">Gabriel</option>
-            </select>
-          </div>
-          <div v-else class="flex justify-center" :title="'Filtro: ' + selectedPerson">
-            <div class="w-3 h-3 rounded-full transition-colors" :class="{
-              'bg-blue-400': selectedPerson === 'Juliana',
-              'bg-blue-500': selectedPerson === 'Gabriel',
-              'bg-emerald-400': selectedPerson === 'Ambos'
-            }"></div>
-          </div>
+        <div v-else class="flex justify-center" :title="'Filtro: ' + selectedPerson">
+          <div class="w-2.5 h-2.5 rounded-full transition-colors" :class="{
+            'bg-blue-400': selectedPerson === 'Juliana',
+            'bg-blue-500': selectedPerson === 'Gabriel',
+            'bg-emerald-400': selectedPerson === 'Ambos'
+          }"></div>
         </div>
       </div>
     </aside>
@@ -149,17 +114,9 @@ import type { PersonType } from '~/composables/usePersonFilter'
 
 const isOpen = ref(true)
 const isMobile = ref(false)
+const route = useRoute()
 const { selectedPerson: globalSelectedPerson, setPersonFilter } = usePersonFilter()
 const { toggleMobileMenu, closeMobileMenu, isMobileMenuOpen } = useMobileMenu()
-
-// Cache status
-const {
-  cacheStatus,
-  fetchCacheStatus,
-  getTimeAgo,
-  getTimeUntilExpiry,
-  getStatusIcon
-} = useCacheStatus()
 
 // Criar computed com get/set para funcionar com v-model
 const selectedPerson = computed({
@@ -175,12 +132,10 @@ const checkScreenSize = () => {
     const wasMobile = isMobile.value
     isMobile.value = window.innerWidth < 1024
 
-    // Se mudou de desktop para mobile, fechar sidebar
     if (!wasMobile && isMobile.value) {
       closeMobileMenu()
     }
 
-    // Se mudou de mobile para desktop, abrir sidebar
     if (wasMobile && !isMobile.value && !isOpen.value) {
       isOpen.value = true
     }
@@ -207,7 +162,6 @@ const handleNavigation = () => {
   }
 }
 
-// Use mobile menu state for mobile, isOpen for desktop
 const sidebarOpen = computed(() => {
   return isMobile.value ? isMobileMenuOpen.value : isOpen.value
 })
@@ -218,19 +172,6 @@ onMounted(() => {
   if (process.client) {
     window.addEventListener('resize', checkScreenSize)
   }
-
-  // Fetch cache status on mount
-  fetchCacheStatus()
-
-  // Refresh cache status every 30 seconds
-  const interval = setInterval(() => {
-    fetchCacheStatus()
-  }, 30000)
-
-  // Clear interval on unmount
-  onUnmounted(() => {
-    clearInterval(interval)
-  })
 })
 
 onUnmounted(() => {

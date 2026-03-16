@@ -1,17 +1,22 @@
 <template>
   <Sidemenu>
-    <div class="bg-gray-50 min-h-screen">
+    <div class="bg-[#FAFBFC] min-h-screen">
       <!-- Header -->
-      <header class="h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white">
-        <div class="flex items-center gap-3">
-          <h1 class="text-lg font-semibold text-gray-900">Parcelas</h1>
-          <span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
-            {{ selectedPerson }}
-          </span>
+      <header class="h-14 px-6 flex items-center justify-between bg-white">
+        <div>
+          <h1 class="text-[15px] font-medium text-[#111111]">Parcelas</h1>
+          <p class="text-[13px] text-[#9CA3AF]">{{ selectedPerson }}</p>
         </div>
-        <BaseButton size="sm" variant="secondary" @click="refreshData" :loading="loading || refreshing">
-          {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
-        </BaseButton>
+        <button
+          @click="refreshData"
+          :disabled="loading || refreshing"
+          class="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          title="Atualizar dados"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
       </header>
 
       <!-- Content -->
@@ -24,8 +29,8 @@
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Cards - 3 COLUNAS Light Design -->
-          <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Summary Cards -->
+          <section class="grid grid-cols-1 md:grid-cols-3">
             <LightStatCard
               label="Ativas"
               :value="activeInstallments.length"
@@ -36,7 +41,7 @@
             />
 
             <LightStatCard
-              label="Mês Atual"
+              label="Mes Atual"
               :value="currentMonthTotal"
               format="currency"
               value-color="neutral"
@@ -45,100 +50,96 @@
             />
 
             <LightStatCard
-              label="Média Mensal"
+              label="Media Mensal"
               :value="averageMonthlyTotal"
               format="currency"
-              value-color="success"
+              value-color="neutral"
               size="lg"
               :secondary-stat="{ label: '13 meses', value: '' }"
             />
           </section>
 
-          <!-- Chart - Light Design -->
-          <section class="bg-gray-50/50 rounded-xl px-6 py-5">
+          <!-- Chart -->
+          <section class="px-6 py-5">
             <div class="mb-5">
-              <h2 class="text-lg font-normal text-gray-700">Parcelas por Mês</h2>
-              <p class="text-sm text-gray-400 mt-1">6 meses atrás → 6 meses à frente</p>
+              <h2 class="text-[15px] font-medium text-[#374151]">Parcelas por Mes</h2>
+              <p class="text-[13px] text-[#9CA3AF] mt-1">6 meses atras → 6 meses a frente</p>
             </div>
             <div class="h-56">
               <Bar :data="chartData" :options="chartOptions" />
             </div>
           </section>
 
-          <!-- Active Installments List - Light Design em Grid 2 colunas -->
+          <!-- Active Installments List -->
           <section class="space-y-5">
-            <h2 class="text-lg font-normal text-gray-700">Parcelas Ativas ({{ activeInstallments.length }})</h2>
+            <h2 class="text-[15px] font-medium text-[#374151]">Parcelas Ativas ({{ activeInstallments.length }})</h2>
             <EmptyState
               v-if="activeInstallments.length === 0"
               icon="📅"
               title="Nenhuma parcela ativa"
-              description="Você não possui parcelas ou financiamentos ativos no momento."
+              description="Voce nao possui parcelas ou financiamentos ativos no momento."
             />
             <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div
                 v-for="installment in activeInstallments"
                 :key="installment.key"
-                class="bg-gray-50/50 rounded-xl px-6 py-5 hover:bg-gray-50 transition-colors"
+                class="rounded-xl px-6 py-5 hover:bg-[#F5F5F5] transition-colors"
               >
                 <div class="flex flex-col gap-4">
                   <div class="flex-1 min-w-0">
-                    <h3 class="font-normal text-gray-800 text-base mb-2 truncate">{{ installment.description }}</h3>
-                    <div class="flex flex-wrap gap-4 text-sm text-gray-500">
-                      <span>
-                        <span class="text-gray-400">Origem:</span> {{ installment.origin }}
-                      </span>
-                      <span>
-                        <span class="text-gray-400">Valor:</span> {{ formatCurrencyCompact(installment.amount) }}/mês
-                      </span>
+                    <h3 class="font-medium text-[#374151] text-[15px] mb-2 truncate">{{ installment.description }}</h3>
+                    <div class="flex flex-wrap gap-4 text-[13px] text-[#9CA3AF]">
+                      <span>{{ installment.origin }}</span>
+                      <span>{{ formatCurrencyCompact(installment.amount) }}/mes</span>
                     </div>
                   </div>
                   <div class="flex items-center justify-between">
-                    <div class="text-2xl font-light text-blue-500">
+                    <div class="text-kpi-md text-[#111111]">
                       {{ installment.paid }}/{{ installment.total }}
-                      <span class="text-sm text-gray-400 ml-2">{{ installment.remaining }} restantes</span>
+                      <span class="text-[13px] text-[#9CA3AF] ml-2">{{ installment.remaining }} restantes</span>
                     </div>
                     <div class="flex-1 max-w-xs ml-4">
                       <div class="w-full bg-gray-100 rounded-full h-[2px]">
                         <div
-                          class="bg-gradient-to-r from-blue-400 to-blue-500 h-[2px] rounded-full transition-all"
+                          class="bg-[#111111] h-[2px] rounded-full transition-all"
                           :style="{ width: `${(installment.paid / installment.total) * 100}%` }"
                         ></div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div class="mt-4 pt-3 border-t border-gray-100 grid grid-cols-2 gap-4 text-sm">
+                <div class="mt-4 pt-3 border-t border-gray-100 grid grid-cols-2 gap-4 text-[13px]">
                   <div>
-                    <span class="text-gray-400">Primeira:</span>
-                    <span class="font-normal text-gray-700 ml-2">{{ formatDateCompact(installment.firstDate) }}</span>
+                    <span class="text-[#9CA3AF]">Primeira:</span>
+                    <span class="text-[#374151] ml-2">{{ formatDateCompact(installment.firstDate) }}</span>
                   </div>
                   <div>
-                    <span class="text-gray-400">Última:</span>
-                    <span class="font-normal text-gray-700 ml-2">{{ formatDateCompact(installment.lastDate) }}</span>
+                    <span class="text-[#9CA3AF]">Ultima:</span>
+                    <span class="text-[#374151] ml-2">{{ formatDateCompact(installment.lastDate) }}</span>
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <!-- Monthly Breakdown - Light Design com scroll interno -->
-          <section class="bg-white rounded-xl overflow-hidden shadow-sm flex flex-col" style="max-height: 500px;">
-            <div class="px-6 py-5 border-b border-gray-100 flex-shrink-0">
-              <h2 class="text-lg font-normal text-gray-700">Detalhamento Mensal</h2>
+          <!-- Monthly Breakdown -->
+          <section class="overflow-hidden flex flex-col" style="max-height: 500px;">
+            <div class="px-1 py-3 flex-shrink-0">
+              <h2 class="text-[15px] font-medium text-[#374151]">Detalhamento Mensal</h2>
             </div>
 
             <!-- Desktop Table -->
             <div class="hidden lg:block overflow-x-auto overflow-y-auto flex-1">
               <table class="min-w-full">
-                <thead class="bg-gray-50/50">
+                <thead>
                   <tr>
-                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Mês
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF]">
+                      Mes
                     </th>
-                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF]">
                       Qtd. Parcelas
                     </th>
-                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th class="px-4 py-3 text-left text-[11px] font-normal text-[#9CA3AF]">
                       Total
                     </th>
                   </tr>
@@ -147,27 +148,27 @@
                   <tr
                     v-for="month in monthlyBreakdown"
                     :key="month.monthKey"
-                    class="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
+                    class="hover:bg-[#F5F5F5] transition-colors"
                     :class="{ 'bg-gray-50': month.monthKey === currentMonth }"
                   >
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-4 py-5 whitespace-nowrap">
                       <div class="flex items-center gap-3">
                         <span
                           v-if="month.monthKey === currentMonth"
-                          class="px-2 py-1 text-xs font-medium rounded-lg bg-blue-50 text-blue-600"
+                          class="px-2 py-1 text-[11px] font-medium rounded-lg bg-gray-100 text-[#374151]"
                         >
                           Atual
                         </span>
-                        <span class="text-sm font-normal text-gray-700">{{ formatMonthYearCompact(month.monthKey) }}</span>
+                        <span class="text-[13px] text-[#374151]">{{ formatMonthYearCompact(month.monthKey) }}</span>
                       </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="text-sm text-gray-500">
+                    <td class="px-4 py-5 whitespace-nowrap">
+                      <span class="text-[13px] text-[#9CA3AF]">
                         {{ month.count }}
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="text-base font-light text-gray-800">
+                    <td class="px-4 py-5 whitespace-nowrap">
+                      <div class="text-[15px] font-medium text-[#111111]">
                         {{ formatCurrencyCompact(month.total) }}
                       </div>
                     </td>
@@ -177,7 +178,7 @@
             </div>
 
             <!-- Mobile Cards -->
-            <div class="lg:hidden divide-y divide-gray-100 overflow-y-auto flex-1">
+            <div class="lg:hidden overflow-y-auto flex-1">
               <div
                 v-for="month in monthlyBreakdown"
                 :key="month.monthKey"
@@ -188,19 +189,19 @@
                   <div class="flex items-center gap-3">
                     <span
                       v-if="month.monthKey === currentMonth"
-                      class="px-2 py-1 text-xs font-medium rounded-lg bg-blue-50 text-blue-600"
+                      class="px-2 py-1 text-[11px] font-medium rounded-lg bg-gray-100 text-[#374151]"
                     >
                       Atual
                     </span>
-                    <span class="text-sm font-normal text-gray-700">{{ formatMonthYearCompact(month.monthKey) }}</span>
+                    <span class="text-[13px] text-[#374151]">{{ formatMonthYearCompact(month.monthKey) }}</span>
                   </div>
-                  <div class="text-base font-light text-gray-800">
+                  <div class="text-[15px] font-medium text-[#111111]">
                     {{ formatCurrencyCompact(month.total) }}
                   </div>
                 </div>
-                <div class="flex justify-between items-center text-sm">
-                  <span class="text-gray-400">Parcelas:</span>
-                  <span class="text-gray-500">
+                <div class="flex justify-between items-center text-[13px]">
+                  <span class="text-[#9CA3AF]">Parcelas:</span>
+                  <span class="text-[#9CA3AF]">
                     {{ month.count }}
                   </span>
                 </div>
@@ -324,7 +325,6 @@ const installmentSeries = computed(() => {
     const series = seriesMap.get(key)!
     series.transactions.push(transaction)
 
-    // Update first and last dates
     if (transaction.date < series.firstDate) {
       series.firstDate = transaction.date
     }
@@ -332,14 +332,12 @@ const installmentSeries = computed(() => {
       series.lastDate = transaction.date
     }
 
-    // Count paid installments (those in the past or current month)
     const transactionMonth = transaction.date.substring(0, 7)
     if (transactionMonth <= currentMonth) {
       series.paid++
     }
   })
 
-  // Update remaining count
   seriesMap.forEach(series => {
     series.remaining = series.total - series.paid
   })
@@ -364,7 +362,6 @@ interface MonthlyData {
 const monthlyBreakdown = computed(() => {
   const monthlyMap = new Map<string, MonthlyData>()
 
-  // Initialize all months in range
   monthRange.forEach(monthKey => {
     monthlyMap.set(monthKey, {
       monthKey,
@@ -373,7 +370,6 @@ const monthlyBreakdown = computed(() => {
     })
   })
 
-  // Aggregate installment data
   installmentTransactions.value.forEach(transaction => {
     const monthKey = transaction.date.substring(0, 7)
 
@@ -409,19 +405,20 @@ const chartData = computed(() => {
         data: monthlyBreakdown.value.map(m => m.total),
         backgroundColor: monthlyBreakdown.value.map(m =>
           m.monthKey === currentMonth
-            ? 'rgba(59, 130, 246, 0.8)'  // Current month - blue-500
+            ? 'rgba(17, 17, 17, 0.8)'
             : m.monthKey < currentMonth
-              ? 'rgba(156, 163, 175, 0.5)' // Past months - gray-400
-              : 'rgba(96, 165, 250, 0.5)'  // Future months - blue-400
+              ? 'rgba(156, 163, 175, 0.4)'
+              : 'rgba(156, 163, 175, 0.25)'
         ),
         borderColor: monthlyBreakdown.value.map(m =>
           m.monthKey === currentMonth
-            ? 'rgb(59, 130, 246)'
+            ? '#111111'
             : m.monthKey < currentMonth
-              ? 'rgb(156, 163, 175)'
-              : 'rgb(96, 165, 250)'
+              ? 'rgba(156, 163, 175, 0.5)'
+              : 'rgba(156, 163, 175, 0.3)'
         ),
-        borderWidth: 1
+        borderWidth: 1,
+        borderRadius: 4
       }
     ]
   }
@@ -438,10 +435,10 @@ const chartOptions = {
       display: false
     },
     tooltip: {
-      backgroundColor: '#1F1F1F',
-      titleColor: '#F3F3F3',
-      bodyColor: '#B0B0B0',
-      borderColor: '#2E2E2E',
+      backgroundColor: '#1F2937',
+      titleColor: '#F9FAFB',
+      bodyColor: '#9CA3AF',
+      borderColor: '#374151',
       borderWidth: 1,
       padding: 12,
       displayColors: false,
@@ -460,22 +457,22 @@ const chartOptions = {
         drawBorder: false,
       },
       ticks: {
-        color: '#B0B0B0',
+        color: '#9CA3AF',
         font: {
-          size: 13
+          size: 11
         }
       }
     },
     y: {
       beginAtZero: true,
       grid: {
-        color: '#2E2E2E',
+        color: '#F3F4F6',
         drawBorder: false,
       },
       ticks: {
-        color: '#B0B0B0',
+        color: '#9CA3AF',
         font: {
-          size: 13
+          size: 11
         },
         callback: (value: any) => {
           return 'R$ ' + value.toLocaleString('pt-BR')
@@ -537,19 +534,15 @@ const formatMonthYearCompact = (monthKey: string) => {
 // Refresh cache and reload data
 const refreshData = async () => {
   try {
-    // Refresh cache - this automatically reloads transactions
     const result = await refreshCache()
 
     if (result.success) {
       console.log('Cache atualizado:', result.message)
     }
 
-    // Update cache status display
     await fetchCacheStatus()
   } catch (e) {
     console.error('Error refreshing data:', e)
   }
 }
-
-// No onMounted needed - useAsyncData fetches data on SSR automatically
 </script>

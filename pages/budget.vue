@@ -2,9 +2,9 @@
   <Sidemenu>
     <div class="bg-gray-50 min-h-screen">
       <!-- Header -->
-      <header class="h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white">
-        <div class="flex items-center gap-3">
-          <h1 class="text-lg font-semibold text-gray-900">Orçamento</h1>
+      <header class="h-14 px-6 flex items-center justify-between bg-white">
+        <div>
+          <h1 class="text-[15px] font-medium text-[#111111]">Orcamento</h1>
         </div>
         <div class="flex items-center gap-3">
           <BaseButton size="sm" variant="secondary" @click="loadData" :loading="loading || refreshing">

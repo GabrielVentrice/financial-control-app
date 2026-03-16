@@ -1,31 +1,33 @@
 <template>
   <Sidemenu>
-    <div class="bg-gray-50 min-h-screen">
+    <div class="bg-[#FAFBFC] min-h-screen">
       <!-- Header -->
-      <header class="h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white">
-        <div class="flex items-center gap-3">
-          <h1 class="text-lg font-semibold text-gray-900">Categorias</h1>
-          <span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
-            {{ selectedPerson }}
-          </span>
+      <header class="h-14 px-6 flex items-center justify-between bg-white">
+        <div>
+          <h1 class="text-[15px] font-medium text-[#111111]">Categorias</h1>
+          <p class="text-[13px] text-[#9CA3AF]">{{ selectedPerson }}</p>
         </div>
-        <BaseButton size="sm" variant="ghost" @click="refreshCacheAndData" :loading="loading || refreshing">
-          {{ refreshing ? 'Atualizando...' : 'Atualizar' }}
-        </BaseButton>
+        <button
+          @click="refreshCacheAndData"
+          :disabled="loading || refreshing"
+          class="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          title="Atualizar dados"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
       </header>
 
       <!-- Month Filter -->
-      <div class="px-6 py-4 bg-white border-b border-gray-200">
+      <div class="px-6 py-4 bg-white">
         <div class="max-w-7xl mx-auto flex items-center gap-4">
-          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            Mês
-          </label>
           <input
             v-model="selectedMonth"
             type="month"
-            class="px-3 py-2 bg-white text-gray-900 text-sm rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
+            class="px-3 py-2 bg-white text-[#374151] text-[13px] rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
           />
-          <span class="text-sm text-gray-500 ml-2">{{ formattedMonth }}</span>
+          <span class="text-[13px] text-[#9CA3AF] ml-2">{{ formattedMonth }}</span>
         </div>
       </div>
 
@@ -39,16 +41,15 @@
 
         <!-- Content -->
         <template v-else>
-          <!-- Summary Cards - Layout mais compacto -->
+          <!-- Summary Cards -->
           <section>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2">
               <LightStatCard
                 label="Fixos"
                 :value="custosFixosTotal"
                 format="currency"
                 value-color="neutral"
                 size="sm"
-                icon="📌"
                 :secondary-stat="{ label: custosFixosCategoriesCount + ' categorias', value: '' }"
               />
 
@@ -58,33 +59,32 @@
                 format="currency"
                 value-color="warning"
                 size="sm"
-                icon="📅"
                 :secondary-stat="{ label: gastosComprometidosCategoriesCount + ' categorias', value: '' }"
               />
             </div>
           </section>
 
           <!-- Total Budget Progress Bar -->
-          <section v-if="totalBudget > 0" class="bg-white rounded-xl p-6 shadow-sm">
+          <section v-if="totalBudget > 0" class="bg-white rounded-xl p-6">
             <div class="space-y-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h2 class="text-base font-normal text-gray-700">Orçamento Total</h2>
-                  <p class="text-xs text-gray-400 mt-0.5">{{ categoriesWithBudget.length }} categorias orçadas</p>
+                  <h2 class="text-[15px] font-medium text-[#374151]">Orcamento Total</h2>
+                  <p class="text-[13px] text-[#9CA3AF] mt-0.5">{{ categoriesWithBudget.length }} categorias orcadas</p>
                 </div>
                 <div class="text-right">
-                  <p class="text-2xl font-semibold text-gray-900">
+                  <p class="text-kpi-md text-[#111111]">
                     {{ formatCurrencyCompact(totalUsed) }}
                   </p>
-                  <p class="text-xs text-gray-400">
+                  <p class="text-[13px] text-[#9CA3AF]">
                     de {{ formatCurrencyCompact(totalBudget) }}
                   </p>
                 </div>
               </div>
 
               <div class="space-y-2">
-                <div class="flex items-center justify-between text-sm">
-                  <span class="text-gray-500">Progresso geral</span>
+                <div class="flex items-center justify-between text-[13px]">
+                  <span class="text-[#9CA3AF]">Progresso geral</span>
                   <span class="font-semibold" :class="getBudgetTextColor(totalBudgetPercentage)">
                     {{ totalBudgetPercentage.toFixed(1) }}%
                   </span>
@@ -96,8 +96,8 @@
                     :style="{ width: `${Math.min(totalBudgetPercentage, 100)}%` }"
                   ></div>
                 </div>
-                <div class="flex items-center justify-between text-sm">
-                  <span class="text-gray-400">Restante:</span>
+                <div class="flex items-center justify-between text-[13px]">
+                  <span class="text-[#9CA3AF]">Restante:</span>
                   <span class="font-semibold" :class="totalBudgetRemaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
                     {{ formatCurrencyCompact(totalBudgetRemaining) }}
                   </span>
@@ -106,48 +106,43 @@
             </div>
           </section>
 
-          <!-- Categories List - Grid Layout (3 per row) -->
+          <!-- Categories List -->
           <section>
-            <div class="mb-4 flex items-center justify-between">
-              <div>
-                <h2 class="text-base font-normal text-gray-700">Gastos por Categoria</h2>
-                <p class="text-xs text-gray-400 mt-0.5">{{ categories.length }} categorias</p>
-              </div>
+            <div class="mb-4">
+              <h2 class="text-[15px] font-medium text-[#374151]">Gastos por Categoria</h2>
+              <p class="text-[13px] text-[#9CA3AF] mt-0.5">{{ categories.length }} categorias</p>
             </div>
 
             <!-- Empty State -->
             <EmptyState
               v-if="categories.length === 0"
               icon="📊"
-              title="Nenhuma transação"
-              description="Selecione outro período."
+              title="Nenhuma transacao"
+              description="Selecione outro periodo."
             />
 
-            <!-- Categories Grid - 3 per row -->
+            <!-- Categories Grid - Flat cards, no emoji, no border -->
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div
                 v-for="category in categories"
                 :key="category.name"
-                class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                class="rounded-xl cursor-pointer hover:bg-[#F5F5F5] transition-colors"
                 @click="toggleCategory(category.name)"
               >
-                <!-- MOBILE VERSION - Simplified (icon, title, remaining) -->
+                <!-- MOBILE VERSION -->
                 <div class="md:hidden p-4">
                   <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <span class="text-3xl">{{ getCategoryIcon(category.name) }}</span>
-                      <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium text-gray-700 truncate">{{ category.name }}</p>
-                      </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-[15px] font-semibold text-[#374151] truncate">{{ category.name }}</p>
                     </div>
                     <div class="text-right ml-3">
                       <template v-if="category.budget">
-                        <p class="text-lg font-semibold" :class="category.budget.remaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
+                        <p class="text-kpi-sm" :class="category.budget.remaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
                           {{ formatCurrencyCompact(category.budget.remaining) }}
                         </p>
                       </template>
                       <template v-else>
-                        <p class="text-lg font-semibold text-gray-900">
+                        <p class="text-kpi-sm text-[#111111]">
                           {{ formatCurrencyCompact(category.total) }}
                         </p>
                       </template>
@@ -155,47 +150,27 @@
                   </div>
                 </div>
 
-                <!-- DESKTOP VERSION - Full details -->
+                <!-- DESKTOP VERSION - Flat, text-led -->
                 <div class="hidden md:block p-5">
-                  <!-- Category Header -->
-                  <div class="flex items-start justify-between mb-4">
-                    <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <span class="text-2xl">{{ getCategoryIcon(category.name) }}</span>
-                      <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium text-gray-700 truncate">{{ category.name }}</p>
-                        <p class="text-xs text-gray-400 mt-0.5">{{ category.count }} transações</p>
-                      </div>
-                    </div>
-                    <svg
-                      class="h-4 w-4 text-gray-400 transition-transform duration-150 flex-shrink-0 mt-1"
-                      :class="{ 'rotate-90': expandedCategory === category.name }"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
+                  <!-- Category Header - no emoji, no chevron -->
+                  <div class="mb-3">
+                    <p class="text-[15px] font-semibold text-[#374151]">{{ category.name }}</p>
+                    <p class="text-[13px] text-[#9CA3AF] mt-0.5">{{ category.count }} transacoes</p>
                   </div>
 
-                  <!-- Available Amount (Highlighted) -->
+                  <!-- Amount -->
                   <div class="mb-3">
                     <template v-if="category.budget">
-                      <p class="text-2xl font-semibold" :class="category.budget.remaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
+                      <p class="text-kpi-md" :class="category.budget.remaining >= 0 ? 'text-emerald-500' : 'text-rose-400'">
                         {{ formatCurrencyCompact(category.budget.remaining) }}
                       </p>
-                      <p class="text-xs text-gray-400 mt-0.5">
-                        {{ category.budget.remaining >= 0 ? 'disponível' : 'excedido' }}
-                      </p>
-                      <p class="text-xs text-gray-500 mt-1">
+                      <p class="text-[13px] text-[#9CA3AF] mt-1">
                         {{ formatCurrencyCompact(category.total) }} gastos de {{ formatCurrencyCompact(category.budget.total) }}
                       </p>
                     </template>
                     <template v-else>
-                      <p class="text-2xl font-semibold text-gray-900">
+                      <p class="text-kpi-md text-[#111111]">
                         {{ formatCurrencyCompact(category.total) }}
-                      </p>
-                      <p class="text-xs text-gray-400 italic mt-0.5">
-                        Sem orçamento
                       </p>
                     </template>
                   </div>
@@ -203,8 +178,8 @@
                   <!-- Budget Progress -->
                   <template v-if="category.budget">
                     <div class="space-y-2">
-                      <div class="flex items-center justify-between text-xs">
-                        <span class="text-gray-400">Utilizado</span>
+                      <div class="flex items-center justify-between text-[11px]">
+                        <span class="text-[#9CA3AF]">Utilizado</span>
                         <span class="font-semibold" :class="getBudgetTextColor(category.budget.percentageUsed)">
                           {{ category.budget.percentageUsed.toFixed(0) }}%
                         </span>
@@ -221,25 +196,25 @@
 
                   <!-- Expanded Transactions -->
                   <div v-if="expandedCategory === category.name" class="mt-4 pt-4 border-t border-gray-100">
-                    <h4 class="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wider">
-                      Transações ({{ getCategoryTransactions(category.name).length }})
+                    <h4 class="text-[11px] font-medium text-[#9CA3AF] mb-3">
+                      Transacoes ({{ getCategoryTransactions(category.name).length }})
                     </h4>
-                    <div class="space-y-3 max-h-48 overflow-y-auto">
+                    <div class="space-y-0 max-h-48 overflow-y-auto">
                       <div
                         v-for="transaction in getCategoryTransactions(category.name)"
                         :key="transaction.transactionId"
-                        class="pb-3 border-b border-gray-100 last:border-0"
+                        class="py-3"
                       >
                         <div class="flex items-start justify-between gap-2">
                           <div class="flex-1 min-w-0">
-                            <p class="text-sm text-gray-700 truncate">{{ transaction.description }}</p>
-                            <div class="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                            <p class="text-[13px] text-[#374151] truncate">{{ transaction.description }}</p>
+                            <div class="flex items-center gap-2 text-[11px] text-[#9CA3AF] mt-1">
                               <span>{{ formatDateCompact(transaction.date) }}</span>
-                              <span>•</span>
+                              <span>·</span>
                               <span class="truncate">{{ transaction.origin }}</span>
                             </div>
                           </div>
-                          <p class="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                          <p class="text-[13px] font-semibold text-[#111111] whitespace-nowrap">
                             {{ formatCurrencyCompact(transaction.amount) }}
                           </p>
                         </div>
@@ -347,23 +322,17 @@ const CATEGORY_ORDER = [
 const categories = computed(() => {
   const cats = categoriesData.value?.categories || []
 
-  // Sort by custom order
   return [...cats].sort((a, b) => {
     const aIndex = CATEGORY_ORDER.indexOf(a.name)
     const bIndex = CATEGORY_ORDER.indexOf(b.name)
 
-    // If both are in the custom order, sort by their position
     if (aIndex !== -1 && bIndex !== -1) {
       return aIndex - bIndex
     }
 
-    // If only 'a' is in custom order, it comes first
     if (aIndex !== -1) return -1
-
-    // If only 'b' is in custom order, it comes first
     if (bIndex !== -1) return 1
 
-    // If neither is in custom order, sort alphabetically
     return a.name.localeCompare(b.name)
   })
 })
@@ -403,170 +372,7 @@ const totalBudgetRemaining = computed(() => {
   return totalBudget.value - totalUsed.value
 })
 
-// Category icon mapping - each category gets unique icon
-const categoryIconMap = new Map<string, string>()
-
 // Methods
-const getCategoryIcon = (categoryName: string): string => {
-  // Check if we already mapped this category
-  if (categoryIconMap.has(categoryName)) {
-    return categoryIconMap.get(categoryName)!
-  }
-
-  const name = categoryName.toLowerCase()
-
-  // Icon patterns ordered by priority (more specific first)
-  const iconPatterns = [
-    // Food & Dining
-    { patterns: ['netflix', 'spotify', 'streaming'], icon: '🎬' },
-    { patterns: ['uber', 'taxi', '99'], icon: '🚕' },
-    { patterns: ['ifood', 'delivery'], icon: '🛵' },
-    { patterns: ['restaurante', 'restaurant'], icon: '🍽️' },
-    { patterns: ['mercado', 'supermercado', 'grocery'], icon: '🛒' },
-    { patterns: ['padaria', 'bakery'], icon: '🥖' },
-    { patterns: ['bar', 'bebida', 'drink'], icon: '🍺' },
-    { patterns: ['café', 'coffee'], icon: '☕' },
-    { patterns: ['lanche', 'snack'], icon: '🍕' },
-    { patterns: ['comida', 'food', 'alimentação'], icon: '🍴' },
-    { patterns: ['jantar', 'dinner'], icon: '🌙' },
-    { patterns: ['almoço', 'lunch'], icon: '🌞' },
-
-    // Transportation
-    { patterns: ['combustível', 'gasolina', 'fuel', 'gas'], icon: '⛽' },
-    { patterns: ['transporte', 'transport'], icon: '🚗' },
-    { patterns: ['estacionamento', 'parking'], icon: '🅿️' },
-    { patterns: ['passagem', 'ticket'], icon: '🎫' },
-    { patterns: ['pedágio', 'toll'], icon: '🛣️' },
-
-    // Health & Wellness
-    { patterns: ['farmácia', 'pharmacy'], icon: '💊' },
-    { patterns: ['médico', 'doctor', 'consulta'], icon: '👨‍⚕️' },
-    { patterns: ['hospital', 'clínica', 'clinic'], icon: '🏥' },
-    { patterns: ['dentista', 'dental'], icon: '🦷' },
-    { patterns: ['saúde', 'health'], icon: '⚕️' },
-    { patterns: ['academia', 'gym'], icon: '💪' },
-    { patterns: ['esporte', 'sport'], icon: '⚽' },
-    { patterns: ['fitness'], icon: '🏃' },
-
-    // Education
-    { patterns: ['escola', 'school'], icon: '🏫' },
-    { patterns: ['curso', 'course'], icon: '🎓' },
-    { patterns: ['livro', 'book'], icon: '📚' },
-    { patterns: ['educação', 'education'], icon: '📖' },
-    { patterns: ['material escolar'], icon: '✏️' },
-
-    // Housing
-    { patterns: ['aluguel', 'rent'], icon: '🏠' },
-    { patterns: ['condomínio'], icon: '🏢' },
-    { patterns: ['casa', 'home'], icon: '🏡' },
-    { patterns: ['moradia', 'housing'], icon: '🏘️' },
-    { patterns: ['móveis', 'furniture'], icon: '🛋️' },
-
-    // Utilities & Bills
-    { patterns: ['luz', 'eletricidade', 'electric'], icon: '💡' },
-    { patterns: ['água', 'water'], icon: '💧' },
-    { patterns: ['internet'], icon: '📡' },
-    { patterns: ['telefone', 'phone', 'celular'], icon: '📱' },
-    { patterns: ['gás', 'gas'], icon: '🔥' },
-    { patterns: ['conta', 'bill'], icon: '📄' },
-
-    // Entertainment
-    { patterns: ['cinema', 'movie'], icon: '🎥' },
-    { patterns: ['lazer', 'leisure'], icon: '🎪' },
-    { patterns: ['entertainment'], icon: '🎭' },
-    { patterns: ['jogo', 'game'], icon: '🎮' },
-    { patterns: ['música', 'music'], icon: '🎵' },
-
-    // Shopping
-    { patterns: ['roupa', 'clothes'], icon: '👕' },
-    { patterns: ['vestuário', 'fashion'], icon: '👔' },
-    { patterns: ['sapato', 'shoe'], icon: '👟' },
-    { patterns: ['loja', 'shop', 'store'], icon: '🏪' },
-    { patterns: ['shopping', 'mall'], icon: '🛍️' },
-
-    // Technology
-    { patterns: ['computador', 'computer'], icon: '💻' },
-    { patterns: ['tecnologia', 'tech'], icon: '⚙️' },
-    { patterns: ['eletrônico', 'electronic'], icon: '🔌' },
-    { patterns: ['software', 'app'], icon: '📲' },
-
-    // Travel
-    { patterns: ['hotel', 'hospedagem'], icon: '🏨' },
-    { patterns: ['viagem', 'travel'], icon: '✈️' },
-    { patterns: ['flight', 'voo'], icon: '🛫' },
-    { patterns: ['turismo', 'tourism'], icon: '🗺️' },
-
-    // Pets
-    { patterns: ['veterinário', 'vet'], icon: '👨‍⚕️' },
-    { patterns: ['pet', 'animal'], icon: '🐾' },
-    { patterns: ['ração', 'pet food'], icon: '🦴' },
-
-    // Beauty & Personal Care
-    { patterns: ['salão', 'salon'], icon: '💇' },
-    { patterns: ['cabelo', 'hair'], icon: '💇‍♀️' },
-    { patterns: ['beleza', 'beauty'], icon: '💄' },
-    { patterns: ['cosmético', 'cosmetic'], icon: '💅' },
-    { patterns: ['perfume'], icon: '🌸' },
-
-    // Finance
-    { patterns: ['pix'], icon: '💸' },
-    { patterns: ['transferência', 'transfer'], icon: '💳' },
-    { patterns: ['pagamento', 'payment'], icon: '💰' },
-    { patterns: ['investimento', 'invest'], icon: '📈' },
-    { patterns: ['poupança', 'savings'], icon: '🏦' },
-    { patterns: ['installment', 'financing', 'parcela', 'parcelamento'], icon: '📅' },
-    { patterns: ['empréstimo', 'loan'], icon: '💵' },
-    { patterns: ['taxa', 'fee'], icon: '🧾' },
-    { patterns: ['seguro', 'insurance'], icon: '🛡️' },
-    { patterns: ['imposto', 'tax'], icon: '📊' },
-
-    // Gifts & Special
-    { patterns: ['presente', 'gift'], icon: '🎁' },
-    { patterns: ['doação', 'donation'], icon: '❤️' },
-    { patterns: ['caridade', 'charity'], icon: '🤝' },
-
-    // Work & Business
-    { patterns: ['negócio', 'business'], icon: '💼' },
-    { patterns: ['escritório', 'office'], icon: '🏢' },
-    { patterns: ['trabalho', 'work'], icon: '👔' },
-
-    // Miscellaneous
-    { patterns: ['outros', 'other', 'diversos'], icon: '📦' },
-    { patterns: ['emergência', 'emergency'], icon: '🚨' },
-    { patterns: ['manutenção', 'maintenance'], icon: '🔧' },
-    { patterns: ['jardinagem', 'garden'], icon: '🌱' },
-    { patterns: ['limpeza', 'cleaning'], icon: '🧹' },
-  ]
-
-  // Find matching icon
-  for (const { patterns, icon } of iconPatterns) {
-    if (patterns.some(pattern => name.includes(pattern))) {
-      // Check if icon is already used by another category
-      const usedIcons = Array.from(categoryIconMap.values())
-      if (!usedIcons.includes(icon)) {
-        categoryIconMap.set(categoryName, icon)
-        return icon
-      }
-    }
-  }
-
-  // Fallback: generate unique icon from pool
-  const fallbackIcons = [
-    '🌟', '🎯', '🎨', '🔑', '🌈', '🎪', '🎲', '🎰', '🧩', '🎭',
-    '🎪', '🎨', '🎯', '🔮', '💎', '🏆', '🎖️', '🏅', '🥇', '🥈',
-    '🥉', '🎃', '🎄', '🎆', '🎇', '✨', '🎉', '🎊', '🎈', '🎀',
-    '🎗️', '🏵️', '🌺', '🌻', '🌷', '🌹', '🥀', '🌼', '🌸', '💮',
-    '🏮', '🪔', '🧧', '🎐', '🧿', '🪬', '🛎️', '🔔', '🔕', '📯'
-  ]
-
-  const usedIcons = Array.from(categoryIconMap.values())
-  const availableIcon = fallbackIcons.find(icon => !usedIcons.includes(icon))
-
-  const finalIcon = availableIcon || '💠'
-  categoryIconMap.set(categoryName, finalIcon)
-  return finalIcon
-}
-
 const formatCurrencyCompact = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -614,7 +420,6 @@ const refreshCacheAndData = async () => {
   refreshing.value = true
 
   try {
-    // First, refresh the cache
     const cacheResponse = await $fetch<CacheRefreshResponse>('/api/cache/refresh', {
       method: 'POST'
     })
@@ -623,10 +428,7 @@ const refreshCacheAndData = async () => {
       console.log('Cache atualizado:', cacheResponse.message)
     }
 
-    // Then refresh categories data
     await refreshData()
-
-    // Update cache status display
     await fetchCacheStatus()
   } catch (e: any) {
     console.error('Erro ao atualizar:', e)
@@ -634,7 +436,4 @@ const refreshCacheAndData = async () => {
     refreshing.value = false
   }
 }
-
-// No onMounted needed - useAsyncData fetches data on SSR automatically
-// Watches are also handled by useAsyncData via the watch option
 </script>

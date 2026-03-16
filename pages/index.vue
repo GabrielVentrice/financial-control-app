@@ -1,15 +1,22 @@
 <template>
   <Sidemenu>
-    <div class="bg-gray-50 min-h-screen">
+    <div class="bg-[#FAFBFC] min-h-screen">
       <!-- Header - Clean and minimal -->
-      <header class="h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white">
-        <div class="flex items-center gap-4">
-          <h1 class="text-lg font-semibold text-gray-900">Dashboard</h1>
-          <span class="text-sm text-gray-500">{{ getCurrentMonthName() }}</span>
+      <header class="h-14 px-6 flex items-center justify-between bg-white">
+        <div>
+          <h1 class="text-[15px] font-medium text-[#111111]">Dashboard</h1>
+          <p class="text-[13px] text-[#9CA3AF]">{{ getCurrentMonthName() }}</p>
         </div>
-        <BaseButton size="sm" variant="ghost" @click="refresh" :loading="loading || refreshing">
-          {{ refreshing ? 'Atualizando...' : 'Atualizar' }}
-        </BaseButton>
+        <button
+          @click="refresh"
+          :disabled="loading || refreshing"
+          class="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          title="Atualizar dados"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
       </header>
 
       <!-- Content -->
@@ -22,8 +29,8 @@
 
         <!-- Dashboard Content -->
         <template v-else>
-          <!-- Smart Insights - Top priority alerts -->
-          <section v-if="smartInsights.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Smart Insights - Demoted to muted caption lines -->
+          <div v-if="smartInsights.length > 0" class="space-y-0">
             <LightInsightCard
               v-for="(insight, index) in smartInsights.slice(0, 2)"
               :key="index"
@@ -32,10 +39,10 @@
               :message="insight.message"
               :value="insight.value"
             />
-          </section>
+          </div>
 
-          <!-- Hero KPIs - 3 main cards answering "Como estou?" -->
-          <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Hero KPIs - Borderless, breathing -->
+          <section class="grid grid-cols-1 md:grid-cols-3">
             <!-- Saldo Disponivel -->
             <LightStatCard
               label="Saldo Disponivel"
@@ -45,7 +52,7 @@
               size="lg"
               :trend="monthlyStats.trend.balance"
               :secondary-stat="{
-                label: 'vs mes anterior',
+                label: '',
                 value: formatTrendText(monthlyStats.trend.balance)
               }"
             />
@@ -60,8 +67,8 @@
               :trend="monthlyStats.trend.expenses"
               :invert-trend-colors="true"
               :secondary-stat="{
-                label: 'media diaria',
-                value: formatCurrency(monthlyStats.dailyAverage)
+                label: '',
+                value: formatCurrency(monthlyStats.dailyAverage) + '/dia'
               }"
             />
 
@@ -74,35 +81,35 @@
               size="lg"
               :trend="monthlyStats.trend.income"
               :secondary-stat="{
-                label: 'este mes',
+                label: '',
                 value: `${monthlyStats.transactionCount} transacoes`
               }"
             />
           </section>
 
-          <!-- Cash Flow Chart - Full width -->
-          <section>
+          <!-- Cash Flow Chart - No card wrapper, directly on page -->
+          <section class="mt-6">
             <DashboardCashFlowChart :transactions="filteredTransactions" />
           </section>
 
           <!-- Categories + Expenses List -->
           <section class="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6">
             <!-- Categories List - Left column -->
-            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div class="px-4 py-3 border-b border-gray-200">
-                <h3 class="text-sm font-semibold text-gray-900">Categorias</h3>
+            <div class="overflow-hidden">
+              <div class="px-1 py-3">
+                <h3 class="text-[13px] font-medium text-[#9CA3AF]">Categorias</h3>
               </div>
-              <div v-if="allCategories.length > 0" class="p-2 space-y-0.5 max-h-[500px] overflow-y-auto">
+              <div v-if="allCategories.length > 0" class="space-y-0.5 max-h-[500px] overflow-y-auto">
                 <!-- "Todas" option -->
                 <button
                   @click="selectedCategory = null"
                   class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left transition-colors duration-150"
                   :class="selectedCategory === null
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'"
+                    ? 'text-[#111111]'
+                    : 'text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F5F5F5]'"
                 >
-                  <span class="text-sm font-medium">Todas</span>
-                  <span class="text-xs font-medium" :class="selectedCategory === null ? 'text-blue-500' : 'text-gray-400'">
+                  <span class="text-[13px]" :class="selectedCategory === null ? 'font-semibold' : 'font-normal'">Todas</span>
+                  <span class="text-[13px]" :class="selectedCategory === null ? 'font-medium text-[#374151]' : 'text-[#9CA3AF]'">
                     {{ formatCurrency(totalExpenses) }}
                   </span>
                 </button>
@@ -113,56 +120,55 @@
                   @click="selectedCategory = category.name"
                   class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left transition-colors duration-150"
                   :class="selectedCategory === category.name
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'"
+                    ? 'text-[#111111]'
+                    : 'text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F5F5F5]'"
                 >
                   <div class="flex items-center gap-2 min-w-0">
-                    <span class="text-sm font-medium truncate">{{ category.name }}</span>
-                    <span class="text-xs shrink-0" :class="selectedCategory === category.name ? 'text-blue-400' : 'text-gray-400'">
+                    <span class="text-[13px] truncate" :class="selectedCategory === category.name ? 'font-semibold' : 'font-normal'">{{ category.name }}</span>
+                    <span class="text-[11px] text-[#9CA3AF]">
                       {{ category.count }}
                     </span>
                   </div>
-                  <span class="text-xs font-medium whitespace-nowrap ml-2" :class="selectedCategory === category.name ? 'text-blue-500' : 'text-gray-500'">
+                  <span class="text-[13px] whitespace-nowrap ml-2" :class="selectedCategory === category.name ? 'font-medium text-[#374151]' : 'text-[#9CA3AF]'">
                     {{ formatCurrency(category.total) }}
                   </span>
                 </button>
               </div>
               <div v-else class="p-8 text-center">
-                <p class="text-sm text-gray-500">Nenhum gasto registrado</p>
+                <p class="text-[13px] text-[#9CA3AF]">Nenhum gasto registrado</p>
               </div>
             </div>
 
-            <!-- Expenses List - Right column -->
-            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-gray-900">
+            <!-- Expenses List - Right column, whitespace separation -->
+            <div class="overflow-hidden">
+              <div class="px-1 py-3 flex items-center justify-between">
+                <h3 class="text-[13px] font-medium text-[#9CA3AF]">
                   {{ selectedCategory ? `Gastos - ${selectedCategory}` : 'Todos os Gastos' }}
                 </h3>
-                <span class="text-xs text-gray-500">
+                <span class="text-[11px] text-[#9CA3AF]">
                   {{ displayedExpenses.length }} {{ displayedExpenses.length === 1 ? 'transacao' : 'transacoes' }}
                 </span>
               </div>
-              <div v-if="displayedExpenses.length > 0" class="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+              <div v-if="displayedExpenses.length > 0" class="max-h-[500px] overflow-y-auto">
                 <div
                   v-for="expense in displayedExpenses"
                   :key="expense.transactionId"
-                  class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors duration-150"
+                  class="px-3 py-5 flex items-center justify-between hover:bg-[#F5F5F5] transition-colors duration-150 rounded-md"
                 >
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium text-gray-900 truncate">{{ expense.description }}</p>
-                    <div class="flex items-center gap-2 mt-0.5">
-                      <span class="text-xs text-gray-500">{{ formatDate(expense.date) }}</span>
-                      <span class="text-xs text-gray-300">|</span>
-                      <span class="text-xs text-gray-500">{{ expense.destination || 'Sem categoria' }}</span>
+                    <p class="text-[15px] font-medium text-[#374151] truncate">{{ expense.description }}</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-[13px] text-[#9CA3AF]">{{ formatDate(expense.date) }}</span>
+                      <span class="text-[13px] text-[#9CA3AF]">{{ expense.destination || 'Sem categoria' }}</span>
                     </div>
                   </div>
-                  <span class="text-sm font-semibold text-red-600 whitespace-nowrap ml-4">
+                  <span class="text-[15px] font-semibold text-[#111111] whitespace-nowrap ml-4">
                     {{ formatCurrency(Math.abs(expense.amount)) }}
                   </span>
                 </div>
               </div>
               <div v-else class="p-8 text-center">
-                <p class="text-sm text-gray-500">Nenhum gasto encontrado</p>
+                <p class="text-[13px] text-[#9CA3AF]">Nenhum gasto encontrado</p>
               </div>
             </div>
           </section>

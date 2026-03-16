@@ -4,9 +4,9 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Header -->
         <div class="mb-8">
-          <h1 class="text-3xl font-bold text-gray-900">Templates de Orçamento</h1>
-          <p class="mt-2 text-gray-600">
-            Configure porcentagens padrão para distribuir automaticamente seus ganhos mensais
+          <h1 class="text-[15px] font-medium text-[#111111]">Templates de Orcamento</h1>
+          <p class="mt-2 text-[13px] text-[#9CA3AF]">
+            Configure porcentagens padrao para distribuir automaticamente seus ganhos mensais
           </p>
         </div>
 
