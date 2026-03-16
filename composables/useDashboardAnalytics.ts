@@ -147,7 +147,13 @@ export const useDashboardAnalytics = () => {
     }
   }
 
+  const EXCLUDED_CATEGORIES = ['adjustment']
+
   const getTopCategories = (transactions: Transaction[], limit: number = 5): CategorySummary[] => {
+    return getAllCategories(transactions).slice(0, limit)
+  }
+
+  const getAllCategories = (transactions: Transaction[]): CategorySummary[] => {
     const now = new Date()
     const currentMonth = now.getMonth()
     const currentYear = now.getFullYear()
@@ -165,6 +171,8 @@ export const useDashboardAnalytics = () => {
 
     monthTransactions.forEach(t => {
       const category = t.destination || 'Sem categoria'
+      // Exclude unwanted categories
+      if (EXCLUDED_CATEGORIES.includes(category.toLowerCase())) return
       const existing = categoryMap.get(category) || { total: 0, count: 0 }
       categoryMap.set(category, {
         total: existing.total + Math.abs(t.amount),
@@ -185,9 +193,24 @@ export const useDashboardAnalytics = () => {
         percentage: totalExpenses > 0 ? (data.total / totalExpenses) * 100 : 0
       }))
       .sort((a, b) => b.total - a.total)
-      .slice(0, limit)
 
     return categories
+  }
+
+  const getCurrentMonthExpenses = (transactions: Transaction[]): Transaction[] => {
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+
+    return transactions
+      .filter(t => {
+        const date = new Date(t.date)
+        return date.getMonth() === currentMonth &&
+               date.getFullYear() === currentYear &&
+               isExpense(t) &&
+               !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase())
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }
 
   const getUpcomingExpenses = (transactions: Transaction[]): Transaction[] => {
@@ -413,6 +436,8 @@ export const useDashboardAnalytics = () => {
   return {
     getCurrentMonthStats,
     getTopCategories,
+    getAllCategories,
+    getCurrentMonthExpenses,
     getUpcomingExpenses,
     generateAlerts,
     getMonthlyForecast,

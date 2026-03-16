@@ -36,23 +36,23 @@
 
           <!-- Hero KPIs - 3 main cards answering "Como estou?" -->
           <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Saldo Disponível -->
+            <!-- Saldo Disponivel -->
             <LightStatCard
-              label="Saldo Disponível"
+              label="Saldo Disponivel"
               :value="monthlyStats.balance"
               format="currency"
               :value-color="monthlyStats.balance >= 0 ? 'positive' : 'negative'"
               size="lg"
               :trend="monthlyStats.trend.balance"
               :secondary-stat="{
-                label: 'vs mês anterior',
+                label: 'vs mes anterior',
                 value: formatTrendText(monthlyStats.trend.balance)
               }"
             />
 
-            <!-- Gastado este mês -->
+            <!-- Gastado este mes -->
             <LightStatCard
-              label="Gastado este Mês"
+              label="Gastado este Mes"
               :value="monthlyStats.expenses"
               format="currency"
               value-color="negative"
@@ -60,7 +60,7 @@
               :trend="monthlyStats.trend.expenses"
               :invert-trend-colors="true"
               :secondary-stat="{
-                label: 'média diária',
+                label: 'media diaria',
                 value: formatCurrency(monthlyStats.dailyAverage)
               }"
             />
@@ -74,24 +74,97 @@
               size="lg"
               :trend="monthlyStats.trend.income"
               :secondary-stat="{
-                label: 'este mês',
-                value: `${monthlyStats.transactionCount} transações`
+                label: 'este mes',
+                value: `${monthlyStats.transactionCount} transacoes`
               }"
             />
           </section>
 
-          <!-- Two Column Grid: Chart + Categories -->
-          <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Cash Flow Chart -->
+          <!-- Cash Flow Chart - Full width -->
+          <section>
             <DashboardCashFlowChart :transactions="filteredTransactions" />
-
-            <!-- Top Categories -->
-            <DashboardCategoryProgressList :categories="topCategories" :limit="5" />
           </section>
 
-          <!-- Upcoming Bills - Full width -->
-          <section v-if="upcomingExpenses.length > 0">
-            <DashboardUpcomingBillsTable :bills="upcomingExpenses" :limit="8" />
+          <!-- Categories + Expenses List -->
+          <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Categories List - Left column -->
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden lg:col-span-1">
+              <div class="px-4 py-3 border-b border-gray-200">
+                <h3 class="text-sm font-semibold text-gray-900">Categorias</h3>
+              </div>
+              <div v-if="allCategories.length > 0" class="p-2 space-y-0.5 max-h-[500px] overflow-y-auto">
+                <!-- "Todas" option -->
+                <button
+                  @click="selectedCategory = null"
+                  class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left transition-colors duration-150"
+                  :class="selectedCategory === null
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-700 hover:bg-gray-50'"
+                >
+                  <span class="text-sm font-medium">Todas</span>
+                  <span class="text-xs font-medium" :class="selectedCategory === null ? 'text-blue-500' : 'text-gray-400'">
+                    {{ formatCurrency(totalExpenses) }}
+                  </span>
+                </button>
+                <!-- Category items -->
+                <button
+                  v-for="category in allCategories"
+                  :key="category.name"
+                  @click="selectedCategory = category.name"
+                  class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left transition-colors duration-150"
+                  :class="selectedCategory === category.name
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-700 hover:bg-gray-50'"
+                >
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-sm font-medium truncate">{{ category.name }}</span>
+                    <span class="text-xs shrink-0" :class="selectedCategory === category.name ? 'text-blue-400' : 'text-gray-400'">
+                      {{ category.count }}
+                    </span>
+                  </div>
+                  <span class="text-xs font-medium whitespace-nowrap ml-2" :class="selectedCategory === category.name ? 'text-blue-500' : 'text-gray-500'">
+                    {{ formatCurrency(category.total) }}
+                  </span>
+                </button>
+              </div>
+              <div v-else class="p-8 text-center">
+                <p class="text-sm text-gray-500">Nenhum gasto registrado</p>
+              </div>
+            </div>
+
+            <!-- Expenses List - Right column -->
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden lg:col-span-2">
+              <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-900">
+                  {{ selectedCategory ? `Gastos - ${selectedCategory}` : 'Todos os Gastos' }}
+                </h3>
+                <span class="text-xs text-gray-500">
+                  {{ displayedExpenses.length }} {{ displayedExpenses.length === 1 ? 'transacao' : 'transacoes' }}
+                </span>
+              </div>
+              <div v-if="displayedExpenses.length > 0" class="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+                <div
+                  v-for="expense in displayedExpenses"
+                  :key="expense.transactionId"
+                  class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors duration-150"
+                >
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ expense.description }}</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <span class="text-xs text-gray-500">{{ formatDate(expense.date) }}</span>
+                      <span class="text-xs text-gray-300">|</span>
+                      <span class="text-xs text-gray-500">{{ expense.destination || 'Sem categoria' }}</span>
+                    </div>
+                  </div>
+                  <span class="text-sm font-semibold text-red-600 whitespace-nowrap ml-4">
+                    {{ formatCurrency(Math.abs(expense.amount)) }}
+                  </span>
+                </div>
+              </div>
+              <div v-else class="p-8 text-center">
+                <p class="text-sm text-gray-500">Nenhum gasto encontrado</p>
+              </div>
+            </div>
           </section>
         </template>
       </main>
@@ -100,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 // Composables - transactions now fetched automatically via SSR
 const {
@@ -119,12 +192,15 @@ const {
 
 const {
   getCurrentMonthStats,
-  getTopCategories,
-  getUpcomingExpenses,
+  getAllCategories,
+  getCurrentMonthExpenses,
   getSmartInsights
 } = useDashboardAnalytics()
 
-const { formatCurrency, formatMonthName, formatPercentage } = useFormatters()
+const { formatCurrency, formatMonthName, formatPercentage, formatDate } = useFormatters()
+
+// State
+const selectedCategory = ref<string | null>(null)
 
 // Computed - Filter transactions by person
 const filteredTransactions = computed(() => {
@@ -141,14 +217,26 @@ const filteredTransactions = computed(() => {
 
 // Dashboard Analytics
 const monthlyStats = computed(() => getCurrentMonthStats([...filteredTransactions.value]))
-const topCategories = computed(() => getTopCategories([...filteredTransactions.value], 5))
-const upcomingExpenses = computed(() => getUpcomingExpenses([...filteredTransactions.value]))
+const allCategories = computed(() => getAllCategories([...filteredTransactions.value]))
 const smartInsights = computed(() => getSmartInsights([...filteredTransactions.value]))
+
+const totalExpenses = computed(() => {
+  return allCategories.value.reduce((sum, cat) => sum + cat.total, 0)
+})
+
+const currentMonthExpenses = computed(() => getCurrentMonthExpenses([...filteredTransactions.value]))
+
+const displayedExpenses = computed(() => {
+  if (!selectedCategory.value) return currentMonthExpenses.value
+  return currentMonthExpenses.value.filter(t => {
+    const category = t.destination || 'Sem categoria'
+    return category === selectedCategory.value
+  })
+})
 
 // Methods
 const refresh = async () => {
   try {
-    // Refresh the cache and automatically reload transactions
     const result = await refreshCache()
 
     if (result.success) {
@@ -157,10 +245,9 @@ const refresh = async () => {
       console.error('Erro ao atualizar cache:', result.error)
     }
 
-    // Update cache status display
     await fetchCacheStatus()
   } catch (e) {
-    console.error('Erro durante atualização:', e)
+    console.error('Erro durante atualizacao:', e)
   }
 }
 
@@ -174,6 +261,4 @@ const formatTrendText = (trend: number): string => {
   const sign = trend >= 0 ? '+' : '-'
   return `${sign}${formatPercentage(abs, 1)}`
 }
-
-// No onMounted needed - useAsyncData fetches data on SSR automatically
 </script>
