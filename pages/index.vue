@@ -86,9 +86,9 @@
           </section>
 
           <!-- Categories + Expenses List -->
-          <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <section class="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6">
             <!-- Categories List - Left column -->
-            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden lg:col-span-1">
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div class="px-4 py-3 border-b border-gray-200">
                 <h3 class="text-sm font-semibold text-gray-900">Categorias</h3>
               </div>
@@ -133,7 +133,7 @@
             </div>
 
             <!-- Expenses List - Right column -->
-            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden lg:col-span-2">
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-900">
                   {{ selectedCategory ? `Gastos - ${selectedCategory}` : 'Todos os Gastos' }}

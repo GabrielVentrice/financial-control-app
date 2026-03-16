@@ -15,8 +15,8 @@
     <div class="flex-1 min-w-0">
       <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0">
-          <!-- Title - Font-weight NORMAL, não bold -->
-          <p class="text-sm font-normal text-gray-700 leading-relaxed mb-1">
+          <!-- Title - Semibold for clear hierarchy -->
+          <p class="text-sm font-semibold text-gray-700 leading-relaxed mb-1">
             {{ title }}
           </p>
 
@@ -81,13 +81,13 @@ const iconColorClass = computed(() => {
   return colors[props.type]
 })
 
-// Background - SEM BORDAS, apenas bg suave
+// Background - Solid subtle bg + left border accent
 const backgroundClass = computed(() => {
   const backgrounds: Record<InsightType, string> = {
-    success: 'bg-emerald-50/30',   // Muito suave, quase invisível
-    warning: 'bg-amber-50/30',
-    danger: 'bg-rose-50/30',
-    info: 'bg-blue-50/30'
+    success: 'bg-emerald-50 border-l-2 border-emerald-400',
+    warning: 'bg-amber-50 border-l-2 border-amber-400',
+    danger: 'bg-rose-50 border-l-2 border-rose-400',
+    info: 'bg-blue-50 border-l-2 border-blue-400'
   }
   return backgrounds[props.type]
 })

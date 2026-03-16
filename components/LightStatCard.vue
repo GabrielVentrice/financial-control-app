@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 transition-colors">
+  <div class="bg-white rounded-lg border border-gray-200 pt-5 pb-6 px-5 hover:border-gray-300 transition-colors">
     <!-- Label - Small, uppercase, consistent -->
     <div class="flex items-center gap-2 mb-1">
       <span v-if="icon" class="text-base">{{ icon }}</span>

@@ -76,7 +76,7 @@
       </nav>
 
       <!-- Footer - Cache Status & Person Filter -->
-      <div class="border-t border-gray-100 flex-shrink-0">
+      <div class="border-t border-gray-200 mt-auto flex-shrink-0">
         <!-- Cache Status -->
         <div class="p-4 border-b border-gray-100">
           <div v-if="sidebarOpen" class="space-y-2">
