@@ -1,17 +1,17 @@
 <template>
-  <div class="inline-flex items-center gap-1" :class="containerClasses">
+  <div class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full" :class="pillClasses">
     <!-- Arrow Icon -->
-    <span :class="iconClasses" class="text-[11px] leading-none font-bold">
+    <span class="text-[10px] leading-none">
       {{ icon }}
     </span>
 
     <!-- Percentage -->
-    <span :class="textClasses" class="text-[11px] leading-none font-semibold">
+    <span class="text-xs leading-none font-medium">
       {{ formattedValue }}
     </span>
 
     <!-- Optional label -->
-    <span v-if="label" class="text-[10px] leading-none text-text-muted ml-0.5">
+    <span v-if="label" class="text-[10px] leading-none opacity-70 ml-0.5">
       {{ label }}
     </span>
   </div>
@@ -25,7 +25,7 @@ type TrendType = 'positive' | 'negative' | 'neutral'
 interface Props {
   value: number // Percentage value (e.g., 15.5 for 15.5%)
   type?: TrendType // Override automatic detection
-  label?: string // Optional label like "vs mês anterior"
+  label?: string // Optional label like "vs mes anterior"
   size?: 'sm' | 'md'
   invertColors?: boolean // For cases where decrease is good (expenses)
 }
@@ -51,26 +51,22 @@ const icon = computed(() => {
   return '●'
 })
 
-// Format value
+// Format value - cap at 999%
 const formattedValue = computed(() => {
   const absValue = Math.abs(props.value)
+  if (absValue > 999) return '+999%'
   return `${absValue.toFixed(1)}%`
 })
 
-// Color classes based on trend and invertColors
-const colorClass = computed(() => {
-  if (trendType.value === 'neutral') return 'text-text-muted'
+// Pill background + text color classes
+const pillClasses = computed(() => {
+  if (trendType.value === 'neutral') return 'bg-gray-100 text-gray-500'
 
   const isPositiveTrend = trendType.value === 'positive'
   const shouldBeGreen = props.invertColors ? !isPositiveTrend : isPositiveTrend
 
-  return shouldBeGreen ? 'text-accent-success' : 'text-accent-danger'
+  return shouldBeGreen
+    ? 'bg-emerald-50 text-emerald-700'
+    : 'bg-red-50 text-red-700'
 })
-
-const containerClasses = computed(() => {
-  return props.size === 'sm' ? 'text-[11px]' : 'text-[13px]'
-})
-
-const iconClasses = computed(() => colorClass.value)
-const textClasses = computed(() => colorClass.value)
 </script>

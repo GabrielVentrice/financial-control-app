@@ -3,7 +3,7 @@
     <!-- Label - Small, uppercase, consistent -->
     <div class="flex items-center gap-2 mb-1">
       <span v-if="icon" class="text-base">{{ icon }}</span>
-      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">
+      <p class="text-xs font-medium text-gray-500 uppercase" style="letter-spacing: 0.08em">
         {{ label }}
       </p>
     </div>
@@ -26,19 +26,19 @@
     <!-- Secondary Stats - Compact, readable -->
     <div v-if="hasSecondaryStats" class="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
       <div v-if="secondaryStat" class="flex-1">
-        <p class="text-xs text-gray-500 mb-0.5">
+        <p class="text-[11px] text-gray-400 uppercase tracking-wider mb-0.5">
           {{ secondaryStat.label }}
         </p>
-        <p class="text-sm font-medium text-gray-900">
+        <p class="text-[13px] font-medium text-gray-700">
           {{ secondaryStat.value }}
         </p>
       </div>
 
       <div v-if="tertiaryStat" class="flex-1">
-        <p class="text-xs text-gray-500 mb-0.5">
+        <p class="text-[11px] text-gray-400 uppercase tracking-wider mb-0.5">
           {{ tertiaryStat.label }}
         </p>
-        <p class="text-sm font-medium text-gray-900">
+        <p class="text-[13px] font-medium text-gray-700">
           {{ tertiaryStat.value }}
         </p>
       </div>
