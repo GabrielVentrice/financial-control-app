@@ -27,7 +27,7 @@
         </h1>
         <button
           @click="toggleSidebar"
-          class="p-2 rounded-lg hover:bg-gray-50 transition-colors text-gray-400 hover:text-gray-700 flex-shrink-0"
+          class="p-2 rounded-lg hover:bg-gray-50 transition-colors text-gray-400 hover:text-gray-700 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
           :class="{ 'mx-auto': !sidebarOpen }"
           :title="sidebarOpen ? 'Fechar menu' : 'Abrir menu'"
         >
@@ -55,7 +55,7 @@
           :key="item.path"
           :to="item.path"
           @click="handleNavigation"
-          class="flex items-center gap-3 h-12 px-4 rounded-xl hover:bg-gray-50 transition-all duration-200 ease-out text-gray-600 hover:text-gray-800 group"
+          class="flex items-center gap-3 h-12 px-4 rounded-xl hover:bg-gray-50 transition-all duration-200 ease-out text-gray-600 hover:text-gray-800 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
           active-class="bg-blue-50 text-blue-600"
         >
           <component :is="item.icon" class="h-5 w-5 flex-shrink-0" stroke-width="1.5" />
@@ -81,7 +81,7 @@
         <div class="p-4 border-b border-gray-100">
           <div v-if="sidebarOpen" class="space-y-2">
             <div class="flex items-center justify-between">
-              <p class="text-xs text-gray-400 uppercase font-medium tracking-wider">
+              <p class="text-xs text-gray-500 uppercase font-medium tracking-wider">
                 Status do Cache
               </p>
               <span class="text-lg">{{ getStatusIcon }}</span>
@@ -100,7 +100,7 @@
                 <span class="font-medium">{{ getTimeUntilExpiry }}</span>
               </div>
             </div>
-            <div v-else class="text-xs text-gray-400">
+            <div v-else class="text-xs text-gray-500">
               Carregando status...
             </div>
           </div>
@@ -112,12 +112,13 @@
         <!-- Person Filter -->
         <div class="p-4">
           <div v-if="sidebarOpen" class="space-y-3">
-            <p class="text-xs text-gray-400 uppercase font-medium tracking-wider">
+            <label for="person-filter" class="text-xs text-gray-500 uppercase font-medium tracking-wider block">
               Filtrar por pessoa
-            </p>
+            </label>
             <select
+              id="person-filter"
               v-model="selectedPerson"
-              class="w-full px-4 py-3 bg-gray-50 text-gray-700 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
+              class="w-full px-4 py-3 bg-gray-50 text-gray-700 text-sm rounded-xl border border-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 transition-all"
             >
               <option value="Ambos">Ambos</option>
               <option value="Juliana">Juliana</option>

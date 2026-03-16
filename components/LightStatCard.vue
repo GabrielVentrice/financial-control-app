@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-white rounded-lg border border-gray-200 pt-5 pb-6 px-5 hover:border-gray-300 transition-colors">
+  <div class="bg-white rounded-lg border border-gray-200 pt-5 pb-6 px-5 hover:border-gray-300 transition-colors" role="region" :aria-label="ariaDescription">
     <!-- Label - Small, uppercase, consistent -->
     <div class="flex items-center gap-2 mb-1">
       <span v-if="icon" class="text-base">{{ icon }}</span>
-      <p class="text-xs font-medium text-gray-500 uppercase" style="letter-spacing: 0.08em">
+      <p class="text-xs font-medium text-gray-600 uppercase" style="letter-spacing: 0.08em">
         {{ label }}
       </p>
     </div>
@@ -132,5 +132,17 @@ const valueColorClass = computed(() => {
 // Check if has secondary stats
 const hasSecondaryStats = computed(() => {
   return props.secondaryStat || props.tertiaryStat
+})
+
+// Accessible description for screen readers
+const ariaDescription = computed(() => {
+  let desc = `${props.label}: ${formattedValue.value}`
+  if (props.trend !== undefined) {
+    const abs = Math.abs(props.trend)
+    const direction = props.trend >= 0 ? 'aumento' : 'reducao'
+    const cappedValue = abs > 999 ? '+999' : abs.toFixed(1)
+    desc += `, ${direction} de ${cappedValue}% em relacao ao mes anterior`
+  }
+  return desc
 })
 </script>

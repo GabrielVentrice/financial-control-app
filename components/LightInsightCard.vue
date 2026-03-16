@@ -6,8 +6,8 @@
       'hover:shadow-sm'
     ]"
   >
-    <!-- Icon - Minimalista e PEQUENO -->
-    <div :class="['flex-shrink-0 text-sm leading-none mt-1 opacity-70', iconColorClass]">
+    <!-- Icon with aria-label for screen readers -->
+    <div :class="['flex-shrink-0 text-sm leading-none mt-1 opacity-70', iconColorClass]" role="img" :aria-label="iconAriaLabel">
       {{ icon }}
     </div>
 
@@ -68,6 +68,17 @@ const icon = computed(() => {
     info: 'ℹ'
   }
   return icons[props.type]
+})
+
+// Aria labels for icons
+const iconAriaLabel = computed(() => {
+  const labels: Record<InsightType, string> = {
+    success: 'Status positivo',
+    warning: 'Aviso',
+    danger: 'Alerta',
+    info: 'Informacao'
+  }
+  return labels[props.type]
 })
 
 // Color classes - SUAVES, dessaturadas

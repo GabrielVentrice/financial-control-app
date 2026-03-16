@@ -54,6 +54,34 @@ import type { Transaction } from '~/types/transaction'
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
+// Create stripe pattern for Despesas (color-blind accessible)
+const createStripePattern = (color: string): CanvasPattern | string => {
+  if (typeof document === 'undefined') return color
+  const canvas = document.createElement('canvas')
+  canvas.width = 10
+  canvas.height = 10
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return color
+  ctx.fillStyle = color
+  ctx.fillRect(0, 0, 10, 10)
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(0, 10)
+  ctx.lineTo(10, 0)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(-2, 2)
+  ctx.lineTo(2, -2)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(8, 12)
+  ctx.lineTo(12, 8)
+  ctx.stroke()
+  const pattern = ctx.createPattern(canvas, 'repeat')
+  return pattern || color
+}
+
 interface Props {
   transactions: Transaction[]
 }
@@ -124,9 +152,9 @@ const chartData = computed<ChartData<'bar'>>(() => {
       {
         label: 'Despesas',
         data: last6Months.map(m => m.expenses),
-        backgroundColor: '#DC2626', // negative color
+        backgroundColor: createStripePattern('#DC2626'),
         borderColor: '#DC2626',
-        borderWidth: 0,
+        borderWidth: 1,
         borderRadius: 4,
         maxBarThickness: 40
       },
