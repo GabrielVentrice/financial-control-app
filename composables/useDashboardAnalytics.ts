@@ -50,6 +50,8 @@ export interface SmartInsight {
 }
 
 export const useDashboardAnalytics = () => {
+  const EXCLUDED_CATEGORIES = ['adjustment']
+
   // Helper function to check if transaction is income
   const isIncome = (transaction: Transaction): boolean => {
     return transaction.destination.toLowerCase().includes('bank account')
@@ -78,7 +80,7 @@ export const useDashboardAnalytics = () => {
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
     const expenses = monthTransactions
-      .filter(t => isExpense(t))
+      .filter(t => isExpense(t) && !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
     return {
@@ -146,8 +148,6 @@ export const useDashboardAnalytics = () => {
       }
     }
   }
-
-  const EXCLUDED_CATEGORIES = ['adjustment']
 
   const getTopCategories = (transactions: Transaction[], limit: number = 5): CategorySummary[] => {
     return getAllCategories(transactions).slice(0, limit)
