@@ -63,6 +63,8 @@ const props = defineProps<Props>()
 const { formatCurrency, formatMonthName } = useFormatters()
 const { getCurrentMonthStats } = useDashboardAnalytics()
 
+const EXCLUDED_CATEGORIES = ['adjustment']
+
 // Helper to check if transaction is income
 const isIncome = (transaction: Transaction): boolean => {
   return transaction.destination.toLowerCase().includes('bank account')
@@ -91,7 +93,7 @@ const getMonthStats = (monthOffset: number = 0) => {
     .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
   const expenses = monthTransactions
-    .filter(t => isExpense(t))
+    .filter(t => isExpense(t) && !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()))
     .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
   return {
