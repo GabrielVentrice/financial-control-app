@@ -12,8 +12,8 @@
 
     <!-- Context line - trend as colored dot + percentage, or secondary stat -->
     <div class="mt-2">
-      <p v-if="trend !== undefined" class="text-[12px] text-gray-500 flex items-center gap-1.5">
-        <span :class="['w-1.5 h-1.5 rounded-full inline-block', trendDotColor]"></span>
+      <p v-if="trend !== undefined" class="text-[12px] text-text-muted flex items-center gap-1">
+        <span :class="['text-[11px] leading-none font-semibold', trendColorText]" aria-hidden="true">{{ trendArrow }}</span>
         {{ formattedTrend }}
       </p>
       <p v-if="secondaryStat" class="text-[13px] font-normal text-gray-500">
@@ -106,11 +106,16 @@ const valueColorClass = computed(() => {
   return colors[props.valueColor]
 })
 
-const trendDotColor = computed(() => {
+const trendArrow = computed(() => {
+  if (props.trend === undefined) return ''
+  return props.trend >= 0 ? '↑' : '↓'
+})
+
+const trendColorText = computed(() => {
   if (props.trend === undefined) return ''
   const isPositive = props.trend >= 0
   const shouldBeGreen = props.invertTrendColors ? !isPositive : isPositive
-  return shouldBeGreen ? 'bg-emerald-400' : 'bg-rose-400'
+  return shouldBeGreen ? 'text-positive' : 'text-negative'
 })
 
 const formattedTrend = computed(() => {

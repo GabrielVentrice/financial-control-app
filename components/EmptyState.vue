@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
-    <!-- Ícone/Emoji -->
-    <div class="text-6xl mb-4 opacity-40">
+    <!-- Ícone/Emoji (decorativo) -->
+    <div class="text-6xl mb-4 opacity-40" aria-hidden="true">
       {{ icon }}
     </div>
 

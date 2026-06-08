@@ -54,7 +54,7 @@
               <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Parcelas por Mes</h2>
               <p class="text-[13px] text-gray-500 mt-1">6 meses atras → 6 meses a frente</p>
             </div>
-            <div class="h-56">
+            <div class="h-56" role="img" aria-label="Grafico de barras do total de parcelas por mes, de 6 meses atras ate 6 meses a frente">
               <Bar :data="chartData" :options="chartOptions" />
             </div>
           </section>

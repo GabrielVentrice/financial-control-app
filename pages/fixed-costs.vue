@@ -74,7 +74,7 @@
                 <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Evolucao dos Custos Fixos</h2>
                 <p class="text-[13px] text-gray-500 mt-1">Ultimos 6 meses</p>
               </div>
-              <div class="h-64">
+              <div class="h-64" role="img" aria-label="Grafico de barras da evolucao dos custos fixos mensais nos ultimos 6 meses">
                 <Bar
                   v-if="chartData"
                   :data="chartData"

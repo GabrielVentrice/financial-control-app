@@ -1,10 +1,10 @@
 <template>
-  <div class="inline-flex items-center gap-1.5">
-    <!-- Colored dot -->
-    <span class="w-1.5 h-1.5 rounded-full" :class="dotClass"></span>
+  <div class="inline-flex items-center gap-1">
+    <!-- Directional arrow (shape + color redundancy) -->
+    <span class="text-[11px] leading-none font-semibold" :class="colorClass" aria-hidden="true">{{ arrow }}</span>
 
     <!-- Percentage -->
-    <span class="text-[12px] leading-none font-normal text-gray-500">
+    <span class="text-[12px] leading-none font-normal text-text-muted">
       {{ formattedValue }}
     </span>
   </div>
@@ -41,12 +41,17 @@ const formattedValue = computed(() => {
   return `${absValue.toFixed(1)}%`
 })
 
-const dotClass = computed(() => {
-  if (trendType.value === 'neutral') return 'bg-gray-300'
+const arrow = computed(() => {
+  if (trendType.value === 'neutral') return '→'
+  return trendType.value === 'positive' ? '↑' : '↓'
+})
+
+const colorClass = computed(() => {
+  if (trendType.value === 'neutral') return 'text-text-muted'
 
   const isPositiveTrend = trendType.value === 'positive'
   const shouldBeGreen = props.invertColors ? !isPositiveTrend : isPositiveTrend
 
-  return shouldBeGreen ? 'bg-emerald-400' : 'bg-rose-400'
+  return shouldBeGreen ? 'text-positive' : 'text-negative'
 })
 </script>

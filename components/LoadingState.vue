@@ -1,7 +1,7 @@
 <template>
-  <div class="flex flex-col items-center justify-center py-20">
+  <div class="flex flex-col items-center justify-center py-20" role="status" aria-live="polite">
     <!-- Spinner -->
-    <div class="relative w-12 h-12">
+    <div class="relative w-12 h-12" aria-hidden="true">
       <div class="absolute inset-0 rounded-full border-4 border-background-section"></div>
       <div class="absolute inset-0 rounded-full border-4 border-accent-primary border-t-transparent animate-spin"></div>
     </div>

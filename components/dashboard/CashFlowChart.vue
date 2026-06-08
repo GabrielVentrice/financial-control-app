@@ -7,7 +7,7 @@
     </div>
 
     <!-- Chart Container -->
-    <div class="h-64">
+    <div class="h-64" role="img" aria-label="Grafico de barras de fluxo de caixa dos ultimos 6 meses, comparando receitas, despesas e saldo por mes">
       <Bar
         v-if="chartData"
         :data="chartData"

@@ -80,9 +80,11 @@
       <!-- Footer - Person Filter only, no label -->
       <div class="mt-auto flex-shrink-0 p-4">
         <div v-if="sidebarOpen">
+          <label for="person-filter" class="sr-only">Filtrar por pessoa</label>
           <select
             id="person-filter"
             v-model="selectedPerson"
+            aria-label="Filtrar por pessoa"
             class="w-full px-3 py-2.5 bg-gray-50 text-gray-600 text-[13px] rounded-lg border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 transition-all"
           >
             <option value="Ambos">Ambos</option>

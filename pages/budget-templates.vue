@@ -143,6 +143,7 @@
                     type="checkbox"
                     :checked="category.active"
                     @change="updateActive(category)"
+                    :aria-label="`Ativar categoria ${category.name}`"
                     class="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded"
                   />
                 </label>

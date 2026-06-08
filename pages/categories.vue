@@ -115,8 +115,14 @@
               <div
                 v-for="category in categories"
                 :key="category.name"
-                class="rounded-xl cursor-pointer hover:bg-gray-50/80 transition-colors"
+                role="button"
+                tabindex="0"
+                :aria-expanded="expandedCategory === category.name"
+                :aria-label="`${category.name}: ${formatCurrencyCompact(category.total)}. Expandir transacoes`"
+                class="rounded-xl cursor-pointer hover:bg-background-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-1"
                 @click="toggleCategory(category.name)"
+                @keydown.enter.prevent="toggleCategory(category.name)"
+                @keydown.space.prevent="toggleCategory(category.name)"
               >
                 <!-- MOBILE VERSION -->
                 <div class="md:hidden p-4">
