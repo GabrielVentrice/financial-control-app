@@ -35,7 +35,7 @@ import { computed } from 'vue'
 
 type Format = 'currency' | 'number' | 'percentage' | 'text'
 type ValueColor = 'positive' | 'negative' | 'neutral' | 'warning' | 'default' | 'success'
-type Size = 'sm' | 'md' | 'lg'
+type Size = 'sm' | 'md' | 'lg' | 'xl'
 
 interface SecondaryStat {
   label: string
@@ -89,7 +89,8 @@ const valueSizeClass = computed(() => {
   const sizes: Record<Size, string> = {
     sm: 'text-kpi-sm',
     md: 'text-kpi-md',
-    lg: 'text-kpi-lg'
+    lg: 'text-kpi-lg',
+    xl: 'text-kpi-xl'
   }
   return sizes[props.size]
 })
@@ -122,7 +123,7 @@ const formattedTrend = computed(() => {
   if (props.trend === undefined) return ''
   const abs = Math.abs(props.trend)
   const capped = abs > 999 ? '+999' : abs.toFixed(1)
-  return `${capped}% vs mes anterior`
+  return `${capped}% vs mês anterior`
 })
 
 const ariaDescription = computed(() => {

@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fluxo de Caixa</h2>
-      <span class="text-[11px] text-gray-500">Ultimos 6 meses</span>
+      <span class="text-[11px] text-gray-500">Últimos 6 meses</span>
     </div>
 
     <!-- Chart Container -->
@@ -102,6 +102,13 @@ const getMonthStats = (monthOffset: number = 0) => {
 const chartData = computed<ChartData<'bar'>>(() => {
   const last6Months = [-5, -4, -3, -2, -1, 0].map(offset => getMonthStats(offset))
 
+  // Balance can be negative; render negative bars with a distinct dashed,
+  // low-opacity style so they read clearly against the visible zero line.
+  const balances = last6Months.map(m => m.balance)
+  const balanceFill = balances.map(b => (b >= 0 ? '#D1D5DB' : 'rgba(156, 163, 175, 0.2)'))
+  const balanceBorder = balances.map(b => (b >= 0 ? '#D1D5DB' : '#9CA3AF'))
+  const balanceBorderWidth = balances.map(b => (b >= 0 ? 0 : 1.5))
+
   return {
     labels: last6Months.map(m => m.monthName),
     datasets: [
@@ -125,10 +132,11 @@ const chartData = computed<ChartData<'bar'>>(() => {
       },
       {
         label: 'Saldo',
-        data: last6Months.map(m => m.balance),
-        backgroundColor: '#D1D5DB',
-        borderColor: '#D1D5DB',
-        borderWidth: 0,
+        data: balances,
+        backgroundColor: balanceFill,
+        borderColor: balanceBorder,
+        borderWidth: balanceBorderWidth,
+        borderDash: [4, 4],
         borderRadius: 4,
         maxBarThickness: 40
       }
@@ -184,7 +192,9 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
     },
     y: {
       grid: {
-        color: '#F3F4F6',
+        // Emphasize the zero line so negative balance bars are readable.
+        color: (ctx) => (ctx.tick.value === 0 ? '#9CA3AF' : '#F3F4F6'),
+        lineWidth: (ctx) => (ctx.tick.value === 0 ? 1.5 : 1),
         drawBorder: false
       },
       border: {
