@@ -80,7 +80,7 @@
                 <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fatura do cartao · Gabriel</h2>
                 <p class="text-[13px] text-gray-500 mt-0.5">{{ invoiceLabel }} · {{ creditCardInvoice.count }} lancamentos</p>
               </div>
-              <p class="text-kpi-md text-negative whitespace-nowrap">{{ formatCurrency(creditCardInvoice.total) }}</p>
+              <p class="text-kpi-md text-negative whitespace-nowrap">{{ formatCurrency(creditCardInvoice.total, { decimals: true }) }}</p>
             </div>
             <div class="max-h-[420px] overflow-y-auto">
               <div
@@ -97,7 +97,7 @@
                   </div>
                 </div>
                 <span class="text-[15px] font-semibold text-[#111111] whitespace-nowrap ml-4">
-                  {{ formatCurrency(Math.abs(item.amount)) }}
+                  {{ formatCurrency(Math.abs(item.amount), { decimals: true }) }}
                 </span>
               </div>
             </div>

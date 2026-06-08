@@ -1,4 +1,5 @@
 import type { Transaction } from '~/types/transaction'
+import { getSeedInvoice } from '~/shared/tempInvoiceSeed'
 
 export interface CategorySummary {
   name: string
@@ -476,15 +477,23 @@ export const useDashboardAnalytics = () => {
 
     const currentInvoice = invoiceMonthOf(referenceDate)
 
-    const items = transactions
-      .filter(t => (t.origin || '') === cardOrigin)
-      .filter(t => !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase()))
-      .filter(t => !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()))
-      .filter(t => {
-        const im = invoiceMonthOf(new Date(t.date))
-        return im.year === currentInvoice.year && im.month === currentInvoice.month
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    // TEMPORARY: until the spreadsheet is synced past 2026-01, use the hardcoded
+    // invoice imported from the bank CSV for any month that has a seed (Gabriel).
+    const seed = cardOrigin === 'Credit Card Gabriel'
+      ? getSeedInvoice(currentInvoice.year, currentInvoice.month)
+      : null
+
+    const items = seed
+      ? [...seed].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      : transactions
+          .filter(t => (t.origin || '') === cardOrigin)
+          .filter(t => !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase()))
+          .filter(t => !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()))
+          .filter(t => {
+            const im = invoiceMonthOf(new Date(t.date))
+            return im.year === currentInvoice.year && im.month === currentInvoice.month
+          })
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     // Net total (purchases positive, refunds/estornos negative).
     const total = items.reduce((sum, t) => sum + t.amount, 0)
