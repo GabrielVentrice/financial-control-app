@@ -73,6 +73,36 @@
             />
           </section>
 
+          <!-- Credit Card Invoice (Gabriel) - billing cycle -->
+          <section v-if="creditCardInvoice.items.length > 0" class="mt-10">
+            <div class="px-1 py-3 flex items-end justify-between">
+              <div>
+                <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fatura do cartao · Gabriel</h2>
+                <p class="text-[13px] text-gray-500 mt-0.5">{{ invoiceLabel }} · {{ creditCardInvoice.count }} lancamentos</p>
+              </div>
+              <p class="text-kpi-md text-negative whitespace-nowrap">{{ formatCurrency(creditCardInvoice.total) }}</p>
+            </div>
+            <div class="max-h-[420px] overflow-y-auto">
+              <div
+                v-for="item in creditCardInvoice.items"
+                :key="item.transactionId"
+                class="px-3 py-3 flex items-center justify-between hover:bg-gray-50/80 transition-colors duration-150 rounded-lg"
+                :title="item.description"
+              >
+                <div class="min-w-0 flex-1">
+                  <p class="text-[15px] font-medium text-gray-700 truncate">{{ item.description }}</p>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span class="text-[13px] text-gray-500">{{ formatDate(item.date) }}</span>
+                    <span class="text-[13px] text-gray-500">{{ item.destination || 'Sem categoria' }}</span>
+                  </div>
+                </div>
+                <span class="text-[15px] font-semibold text-[#111111] whitespace-nowrap ml-4">
+                  {{ formatCurrency(Math.abs(item.amount)) }}
+                </span>
+              </div>
+            </div>
+          </section>
+
           <!-- Cash Flow Chart - contained card, larger gap from KPIs -->
           <section class="mt-10">
             <DashboardCashFlowChart :transactions="filteredTransactions" />
@@ -186,7 +216,8 @@ const {
   getCurrentMonthStats,
   getAllCategories,
   getCurrentMonthExpenses,
-  getSmartInsights
+  getSmartInsights,
+  getCreditCardInvoice
 } = useDashboardAnalytics()
 
 const { formatCurrency, formatMonthName, formatPercentage, formatDate } = useFormatters()
@@ -208,6 +239,11 @@ const filteredTransactions = computed(() => {
 const monthlyStats = computed(() => getCurrentMonthStats([...filteredTransactions.value]))
 const allCategories = computed(() => getAllCategories([...filteredTransactions.value]))
 const smartInsights = computed(() => getSmartInsights([...filteredTransactions.value]))
+
+// Credit card invoice for Gabriel's card (billing cycle, not calendar month).
+// Uses ALL transactions (not the person filter) and selects by card origin.
+const creditCardInvoice = computed(() => getCreditCardInvoice([...transactions.value]))
+const invoiceLabel = computed(() => `Fatura de ${formatMonthName(creditCardInvoice.value.closingMonth)}`)
 
 const totalExpenses = computed(() => {
   return allCategories.value.reduce((sum, cat) => sum + cat.total, 0)

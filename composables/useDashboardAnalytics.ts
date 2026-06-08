@@ -435,6 +435,74 @@ export const useDashboardAnalytics = () => {
     return insights.sort((a, b) => b.priority - a.priority)
   }
 
+  // Credit card invoice (fatura) for a billing cycle that closes on the last day
+  // of the month: a purchase belongs to the invoice of month(date + 1 day).
+  // So a purchase on 31/05 belongs to June's invoice, paid in July.
+  interface CreditCardInvoice {
+    total: number
+    items: Transaction[]
+    count: number
+    closingMonth: number // 0-11
+    closingYear: number
+    dueMonth: number // 0-11
+    dueYear: number
+  }
+
+  const getCreditCardInvoice = (
+    transactions: Transaction[],
+    options?: { cardOrigin?: string; closingDay?: number | 'last'; referenceDate?: Date }
+  ): CreditCardInvoice => {
+    const cardOrigin = options?.cardOrigin ?? 'Credit Card Gabriel'
+    const closingDay = options?.closingDay ?? 'last'
+    const referenceDate = options?.referenceDate ?? new Date()
+
+    // Resolve which invoice month a given date falls into.
+    const invoiceMonthOf = (d: Date): { year: number; month: number } => {
+      if (closingDay === 'last') {
+        // Closing on the last day: the last day's purchases roll into next month.
+        const shifted = new Date(d)
+        shifted.setDate(shifted.getDate() + 1)
+        return { year: shifted.getFullYear(), month: shifted.getMonth() }
+      }
+      // Fixed closing day: date after the closing day rolls into next month.
+      let month = d.getMonth()
+      let year = d.getFullYear()
+      if (d.getDate() > closingDay) {
+        month += 1
+        if (month > 11) { month = 0; year += 1 }
+      }
+      return { year, month }
+    }
+
+    const currentInvoice = invoiceMonthOf(referenceDate)
+
+    const items = transactions
+      .filter(t => (t.origin || '') === cardOrigin)
+      .filter(t => !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase()))
+      .filter(t => !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()))
+      .filter(t => {
+        const im = invoiceMonthOf(new Date(t.date))
+        return im.year === currentInvoice.year && im.month === currentInvoice.month
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+    // Net total (purchases positive, refunds/estornos negative).
+    const total = items.reduce((sum, t) => sum + t.amount, 0)
+
+    const dueMonth = (currentInvoice.month + 1) % 12
+    const dueYear = currentInvoice.month === 11 ? currentInvoice.year + 1 : currentInvoice.year
+
+    return {
+      total,
+      items,
+      count: items.length,
+      closingMonth: currentInvoice.month,
+      closingYear: currentInvoice.year,
+      dueMonth,
+      dueYear
+    }
+  }
+
   return {
     getCurrentMonthStats,
     getTopCategories,
@@ -444,6 +512,7 @@ export const useDashboardAnalytics = () => {
     generateAlerts,
     getMonthlyForecast,
     getHistoricalExpenses,
-    getSmartInsights
+    getSmartInsights,
+    getCreditCardInvoice
   }
 }
