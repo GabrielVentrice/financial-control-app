@@ -1,23 +1,12 @@
 <template>
   <Sidemenu>
-    <div class="bg-[#FAFBFC] min-h-screen">
+    <div class="bg-background-page min-h-screen">
       <!-- Header -->
-      <header class="h-14 px-6 flex items-center justify-between bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div>
-          <h1 class="text-lg font-semibold text-[#111111] tracking-tight">Transacoes</h1>
-          <p class="text-[13px] text-gray-500 mt-0.5">{{ selectedPerson }}</p>
-        </div>
-        <button
-          @click="refreshData"
-          :disabled="loading || refreshing"
-          class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          title="Atualizar dados"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </button>
-      </header>
+      <PageHeader title="Transacoes" :subtitle="selectedPerson">
+        <template #actions>
+          <RefreshButton :disabled="loading || refreshing" :spinning="refreshing" @click="refreshData" />
+        </template>
+      </PageHeader>
 
       <!-- Filters -->
       <div class="px-6 py-4 bg-white">

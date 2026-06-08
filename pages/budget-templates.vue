@@ -1,15 +1,11 @@
 <template>
   <Sidemenu>
-    <div class="bg-gray-50 min-h-screen">
+    <div class="bg-background-page min-h-screen">
+      <PageHeader
+        title="Templates de Orcamento"
+        subtitle="Configure porcentagens padrao para distribuir automaticamente seus ganhos mensais"
+      />
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Header -->
-        <div class="mb-8">
-          <h1 class="text-[15px] font-medium text-[#111111]">Templates de Orcamento</h1>
-          <p class="mt-2 text-[13px] text-[#9CA3AF]">
-            Configure porcentagens padrao para distribuir automaticamente seus ganhos mensais
-          </p>
-        </div>
-
         <!-- Person Tabs -->
         <div class="mb-6 border-b border-gray-200">
           <nav class="-mb-px flex space-x-8">
@@ -18,7 +14,7 @@
               :class="[
                 'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
                 selectedPerson === 'Gabriel'
-                  ? 'border-primary-500 text-primary-600'
+                  ? 'border-accent text-accent'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               ]"
             >
@@ -29,7 +25,7 @@
               :class="[
                 'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
                 selectedPerson === 'Juliana'
-                  ? 'border-primary-500 text-primary-600'
+                  ? 'border-accent text-accent'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               ]"
             >
@@ -147,7 +143,7 @@
                     type="checkbox"
                     :checked="category.active"
                     @change="updateActive(category)"
-                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    class="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded"
                   />
                 </label>
               </div>
@@ -164,7 +160,7 @@
                       min="0"
                       max="100"
                       step="0.5"
-                      class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     />
                     <span class="text-xs text-gray-500">%</span>
                   </div>
@@ -221,7 +217,7 @@
               <button
                 @click="resetAllTemplates"
                 :disabled="!hasModifications"
-                class="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                class="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Resetar Tudo
               </button>

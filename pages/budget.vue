@@ -1,12 +1,9 @@
 <template>
   <Sidemenu>
-    <div class="bg-gray-50 min-h-screen">
+    <div class="bg-background-page min-h-screen">
       <!-- Header -->
-      <header class="h-14 px-6 flex items-center justify-between bg-white">
-        <div>
-          <h1 class="text-[15px] font-medium text-[#111111]">Orcamento</h1>
-        </div>
-        <div class="flex items-center gap-3">
+      <PageHeader title="Orcamento" :subtitle="formattedMonth">
+        <template #actions>
           <BaseButton size="sm" variant="secondary" @click="loadData" :loading="loading || refreshing">
             {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
           </BaseButton>
@@ -30,8 +27,8 @@
           <BaseButton size="sm" @click="saveBudgets" :loading="saving" :disabled="!hasChanges">
             {{ saving ? 'Salvando...' : 'Salvar' }}
           </BaseButton>
-        </div>
-      </header>
+        </template>
+      </PageHeader>
 
       <!-- Month Selector & Messages -->
       <div class="px-6 py-4 bg-white border-b border-gray-200 space-y-4">
@@ -287,7 +284,7 @@
           <div class="px-6 py-6 space-y-6">
             <!-- Loading State -->
             <div v-if="applyingTemplate" class="text-center py-8">
-              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
               <p class="text-gray-600">Aplicando template...</p>
             </div>
 
@@ -365,7 +362,7 @@
           <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex items-center justify-end space-x-3">
             <button
               @click="showApplyTemplateModal = false"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors"
             >
               Cancelar
             </button>
