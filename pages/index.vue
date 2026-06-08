@@ -30,6 +30,17 @@
             />
           </div>
 
+          <!-- Credit Card Invoice (Gabriel) - single card at the top -->
+          <section v-if="creditCardInvoice.items.length > 0" class="mb-6">
+            <div class="bg-white border border-gray-100 rounded-xl px-6 py-5 flex items-center justify-between">
+              <div>
+                <p class="text-[13px] font-medium text-gray-500 uppercase tracking-wider">Fatura do cartao · Gabriel</p>
+                <p class="text-[13px] text-gray-500 mt-0.5">{{ invoiceLabel }} · {{ creditCardInvoice.count }} lancamentos</p>
+              </div>
+              <p class="text-kpi-lg text-negative whitespace-nowrap">{{ formatCurrency(creditCardInvoice.total, { decimals: true }) }}</p>
+            </div>
+          </section>
+
           <!-- Hero KPIs - divide-x for visual separation -->
           <section class="grid grid-cols-1 md:grid-cols-3 divide-x divide-gray-100">
             <LightStatCard
@@ -71,36 +82,6 @@
                 value: `${monthlyStats.transactionCount} transacoes`
               }"
             />
-          </section>
-
-          <!-- Credit Card Invoice (Gabriel) - billing cycle -->
-          <section v-if="creditCardInvoice.items.length > 0" class="mt-10">
-            <div class="px-1 py-3 flex items-end justify-between">
-              <div>
-                <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fatura do cartao · Gabriel</h2>
-                <p class="text-[13px] text-gray-500 mt-0.5">{{ invoiceLabel }} · {{ creditCardInvoice.count }} lancamentos</p>
-              </div>
-              <p class="text-kpi-md text-negative whitespace-nowrap">{{ formatCurrency(creditCardInvoice.total, { decimals: true }) }}</p>
-            </div>
-            <div class="max-h-[420px] overflow-y-auto">
-              <div
-                v-for="item in creditCardInvoice.items"
-                :key="item.transactionId"
-                class="px-3 py-3 flex items-center justify-between hover:bg-gray-50/80 transition-colors duration-150 rounded-lg"
-                :title="item.description"
-              >
-                <div class="min-w-0 flex-1">
-                  <p class="text-[15px] font-medium text-gray-700 truncate">{{ item.description }}</p>
-                  <div class="flex items-center gap-2 mt-0.5">
-                    <span class="text-[13px] text-gray-500">{{ formatDate(item.date) }}</span>
-                    <span class="text-[13px] text-gray-500">{{ item.destination || 'Sem categoria' }}</span>
-                  </div>
-                </div>
-                <span class="text-[15px] font-semibold text-[#111111] whitespace-nowrap ml-4">
-                  {{ formatCurrency(Math.abs(item.amount), { decimals: true }) }}
-                </span>
-              </div>
-            </div>
           </section>
 
           <!-- Cash Flow Chart - contained card, larger gap from KPIs -->
