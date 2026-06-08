@@ -38,17 +38,30 @@
             </div>
           </div>
 
-          <!-- Clear filters -->
-          <div v-if="startDate || endDate || searchTerm" class="mt-3 flex items-center gap-3">
+          <!-- Active filter chips -->
+          <div v-if="hasActiveFilters" class="mt-3 flex items-center flex-wrap gap-2">
+            <span v-if="searchTerm" class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-background-section text-text-secondary text-[13px] rounded-full">
+              "{{ searchTerm }}"
+              <button
+                @click="searchTerm = ''"
+                aria-label="Remover filtro de busca"
+                class="w-4 h-4 inline-flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors"
+              >×</button>
+            </span>
+            <span v-if="startDate || endDate" class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-background-section text-text-secondary text-[13px] rounded-full">
+              {{ dateRangeLabel }}
+              <button
+                @click="startDate = ''; endDate = ''"
+                aria-label="Remover filtro de data"
+                class="w-4 h-4 inline-flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors"
+              >×</button>
+            </span>
             <button
               @click="clearFilters"
-              class="px-3 py-1.5 text-[13px] text-gray-500 hover:text-gray-700 transition-colors"
+              class="px-2.5 py-1 text-[13px] text-accent hover:underline transition-colors"
             >
-              Limpar filtros
+              Limpar tudo
             </button>
-            <div v-if="startDate || endDate" class="text-[13px] text-gray-500">
-              <span class="font-medium text-gray-700">{{ dateRangeLabel }}</span>
-            </div>
           </div>
         </div>
       </div>
@@ -188,9 +201,18 @@
             <EmptyState
               v-if="filteredTransactions.length === 0"
               icon="🔍"
-              title="Nenhuma transacao"
-              description="Ajuste os filtros para ver transacoes."
-            />
+              :title="hasActiveFilters ? 'Nenhum resultado' : 'Nenhuma transacao'"
+              :description="hasActiveFilters ? 'Nenhuma transacao corresponde aos filtros atuais.' : 'Nao ha transacoes para exibir.'"
+            >
+              <template v-if="hasActiveFilters" #action>
+                <button
+                  @click="clearFilters"
+                  class="px-4 py-2 text-[13px] font-medium text-text-inverse bg-accent-primary hover:bg-accent-primary-hover rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2"
+                >
+                  Limpar filtros
+                </button>
+              </template>
+            </EmptyState>
 
             <!-- Pagination -->
             <div v-if="filteredTransactions.length > pageSize" class="px-4 py-3 flex items-center justify-between flex-shrink-0">
@@ -307,6 +329,10 @@ const endIndex = computed(() => {
 
 const paginatedTransactions = computed(() => {
   return filteredTransactions.value.slice(startIndex.value, endIndex.value)
+})
+
+const hasActiveFilters = computed(() => {
+  return Boolean(searchTerm.value || startDate.value || endDate.value)
 })
 
 const dateRangeLabel = computed(() => {

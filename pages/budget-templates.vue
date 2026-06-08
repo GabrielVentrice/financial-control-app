@@ -61,9 +61,13 @@
                       v-model.number="simulatedIncome"
                       min="0"
                       step="100"
+                      aria-describedby="simulatedIncome-hint"
                       class="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 bg-white border border-blue-300 rounded-lg text-sm sm:text-base font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                     />
                   </div>
+                  <p id="simulatedIncome-hint" class="text-[10px] text-blue-700/70 mt-1 hidden sm:block">
+                    Apenas simulacao — salva somente neste navegador
+                  </p>
                 </div>
                 <div class="text-right hidden sm:block">
                   <p class="text-xs text-blue-700 mb-1">Valor Total</p>
