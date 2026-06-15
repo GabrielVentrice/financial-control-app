@@ -1,5 +1,4 @@
 import type { Transaction } from '~/types/transaction'
-import { getSeedInvoice } from '~/shared/tempInvoiceSeed'
 
 export interface CategorySummary {
   name: string
@@ -54,6 +53,17 @@ export const useDashboardAnalytics = () => {
   const EXCLUDED_CATEGORIES = ['adjustment']
   const EXCLUDED_DESCRIPTIONS = ['pagamento debito automatico']
 
+  // Parse a "YYYY-MM-DD" date as LOCAL time. Using `new Date("2026-06-01")`
+  // parses as UTC midnight, which in a negative-offset timezone (e.g. UTC-3)
+  // rolls back to the previous day/month — so day-01 transactions (including
+  // salary) leaked into the previous month. Building the Date from explicit
+  // components keeps it on the intended calendar day.
+  const parseLocalDate = (dateStr: string): Date => {
+    const [y, m, d] = (dateStr || '').split('-').map(Number)
+    if (!y || !m || !d) return new Date(dateStr)
+    return new Date(y, m - 1, d)
+  }
+
   // Helper function to check if transaction is income
   const isIncome = (transaction: Transaction): boolean => {
     return transaction.destination.toLowerCase().includes('bank account')
@@ -73,7 +83,7 @@ export const useDashboardAnalytics = () => {
     const targetYear = targetDate.getFullYear()
 
     const monthTransactions = transactions.filter(t => {
-      const date = new Date(t.date)
+      const date = parseLocalDate(t.date)
       return date.getMonth() === targetMonth && date.getFullYear() === targetYear
     })
 
@@ -162,7 +172,7 @@ export const useDashboardAnalytics = () => {
 
     // Filter to current month and only expenses
     const monthTransactions = transactions.filter(t => {
-      const date = new Date(t.date)
+      const date = parseLocalDate(t.date)
       return date.getMonth() === currentMonth &&
              date.getFullYear() === currentYear &&
              isExpense(t)
@@ -207,13 +217,13 @@ export const useDashboardAnalytics = () => {
 
     return transactions
       .filter(t => {
-        const date = new Date(t.date)
+        const date = parseLocalDate(t.date)
         return date.getMonth() === currentMonth &&
                date.getFullYear() === currentYear &&
                isExpense(t) &&
                !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()) && !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase())
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
   }
 
   const getUpcomingExpenses = (transactions: Transaction[]): Transaction[] => {
@@ -223,10 +233,10 @@ export const useDashboardAnalytics = () => {
 
     return transactions
       .filter(t => {
-        const date = new Date(t.date)
+        const date = parseLocalDate(t.date)
         return date > now && date <= nextMonth && isExpense(t)
       })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime())
   }
 
   const generateAlerts = (transactions: Transaction[]): Alert[] => {
@@ -239,7 +249,7 @@ export const useDashboardAnalytics = () => {
     const currentMonthStats = getCurrentMonthStats(transactions)
 
     const previousMonthTransactions = transactions.filter(t => {
-      const date = new Date(t.date)
+      const date = parseLocalDate(t.date)
       const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
       const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
       return date.getMonth() === prevMonth && date.getFullYear() === prevYear
@@ -261,7 +271,7 @@ export const useDashboardAnalytics = () => {
 
     // Alert: High value transactions this month
     const highValueTransactions = transactions.filter(t => {
-      const date = new Date(t.date)
+      const date = parseLocalDate(t.date)
       return date.getMonth() === currentMonth &&
              date.getFullYear() === currentYear &&
              Math.abs(t.amount) > 1000
@@ -477,23 +487,15 @@ export const useDashboardAnalytics = () => {
 
     const currentInvoice = invoiceMonthOf(referenceDate)
 
-    // TEMPORARY: until the spreadsheet is synced past 2026-01, use the hardcoded
-    // invoice imported from the bank CSV for any month that has a seed (Gabriel).
-    const seed = cardOrigin === 'Credit Card Gabriel'
-      ? getSeedInvoice(currentInvoice.year, currentInvoice.month)
-      : null
-
-    const items = seed
-      ? [...seed].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      : transactions
-          .filter(t => (t.origin || '') === cardOrigin)
-          .filter(t => !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase()))
-          .filter(t => !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()))
-          .filter(t => {
-            const im = invoiceMonthOf(new Date(t.date))
-            return im.year === currentInvoice.year && im.month === currentInvoice.month
-          })
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    const items = transactions
+      .filter(t => (t.origin || '') === cardOrigin)
+      .filter(t => !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase()))
+      .filter(t => !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()))
+      .filter(t => {
+        const im = invoiceMonthOf(parseLocalDate(t.date))
+        return im.year === currentInvoice.year && im.month === currentInvoice.month
+      })
+      .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
 
     // Net total (purchases positive, refunds/estornos negative).
     const total = items.reduce((sum, t) => sum + t.amount, 0)
