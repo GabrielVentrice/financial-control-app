@@ -49,7 +49,12 @@ export const useTransactions = (initialParams?: MaybeRef<TransactionQueryParams>
     {
       default: () => [],
       watch: [queryObject], // Re-fetch when params change
-      immediate: true // Fetch immediately on SSR
+      immediate: true, // Fetch immediately on SSR
+      // Reuse already-loaded data on client-side navigation instead of
+      // re-fetching (and showing a loading state) every time a page mounts.
+      // The dataset is shared across pages via a stable cache key and only
+      // refreshes on full reload, an explicit refresh, or a params change.
+      getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key]
     }
   )
 

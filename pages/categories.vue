@@ -280,7 +280,9 @@ const {
   {
     default: () => null,
     watch: [queryObject],
-    immediate: true
+    immediate: true,
+    // Reuse cached data on navigation; only refetch on reload or filter change.
+    getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key]
   }
 )
 
