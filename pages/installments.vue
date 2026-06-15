@@ -1,225 +1,278 @@
 <template>
   <Sidemenu>
     <div class="bg-background-page min-h-screen">
-      <!-- Header -->
-      <PageHeader title="Parcelas" :subtitle="selectedPerson">
-        <template #actions>
-          <RefreshButton :disabled="loading || refreshing" :spinning="refreshing" @click="refreshData" />
-        </template>
-      </PageHeader>
-
-      <!-- Content -->
-      <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        <!-- Loading State -->
+      <main class="max-w-[1180px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
         <LoadingState v-if="loading" message="Carregando parcelas..." />
-
-        <!-- Error State -->
         <ErrorState v-else-if="error" :message="error" />
 
-        <!-- Content -->
         <template v-else>
-          <!-- Summary Cards -->
-          <section class="grid grid-cols-1 md:grid-cols-3 divide-x divide-gray-100">
-            <LightStatCard
-              label="Ativas"
-              :value="activeInstallments.length"
-              format="number"
-              value-color="neutral"
-              size="lg"
-              :secondary-stat="{ label: 'Futuras', value: '' }"
-            />
-
-            <LightStatCard
-              label="Mes Atual"
-              :value="currentMonthTotal"
-              format="currency"
-              value-color="neutral"
-              size="lg"
-              :secondary-stat="{ label: formatMonthYear(currentMonth), value: '' }"
-            />
-
-            <LightStatCard
-              label="Media Mensal"
-              :value="averageMonthlyTotal"
-              format="currency"
-              value-color="neutral"
-              size="lg"
-              :secondary-stat="{ label: '13 meses', value: '' }"
-            />
-          </section>
-
-          <!-- Chart -->
-          <section class="px-6 py-5">
-            <div class="mb-5">
-              <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Parcelas por Mes</h2>
-              <p class="text-[13px] text-gray-500 mt-1">6 meses atras → 6 meses a frente</p>
+          <!-- 1. Header -->
+          <header class="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+            <div class="min-w-0">
+              <p class="text-xs font-medium text-text-muted uppercase tracking-wider">Parcelas Ativas</p>
+              <h1 class="text-2xl font-semibold text-text-primary tracking-tight mt-0.5">O que já está comprometido</h1>
             </div>
-            <div class="h-56" role="img" aria-label="Grafico de barras do total de parcelas por mes, de 6 meses atras ate 6 meses a frente">
-              <Bar :data="chartData" :options="chartOptions" />
-            </div>
-          </section>
 
-          <!-- Active Installments List -->
-          <section class="space-y-5">
-            <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Parcelas Ativas ({{ activeInstallments.length }})</h2>
-            <EmptyState
-              v-if="activeInstallments.length === 0"
-              icon="📅"
-              title="Nenhuma parcela ativa"
-              description="Voce nao possui parcelas ou financiamentos ativos no momento."
-            />
-            <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="sm:ml-auto flex items-center gap-3">
+              <!-- Month selector -->
               <div
-                v-for="installment in activeInstallments"
-                :key="installment.key"
-                class="rounded-xl px-6 py-5 hover:bg-gray-50/80 transition-colors"
+                class="inline-flex items-center h-11 rounded-full border border-border-base bg-background-card"
+                role="group"
+                aria-label="Mês de referência"
               >
-                <div class="flex flex-col gap-4">
-                  <div class="flex-1 min-w-0">
-                    <h3 class="font-medium text-gray-700 text-[15px] mb-2 truncate">{{ installment.description }}</h3>
-                    <div class="flex flex-wrap gap-4 text-[13px] text-gray-500">
-                      <span>{{ installment.origin }}</span>
-                      <span>{{ formatCurrencyCompact(installment.amount) }}/mes</span>
+                <button
+                  type="button"
+                  aria-label="Mês anterior"
+                  class="px-3 h-full text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded-l-full"
+                  @click="changeMonth(-1)"
+                >‹</button>
+                <span class="px-1 text-[14px] font-medium text-text-primary min-w-[88px] text-center">
+                  {{ selectedMonthLong }}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Próximo mês"
+                  class="px-3 h-full text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded-r-full"
+                  @click="changeMonth(1)"
+                >›</button>
+              </div>
+
+              <button
+                type="button"
+                :disabled="loading || refreshing"
+                @click="refreshData"
+                class="inline-flex items-center gap-2 h-11 px-4 rounded-full border border-border-base bg-background-card text-[14px] font-medium text-text-secondary hover:bg-background-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Atualizar
+              </button>
+            </div>
+          </header>
+
+          <!-- Empty state -->
+          <EmptyState
+            v-if="activeSeries.length === 0"
+            icon="📅"
+            title="Nenhuma parcela ativa"
+            description="Você não tem parcelas ou financiamentos em aberto neste mês. Sua renda está livre de compromissos parcelados. 🎉"
+          />
+
+          <div v-else class="space-y-6">
+            <!-- 2. Hero band -->
+            <section class="grid grid-cols-1 md:grid-cols-[1.3fr_0.9fr] gap-4">
+              <!-- Comprometido este mês -->
+              <div class="bg-background-card border border-border-subtle rounded-xl px-6 py-6">
+                <p class="text-[13px] font-normal text-text-muted">Comprometido este mês</p>
+                <p class="text-kpi-xl text-negative leading-tight mt-2">{{ formatCurrency(committedThisMonth) }}</p>
+                <p class="text-[13px] mt-2 flex items-center gap-1.5">
+                  <span v-if="referenceIncome > 0" class="text-text-secondary">
+                    {{ committedPct }}% da sua renda
+                  </span>
+                  <span v-else class="text-text-secondary">renda do mês indisponível</span>
+                  <template v-if="referenceIncome > 0">
+                    <span class="text-text-muted">·</span>
+                    <span :class="['inline-flex items-center gap-1 font-medium', overLimit ? 'text-warning' : 'text-positive']">
+                      <span class="w-1.5 h-1.5 rounded-full" :class="overLimit ? 'bg-warning' : 'bg-positive'" aria-hidden="true"></span>
+                      {{ overLimit ? 'acima do saudável' : 'dentro do saudável' }}
+                    </span>
+                  </template>
+                </p>
+                <p class="text-[12px] text-text-muted mt-3">limite saudável: 30% da renda</p>
+              </div>
+
+              <!-- Saldo devedor total -->
+              <div class="bg-background-card border border-red-200 rounded-xl px-6 py-6 flex flex-col">
+                <p class="text-[13px] font-normal text-text-muted">Saldo devedor total</p>
+                <p class="text-kpi-lg text-negative leading-tight mt-2 whitespace-nowrap">{{ formatCurrency(totalDebt) }}</p>
+                <p class="text-[13px] text-text-secondary mt-1">soma de todas as parcelas a vencer</p>
+                <p class="text-[13px] text-text-muted mt-auto pt-4">
+                  quita em <span class="font-medium text-text-secondary">{{ endLabel }}</span>
+                </p>
+              </div>
+            </section>
+
+            <!-- 3. KPIs -->
+            <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-background-card border border-border-subtle rounded-xl">
+                <LightStatCard
+                  label="Parcelas ativas"
+                  :value="activeSeries.length"
+                  format="number"
+                  value-color="neutral"
+                  size="lg"
+                  :secondary-stat="{ value: '', label: `${activeSeries.length} série(s) em aberto` }"
+                />
+              </div>
+
+              <div class="bg-background-card border border-border-subtle rounded-xl">
+                <LightStatCard
+                  label="Próximo alívio"
+                  :value="nextReliefValue"
+                  format="text"
+                  :value-color="nextRelief ? 'positive' : 'default'"
+                  size="lg"
+                  :secondary-stat="{ value: '', label: nextRelief ? 'quando a próxima encerra' : 'nenhuma encerra em 12 meses' }"
+                />
+              </div>
+
+              <div class="bg-background-card border border-border-subtle rounded-xl">
+                <LightStatCard
+                  label="Término previsto"
+                  :value="endLabel"
+                  format="text"
+                  value-color="neutral"
+                  size="lg"
+                  :secondary-stat="{ value: '', label: 'última parcela a vencer' }"
+                />
+              </div>
+            </section>
+
+            <!-- 4. Commitment chart -->
+            <section>
+              <InstallmentsCommitmentChart
+                :months="projection"
+                :y-max="chartYMax"
+                :limit="healthyLimit"
+                :limit-label="limitLabel"
+                :legend="legend"
+              />
+            </section>
+
+            <!-- 5. Insight -->
+            <section v-if="reliefInsight">
+              <div class="bg-background-card border border-border-subtle rounded-xl p-5 flex items-start gap-3">
+                <span class="w-2 h-2 rounded-full flex-shrink-0 mt-1.5 bg-emerald-500" aria-hidden="true"></span>
+                <div class="min-w-0">
+                  <p class="text-[15px] font-semibold text-text-primary">{{ reliefInsight.title }}</p>
+                  <p class="text-[13px] text-text-secondary mt-0.5">{{ reliefInsight.message }}</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- 6. List -->
+            <section class="bg-background-card border border-border-subtle rounded-xl p-5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <h2 class="text-xs font-medium text-text-muted uppercase tracking-wider">Suas parcelas</h2>
+                <div class="flex items-center gap-1.5" role="group" aria-label="Ordenar parcelas">
+                  <button
+                    v-for="opt in sortOptions"
+                    :key="opt.value"
+                    type="button"
+                    @click="sortBy = opt.value"
+                    :aria-pressed="sortBy === opt.value"
+                    class="px-3.5 h-11 rounded-full text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+                    :class="sortBy === opt.value ? 'bg-background-section text-text-primary border border-border-base' : 'text-text-muted hover:bg-background-section/60 border border-transparent'"
+                  >
+                    {{ opt.label }}
+                  </button>
+                </div>
+              </div>
+
+              <ul class="divide-y divide-border-subtle">
+                <li v-for="series in sortedSeries" :key="series.key">
+                  <button
+                    type="button"
+                    @click="openDetail(series)"
+                    class="w-full flex flex-wrap items-center gap-x-4 gap-y-3 py-4 text-left rounded-lg hover:bg-background-section/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary px-2 -mx-2"
+                  >
+                    <span class="w-2.5 h-2.5 rounded-sm flex-shrink-0 order-1" :style="{ backgroundColor: series.color }" aria-hidden="true"></span>
+
+                    <div class="min-w-0 flex-1 order-2">
+                      <p class="text-[15px] font-medium text-text-primary truncate">{{ series.name }}</p>
+                      <p class="text-[13px] text-text-muted truncate">{{ series.category }}</p>
                     </div>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <div class="text-kpi-md text-[#111111]">
-                      {{ installment.paid }}/{{ installment.total }}
-                      <span class="text-[13px] text-gray-500 ml-2">{{ installment.remaining }} restantes</span>
-                    </div>
-                    <div class="flex-1 max-w-xs ml-4">
-                      <div class="w-full bg-gray-100 rounded-full h-[2px]">
+
+                    <!-- Progress: inline on desktop, full-width row on mobile -->
+                    <div class="basis-full order-5 sm:basis-44 sm:flex-none sm:order-3">
+                      <div class="h-1.5 bg-background-hover rounded-full overflow-hidden">
                         <div
-                          class="bg-[#111111] h-[2px] rounded-full transition-all"
-                          :style="{ width: `${(installment.paid / installment.total) * 100}%` }"
+                          class="h-full rounded-full transition-all duration-500"
+                          :style="{ width: `${series.pctPaid}%`, backgroundColor: series.color }"
                         ></div>
                       </div>
+                      <p class="text-[12px] text-text-muted mt-1">
+                        {{ series.paid }}/{{ series.total }} pagas · {{ series.remaining }} restantes
+                      </p>
                     </div>
-                  </div>
-                </div>
-                <div class="mt-4 pt-3 border-t border-gray-100 grid grid-cols-2 gap-4 text-[13px]">
-                  <div>
-                    <span class="text-gray-500">Primeira:</span>
-                    <span class="text-gray-700 ml-2">{{ formatDateCompact(installment.firstDate) }}</span>
-                  </div>
-                  <div>
-                    <span class="text-gray-500">Ultima:</span>
-                    <span class="text-gray-700 ml-2">{{ formatDateCompact(installment.lastDate) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
 
-          <!-- Monthly Breakdown -->
-          <section class="overflow-hidden flex flex-col" style="max-height: 500px;">
-            <div class="px-1 py-3 flex-shrink-0">
-              <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Detalhamento Mensal</h2>
-            </div>
+                    <div class="text-right order-3 ml-auto sm:ml-0 sm:order-4">
+                      <p class="text-[15px] font-semibold text-negative whitespace-nowrap">{{ formatCurrency(series.amount) }}/mês</p>
+                      <p class="text-[12px] text-text-muted whitespace-nowrap">faltam {{ formatCurrency(series.toPay) }}</p>
+                    </div>
 
-            <!-- Desktop Table -->
-            <div class="hidden lg:block overflow-x-auto overflow-y-auto flex-1">
-              <table class="min-w-full">
-                <thead>
-                  <tr>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
-                      Mes
-                    </th>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
-                      Qtd. Parcelas
-                    </th>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="month in monthlyBreakdown"
-                    :key="month.monthKey"
-                    class="hover:bg-gray-50/80 transition-colors"
-                    :class="{ 'bg-gray-50': month.monthKey === currentMonth }"
-                  >
-                    <td class="px-4 py-5 whitespace-nowrap">
-                      <div class="flex items-center gap-3">
-                        <span
-                          v-if="month.monthKey === currentMonth"
-                          class="px-2 py-1 text-[11px] font-medium rounded-lg bg-gray-100 text-gray-700"
-                        >
-                          Atual
-                        </span>
-                        <span class="text-[13px] text-gray-700">{{ formatMonthYearCompact(month.monthKey) }}</span>
-                      </div>
-                    </td>
-                    <td class="px-4 py-5 whitespace-nowrap">
-                      <span class="text-[13px] text-gray-500">
-                        {{ month.count }}
-                      </span>
-                    </td>
-                    <td class="px-4 py-5 whitespace-nowrap">
-                      <div class="text-[15px] font-medium text-[#111111]">
-                        {{ formatCurrencyCompact(month.total) }}
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Mobile Cards -->
-            <div class="lg:hidden overflow-y-auto flex-1">
-              <div
-                v-for="month in monthlyBreakdown"
-                :key="month.monthKey"
-                class="p-5 space-y-3"
-                :class="{ 'bg-gray-50': month.monthKey === currentMonth }"
-              >
-                <div class="flex justify-between items-start">
-                  <div class="flex items-center gap-3">
-                    <span
-                      v-if="month.monthKey === currentMonth"
-                      class="px-2 py-1 text-[11px] font-medium rounded-lg bg-gray-100 text-gray-700"
-                    >
-                      Atual
-                    </span>
-                    <span class="text-[13px] text-gray-700">{{ formatMonthYearCompact(month.monthKey) }}</span>
-                  </div>
-                  <div class="text-[15px] font-medium text-[#111111]">
-                    {{ formatCurrencyCompact(month.total) }}
-                  </div>
-                </div>
-                <div class="flex justify-between items-center text-[13px]">
-                  <span class="text-gray-500">Parcelas:</span>
-                  <span class="text-gray-500">
-                    {{ month.count }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
+                    <span class="text-text-muted/60 flex-shrink-0 order-4 sm:order-5" aria-hidden="true">›</span>
+                  </button>
+                </li>
+              </ul>
+            </section>
+          </div>
         </template>
       </main>
+    </div>
+
+    <!-- Detail modal -->
+    <div
+      v-if="selectedParcela"
+      class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="`Detalhe da parcela ${selectedParcela.name}`"
+      @keydown.esc="closeDetail"
+    >
+      <div class="absolute inset-0 bg-black/40" @click="closeDetail"></div>
+      <div class="relative bg-background-card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-border-base shadow-xl p-6">
+        <div class="flex items-start justify-between gap-4 mb-4">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-3 h-3 rounded-sm flex-shrink-0" :style="{ backgroundColor: selectedParcela.color }" aria-hidden="true"></span>
+            <div class="min-w-0">
+              <h2 class="text-[17px] font-semibold text-text-primary truncate">{{ selectedParcela.name }}</h2>
+              <p class="text-[13px] text-text-muted">{{ selectedParcela.category }} · {{ selectedParcela.origin }}</p>
+            </div>
+          </div>
+          <button
+            ref="closeBtn"
+            type="button"
+            @click="closeDetail"
+            aria-label="Fechar"
+            class="p-1.5 rounded-lg text-text-muted hover:bg-background-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div class="h-1.5 bg-background-hover rounded-full overflow-hidden mb-1">
+          <div class="h-full rounded-full" :style="{ width: `${selectedParcela.pctPaid}%`, backgroundColor: selectedParcela.color }"></div>
+        </div>
+        <p class="text-[12px] text-text-muted mb-5">{{ selectedParcela.paid }} de {{ selectedParcela.total }} pagas · {{ selectedParcela.remaining }} restantes</p>
+
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-4">
+          <div>
+            <dt class="text-[12px] text-text-muted">Valor por mês</dt>
+            <dd class="text-[15px] font-semibold text-negative">{{ formatCurrency(selectedParcela.amount) }}</dd>
+          </div>
+          <div>
+            <dt class="text-[12px] text-text-muted">Falta pagar</dt>
+            <dd class="text-[15px] font-semibold text-negative">{{ formatCurrency(selectedParcela.toPay) }}</dd>
+          </div>
+          <div>
+            <dt class="text-[12px] text-text-muted">Primeira parcela</dt>
+            <dd class="text-[15px] text-text-primary">{{ monthYear(selectedParcela.firstMonth) }}</dd>
+          </div>
+          <div>
+            <dt class="text-[12px] text-text-muted">Última parcela</dt>
+            <dd class="text-[15px] text-text-primary">{{ monthYear(selectedParcela.lastMonth) }}</dd>
+          </div>
+        </dl>
+      </div>
     </div>
   </Sidemenu>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Bar } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js'
+import { computed, ref, nextTick } from 'vue'
 
-// Register Chart.js components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
-
-// Composables - transactions fetched automatically via SSR
 const {
   transactions: rawTransactions,
   loading,
@@ -231,307 +284,290 @@ const {
 const { selectedPerson } = usePersonFilter()
 const { processInstallments, parseInstallment, isInstallmentTransaction } = useInstallments()
 const { fetchCacheStatus } = useCacheStatus()
+const { formatCurrency, formatMonthName } = useFormatters()
 
-// Process installments to expand them across months
+// Expand installments into their full monthly schedule.
 const transactions = computed(() => processInstallments(rawTransactions.value))
 
-// Current month in YYYY-MM format
-const getCurrentMonth = () => {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+// --- Month helpers (string YYYY-MM keys — timezone-safe) ---
+const toKey = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, '0')}`
+const addMonths = (key: string, delta: number) => {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  return toKey(d.getFullYear(), d.getMonth())
+}
+const shortMonth = (key: string) => {
+  const m = Number(key.split('-')[1])
+  return formatMonthName(m - 1, true)
+}
+const monthYear = (key: string) => {
+  if (!key) return '—'
+  const [y, m] = key.split('-')
+  return `${formatMonthName(Number(m) - 1, true)}/${y}`
 }
 
-const currentMonth = getCurrentMonth()
+const now = new Date()
+const currentMonthKey = toKey(now.getFullYear(), now.getMonth())
+const selectedMonth = ref(currentMonthKey)
+const changeMonth = (delta: number) => { selectedMonth.value = addMonths(selectedMonth.value, delta) }
 
-// Compute date range (6 months back to 6 months ahead)
-const getMonthRange = () => {
-  const months: string[] = []
-  const now = new Date()
-
-  for (let i = -6; i <= 6; i++) {
-    const date = new Date(now.getFullYear(), now.getMonth() + i, 1)
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    months.push(monthKey)
-  }
-
-  return months
-}
-
-const monthRange = getMonthRange()
-
-// Filter installment transactions
-const installmentTransactions = computed(() => {
-  let filtered = transactions.value.filter(t => isInstallmentTransaction(t))
-
-  // Filter by person
-  if (selectedPerson.value !== 'Ambos') {
-    filtered = filtered.filter(transaction => {
-      return transaction.person === selectedPerson.value
-    })
-  }
-
-  return filtered
+const selectedMonthLong = computed(() => {
+  const m = Number(selectedMonth.value.split('-')[1])
+  return formatMonthName(m - 1)
 })
 
-// Group installments by series
-interface InstallmentSeries {
+// --- Person-filtered transactions ---
+const personTransactions = computed(() => {
+  if (selectedPerson.value === 'Ambos') return transactions.value
+  return transactions.value.filter(t => t.person === selectedPerson.value)
+})
+
+const installmentTransactions = computed(() =>
+  personTransactions.value.filter(t => isInstallmentTransaction(t))
+)
+
+// --- Category label from destination ---
+const categoryOf = (destination: string): string => {
+  const d = (destination || '').trim()
+  if (!d || /installments\s*\/\s*financing/i.test(d)) return 'Parcelamento'
+  return d
+}
+
+// Categorical palette — same color identifies a parcela in chart and list.
+// Curated, harmonious, AA-friendly on white. When there are more active series
+// than colors, fall back to evenly-spaced hues so every parcela stays distinct.
+const PALETTE = [
+  '#4F46E5', '#2563EB', '#0891B2', '#0D9488', '#059669', '#65A30D',
+  '#CA8A04', '#EA580C', '#DB2777', '#9333EA', '#7C3AED', '#0369A1'
+]
+const colorFor = (index: number, count: number): string => {
+  if (count <= PALETTE.length) return PALETTE[index]
+  return `hsl(${Math.round((index / count) * 360)}, 60%, 45%)`
+}
+
+interface Series {
   key: string
-  description: string
+  name: string
+  category: string
   origin: string
   amount: number
   total: number
   paid: number
   remaining: number
-  firstDate: string
-  lastDate: string
-  transactions: Transaction[]
+  pctPaid: number
+  toPay: number
+  color: string
+  firstMonth: string
+  lastMonth: string
 }
 
-const installmentSeries = computed(() => {
-  const seriesMap = new Map<string, InstallmentSeries>()
+// Build raw series grouped by installment identity, relative to selectedMonth.
+const rawSeries = computed<Series[]>(() => {
+  const map = new Map<string, {
+    key: string; name: string; category: string; origin: string; amount: number; total: number; months: Set<string>
+  }>()
 
-  installmentTransactions.value.forEach(transaction => {
-    const installmentInfo = parseInstallment(transaction.description)
-    if (!installmentInfo) return
-
-    const key = `${installmentInfo.description}_${transaction.origin}_${installmentInfo.total}`
-
-    if (!seriesMap.has(key)) {
-      seriesMap.set(key, {
+  installmentTransactions.value.forEach(t => {
+    const info = parseInstallment(t.description)
+    if (!info) return
+    const key = `${info.description}_${t.origin}_${info.total}`
+    if (!map.has(key)) {
+      map.set(key, {
         key,
-        description: installmentInfo.description,
-        origin: transaction.origin,
-        amount: transaction.amount,
-        total: installmentInfo.total,
-        paid: 0,
-        remaining: installmentInfo.total,
-        firstDate: transaction.date,
-        lastDate: transaction.date,
-        transactions: []
+        name: info.description || t.description,
+        category: categoryOf(t.destination),
+        origin: t.origin,
+        amount: Math.abs(t.amount),
+        total: info.total,
+        months: new Set()
       })
     }
-
-    const series = seriesMap.get(key)!
-    series.transactions.push(transaction)
-
-    if (transaction.date < series.firstDate) {
-      series.firstDate = transaction.date
-    }
-    if (transaction.date > series.lastDate) {
-      series.lastDate = transaction.date
-    }
-
-    const transactionMonth = transaction.date.substring(0, 7)
-    if (transactionMonth <= currentMonth) {
-      series.paid++
-    }
+    map.get(key)!.months.add(t.date.substring(0, 7))
   })
 
-  seriesMap.forEach(series => {
-    series.remaining = series.total - series.paid
+  return Array.from(map.values()).map(s => {
+    const months = Array.from(s.months).sort()
+    // Paid = scheduled occurrences strictly before the reference month; the
+    // reference month's payment still counts as "a vencer" (per the model).
+    const paid = Math.min(months.filter(mk => mk < selectedMonth.value).length, s.total)
+    const remaining = s.total - paid
+    return {
+      key: s.key,
+      name: s.name,
+      category: s.category,
+      origin: s.origin,
+      amount: s.amount,
+      total: s.total,
+      paid,
+      remaining,
+      pctPaid: Math.round((paid / s.total) * 100),
+      toPay: remaining * s.amount,
+      color: '',
+      firstMonth: months[0],
+      lastMonth: months[months.length - 1]
+    }
   })
-
-  return Array.from(seriesMap.values())
 })
 
-// Active installments (those with future payments)
-const activeInstallments = computed(() => {
-  return installmentSeries.value
-    .filter(series => series.remaining > 0)
-    .sort((a, b) => b.remaining - a.remaining)
+// Active series (still have payments left), with stable color assignment.
+const activeSeries = computed<Series[]>(() => {
+  const active = rawSeries.value.filter(s => s.remaining > 0)
+  const ordered = [...active].sort((a, b) => (a.key < b.key ? -1 : 1))
+  ordered.forEach((s, i) => { s.color = colorFor(i, ordered.length) })
+  return active
 })
 
-// Monthly breakdown
-interface MonthlyData {
-  monthKey: string
-  count: number
-  total: number
+// --- Reference month income (with fallback to a recent month) ---
+const monthIncome = (monthKey: string): number => {
+  return personTransactions.value
+    .filter(t => t.date.substring(0, 7) === monthKey)
+    .filter(t => (t.destination || '').toLowerCase().includes('bank account'))
+    .filter(t => (t.destination || '').toLowerCase() !== 'adjustment')
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 }
 
-const monthlyBreakdown = computed(() => {
-  const monthlyMap = new Map<string, MonthlyData>()
+const referenceIncome = computed(() => {
+  const direct = monthIncome(selectedMonth.value)
+  if (direct > 0) return direct
+  // Fall back to the most recent month with income within the last 6 months.
+  for (let i = 1; i <= 6; i++) {
+    const v = monthIncome(addMonths(selectedMonth.value, -i))
+    if (v > 0) return v
+  }
+  return 0
+})
 
-  monthRange.forEach(monthKey => {
-    monthlyMap.set(monthKey, {
-      monthKey,
-      count: 0,
-      total: 0
+// --- Derived metrics ---
+const committedThisMonth = computed(() =>
+  activeSeries.value.reduce((sum, s) => sum + s.amount, 0)
+)
+
+const committedPct = computed(() =>
+  referenceIncome.value > 0 ? Math.round((committedThisMonth.value / referenceIncome.value) * 100) : 0
+)
+
+const healthyLimit = computed(() => referenceIncome.value * 0.3)
+const overLimit = computed(() => referenceIncome.value > 0 && committedThisMonth.value > healthyLimit.value)
+
+const limitLabel = computed(() => {
+  if (healthyLimit.value <= 0) return ''
+  return `limite saudável · ${formatCurrency(healthyLimit.value, { compact: true })} (30%)`
+})
+
+const totalDebt = computed(() =>
+  activeSeries.value.reduce((sum, s) => sum + s.toPay, 0)
+)
+
+// 12-month projection from the reference month.
+const projection = computed(() => {
+  const months = []
+  for (let i = 0; i < 12; i++) {
+    const key = addMonths(selectedMonth.value, i)
+    const segments = activeSeries.value
+      .filter(s => s.remaining > i)
+      .map(s => ({ key: s.key, name: s.name, color: s.color, value: s.amount }))
+    const total = segments.reduce((sum, seg) => sum + seg.value, 0)
+    months.push({
+      key,
+      label: shortMonth(key),
+      total,
+      isCurrent: i === 0,
+      isFuture: i > 0,
+      segments
     })
-  })
-
-  installmentTransactions.value.forEach(transaction => {
-    const monthKey = transaction.date.substring(0, 7)
-
-    if (monthlyMap.has(monthKey)) {
-      const data = monthlyMap.get(monthKey)!
-      data.count++
-      data.total += transaction.amount
-    }
-  })
-
-  return Array.from(monthlyMap.values())
+  }
+  return months
 })
 
-// Current month total
-const currentMonthTotal = computed(() => {
-  const currentData = monthlyBreakdown.value.find(m => m.monthKey === currentMonth)
-  return currentData?.total || 0
+const chartYMax = computed(() => {
+  const maxBar = Math.max(0, ...projection.value.map(m => m.total))
+  const ceiling = Math.max(maxBar, healthyLimit.value)
+  return ceiling > 0 ? ceiling * 1.15 : 1
 })
 
-// Average monthly total
-const averageMonthlyTotal = computed(() => {
-  const total = monthlyBreakdown.value.reduce((sum, m) => sum + m.total, 0)
-  return total / monthlyBreakdown.value.length
+const legend = computed(() =>
+  activeSeries.value.map(s => ({ key: s.key, name: s.name, color: s.color }))
+)
+
+// Término previsto = last month any active parcela still has a payment.
+const endLabel = computed(() => {
+  if (!activeSeries.value.length) return '—'
+  const maxRemaining = Math.max(...activeSeries.value.map(s => s.remaining))
+  return monthYear(addMonths(selectedMonth.value, maxRemaining - 1))
 })
 
-// Chart data
-const chartData = computed(() => {
+// Próximo alívio = first future month where a parcela ends and frees up money.
+const nextRelief = computed(() => {
+  if (!activeSeries.value.length) return null
+  const reliefIndex = Math.min(...activeSeries.value.map(s => s.remaining))
+  if (reliefIndex < 1 || reliefIndex > 12) return null
+  const freed = activeSeries.value
+    .filter(s => s.remaining === reliefIndex)
+    .reduce((sum, s) => sum + s.amount, 0)
+  return { monthKey: addMonths(selectedMonth.value, reliefIndex), freed }
+})
+
+const nextReliefValue = computed(() =>
+  nextRelief.value
+    ? `${shortMonth(nextRelief.value.monthKey)} · −${formatCurrency(nextRelief.value.freed)}`
+    : '—'
+)
+
+// Insight: how much frees up over the projection horizon.
+const reliefInsight = computed(() => {
+  if (!nextRelief.value) return null
+  const endingWithin = activeSeries.value.filter(s => s.remaining <= 12)
+  if (!endingWithin.length) return null
+  const freedTotal = endingWithin.reduce((sum, s) => sum + s.amount, 0)
+  const lastEndKey = addMonths(
+    selectedMonth.value,
+    Math.max(...endingWithin.map(s => s.remaining)) - 1
+  )
   return {
-    labels: monthlyBreakdown.value.map(m => formatMonthYear(m.monthKey)),
-    datasets: [
-      {
-        label: 'Total de Parcelas',
-        data: monthlyBreakdown.value.map(m => m.total),
-        backgroundColor: monthlyBreakdown.value.map(m =>
-          m.monthKey === currentMonth
-            ? 'rgba(17, 17, 17, 0.8)'
-            : m.monthKey < currentMonth
-              ? 'rgba(156, 163, 175, 0.4)'
-              : 'rgba(156, 163, 175, 0.25)'
-        ),
-        borderColor: monthlyBreakdown.value.map(m =>
-          m.monthKey === currentMonth
-            ? '#111111'
-            : m.monthKey < currentMonth
-              ? 'rgba(156, 163, 175, 0.5)'
-              : 'rgba(156, 163, 175, 0.3)'
-        ),
-        borderWidth: 1,
-        borderRadius: 4
-      }
-    ]
+    title: `A partir de ${shortMonth(nextRelief.value.monthKey)} sobra mais no bolso`,
+    message: `${endingWithin.length} parcela(s) encerram até ${monthYear(lastEndKey)}, liberando ${formatCurrency(freedTotal)}/mês.`
   }
 })
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: false
-    },
-    title: {
-      display: false
-    },
-    tooltip: {
-      backgroundColor: '#1F2937',
-      titleColor: '#F9FAFB',
-      bodyColor: '#9CA3AF',
-      borderColor: '#374151',
-      borderWidth: 1,
-      padding: 12,
-      displayColors: false,
-      callbacks: {
-        label: (context: any) => {
-          const value = context.parsed.y
-          return `Total: ${formatCurrency(value)}`
-        }
-      }
-    }
-  },
-  scales: {
-    x: {
-      grid: {
-        display: false,
-        drawBorder: false,
-      },
-      ticks: {
-        color: '#9CA3AF',
-        font: {
-          size: 11
-        }
-      }
-    },
-    y: {
-      beginAtZero: true,
-      grid: {
-        color: '#F3F4F6',
-        drawBorder: false,
-      },
-      ticks: {
-        color: '#9CA3AF',
-        font: {
-          size: 11
-        },
-        callback: (value: any) => {
-          return 'R$ ' + value.toLocaleString('pt-BR')
-        }
-      }
-    }
+// --- Sorting ---
+type SortKey = 'valor' | 'termina' | 'aPagar'
+const sortBy = ref<SortKey>('valor')
+const sortOptions: { value: SortKey; label: string }[] = [
+  { value: 'valor', label: 'Maior parcela' },
+  { value: 'termina', label: 'Termina antes' },
+  { value: 'aPagar', label: 'A pagar' }
+]
+
+const sortedSeries = computed(() => {
+  const list = [...activeSeries.value]
+  switch (sortBy.value) {
+    case 'termina':
+      return list.sort((a, b) => a.remaining - b.remaining)
+    case 'aPagar':
+      return list.sort((a, b) => b.toPay - a.toPay)
+    case 'valor':
+    default:
+      return list.sort((a, b) => b.amount - a.amount)
   }
-}
+})
 
-// Formatting functions
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value)
+// --- Detail modal ---
+const selectedParcela = ref<Series | null>(null)
+const closeBtn = ref<HTMLButtonElement | null>(null)
+const openDetail = async (series: Series) => {
+  selectedParcela.value = series
+  await nextTick()
+  closeBtn.value?.focus()
 }
+const closeDetail = () => { selectedParcela.value = null }
 
-const formatCurrencyCompact = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value)
-}
-
-const formatDate = (dateString: string) => {
-  if (!dateString) return '-'
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('pt-BR')
-  } catch {
-    return dateString
-  }
-}
-
-const formatDateCompact = (dateString: string) => {
-  if (!dateString) return '-'
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' })
-  } catch {
-    return dateString
-  }
-}
-
-const formatMonthYear = (monthKey: string) => {
-  const [year, month] = monthKey.split('-')
-  const date = new Date(parseInt(year), parseInt(month) - 1)
-  return date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
-}
-
-const formatMonthYearCompact = (monthKey: string) => {
-  const [year, month] = monthKey.split('-')
-  const date = new Date(parseInt(year), parseInt(month) - 1)
-  return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
-}
-
-// Refresh cache and reload data
+// --- Refresh ---
 const refreshData = async () => {
   try {
-    const result = await refreshCache()
-
-    if (result.success) {
-      console.log('Cache atualizado:', result.message)
-    }
-
+    await refreshCache()
     await fetchCacheStatus()
   } catch (e) {
-    console.error('Error refreshing data:', e)
+    console.error('Erro ao atualizar parcelas:', e)
   }
 }
 </script>
