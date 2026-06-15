@@ -54,7 +54,20 @@ export default defineNuxtConfig({
     experimental: {
       openAPI: true
     },
-    openAPI: {route: '/api/docs'}
+    openAPI: {route: '/api/docs'},
+
+    // Vercel: daily cron to sync Postgres from Google Sheets (09:00 UTC = 06:00 BRT)
+    // and a higher function timeout so the batched sync has room to finish.
+    vercel: {
+      config: {
+        crons: [
+          { path: '/api/cron/sync', schedule: '0 9 * * *' }
+        ]
+      },
+      functions: {
+        maxDuration: 60
+      }
+    }
   },
 
   // Production build optimizations
