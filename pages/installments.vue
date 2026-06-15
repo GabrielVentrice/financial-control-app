@@ -296,6 +296,12 @@ const addMonths = (key: string, delta: number) => {
   const d = new Date(y, m - 1 + delta, 1)
   return toKey(d.getFullYear(), d.getMonth())
 }
+// Absolute month index (year*12 + month) for arithmetic, and its inverse.
+const monthToIdx = (key: string) => {
+  const [y, m] = key.split('-').map(Number)
+  return y * 12 + (m - 1)
+}
+const idxToKey = (idx: number) => toKey(Math.floor(idx / 12), idx % 12)
 const shortMonth = (key: string) => {
   const m = Number(key.split('-')[1])
   return formatMonthName(m - 1, true)
@@ -357,14 +363,24 @@ interface Series {
   pctPaid: number
   toPay: number
   color: string
+  startIdx: number
   firstMonth: string
   lastMonth: string
 }
 
 // Build raw series grouped by installment identity, relative to selectedMonth.
+//
+// Paid/remaining are derived by DATE ARITHMETIC from the installment number,
+// not by counting how many distinct months the data carries. The source sheet
+// often clusters every installment row on a single date (it isn't one row per
+// month), so counting months wildly under-counts "paid" and keeps finished
+// series looking active. Instead we anchor on the lowest-numbered installment
+// (its number + month), back out the month installment #1 was due, then count
+// elapsed months up to the reference month.
 const rawSeries = computed<Series[]>(() => {
   const map = new Map<string, {
-    key: string; name: string; category: string; origin: string; amount: number; total: number; months: Set<string>
+    key: string; name: string; category: string; origin: string; total: number
+    rows: { cur: number; monthIdx: number; amount: number }[]
   }>()
 
   installmentTransactions.value.forEach(t => {
@@ -377,34 +393,46 @@ const rawSeries = computed<Series[]>(() => {
         name: info.description || t.description,
         category: categoryOf(t.destination),
         origin: t.origin,
-        amount: Math.abs(t.amount),
         total: info.total,
-        months: new Set()
+        rows: []
       })
     }
-    map.get(key)!.months.add(t.date.substring(0, 7))
+    map.get(key)!.rows.push({
+      cur: info.current,
+      monthIdx: monthToIdx(t.date.substring(0, 7)),
+      amount: Math.abs(t.amount)
+    })
   })
 
+  const refIdx = monthToIdx(selectedMonth.value)
+
   return Array.from(map.values()).map(s => {
-    const months = Array.from(s.months).sort()
-    // Paid = scheduled occurrences strictly before the reference month; the
-    // reference month's payment still counts as "a vencer" (per the model).
-    const paid = Math.min(months.filter(mk => mk < selectedMonth.value).length, s.total)
+    // Anchor on the lowest-numbered installment present and derive the month
+    // installment #1 was due (startIdx). Its value is the monthly amount.
+    const anchor = s.rows.reduce((a, b) => (b.cur < a.cur ? b : a))
+    const startIdx = anchor.monthIdx - (anchor.cur - 1)
+    const amount = anchor.amount
+
+    // Elapsed installments before the reference month = paid; the reference
+    // month's own installment still counts as "a vencer".
+    const paid = Math.max(0, Math.min(refIdx - startIdx, s.total))
     const remaining = s.total - paid
+
     return {
       key: s.key,
       name: s.name,
       category: s.category,
       origin: s.origin,
-      amount: s.amount,
+      amount,
       total: s.total,
       paid,
       remaining,
       pctPaid: Math.round((paid / s.total) * 100),
-      toPay: remaining * s.amount,
+      toPay: remaining * amount,
       color: '',
-      firstMonth: months[0],
-      lastMonth: months[months.length - 1]
+      startIdx,
+      firstMonth: idxToKey(startIdx),
+      lastMonth: idxToKey(startIdx + s.total - 1)
     }
   })
 })
@@ -438,8 +466,10 @@ const referenceIncome = computed(() => {
 })
 
 // --- Derived metrics ---
+// A series bills in a given month only if that month is within its schedule
+// [startIdx, startIdx + total). committedThisMonth = projection[0].
 const committedThisMonth = computed(() =>
-  activeSeries.value.reduce((sum, s) => sum + s.amount, 0)
+  projection.value[0]?.total ?? 0
 )
 
 const committedPct = computed(() =>
@@ -458,13 +488,16 @@ const totalDebt = computed(() =>
   activeSeries.value.reduce((sum, s) => sum + s.toPay, 0)
 )
 
-// 12-month projection from the reference month.
+// 12-month projection from the reference month. A series contributes to the
+// month at offset i only if that month falls within its schedule.
 const projection = computed(() => {
+  const refIdx = monthToIdx(selectedMonth.value)
   const months = []
   for (let i = 0; i < 12; i++) {
-    const key = addMonths(selectedMonth.value, i)
+    const dueIdx = refIdx + i
+    const key = idxToKey(dueIdx)
     const segments = activeSeries.value
-      .filter(s => s.remaining > i)
+      .filter(s => dueIdx >= s.startIdx && dueIdx < s.startIdx + s.total)
       .map(s => ({ key: s.key, name: s.name, color: s.color, value: s.amount }))
     const total = segments.reduce((sum, seg) => sum + seg.value, 0)
     months.push({
@@ -492,19 +525,23 @@ const legend = computed(() =>
 // Término previsto = last month any active parcela still has a payment.
 const endLabel = computed(() => {
   if (!activeSeries.value.length) return '—'
-  const maxRemaining = Math.max(...activeSeries.value.map(s => s.remaining))
-  return monthYear(addMonths(selectedMonth.value, maxRemaining - 1))
+  const maxLastIdx = Math.max(...activeSeries.value.map(s => s.startIdx + s.total - 1))
+  return monthYear(idxToKey(maxLastIdx))
 })
 
 // Próximo alívio = first future month where a parcela ends and frees up money.
+// A series' last payment is at startIdx + total - 1; it frees the month after.
 const nextRelief = computed(() => {
   if (!activeSeries.value.length) return null
-  const reliefIndex = Math.min(...activeSeries.value.map(s => s.remaining))
-  if (reliefIndex < 1 || reliefIndex > 12) return null
+  const refIdx = monthToIdx(selectedMonth.value)
+  const frees = activeSeries.value.map(s => s.startIdx + s.total - refIdx) // offset where it frees up
+  const candidates = frees.filter(o => o >= 1 && o <= 12)
+  if (!candidates.length) return null
+  const reliefOffset = Math.min(...candidates)
   const freed = activeSeries.value
-    .filter(s => s.remaining === reliefIndex)
+    .filter(s => s.startIdx + s.total - refIdx === reliefOffset)
     .reduce((sum, s) => sum + s.amount, 0)
-  return { monthKey: addMonths(selectedMonth.value, reliefIndex), freed }
+  return { monthKey: idxToKey(refIdx + reliefOffset), freed }
 })
 
 const nextReliefValue = computed(() =>
@@ -516,13 +553,12 @@ const nextReliefValue = computed(() =>
 // Insight: how much frees up over the projection horizon.
 const reliefInsight = computed(() => {
   if (!nextRelief.value) return null
-  const endingWithin = activeSeries.value.filter(s => s.remaining <= 12)
+  const refIdx = monthToIdx(selectedMonth.value)
+  // Series whose last payment lands within the next 12 months.
+  const endingWithin = activeSeries.value.filter(s => s.startIdx + s.total - 1 - refIdx <= 11)
   if (!endingWithin.length) return null
   const freedTotal = endingWithin.reduce((sum, s) => sum + s.amount, 0)
-  const lastEndKey = addMonths(
-    selectedMonth.value,
-    Math.max(...endingWithin.map(s => s.remaining)) - 1
-  )
+  const lastEndKey = idxToKey(Math.max(...endingWithin.map(s => s.startIdx + s.total - 1)))
   return {
     title: `A partir de ${shortMonth(nextRelief.value.monthKey)} sobra mais no bolso`,
     message: `${endingWithin.length} parcela(s) encerram até ${monthYear(lastEndKey)}, liberando ${formatCurrency(freedTotal)}/mês.`
