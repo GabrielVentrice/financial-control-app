@@ -17,9 +17,11 @@ This is a **Nuxt 3** financial control application that integrates with Google S
 
 - **Framework**: Nuxt 3 (Vue 3)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **API Integration**: Google Sheets API via googleapis
-- **Charts**: Chart.js with vue-chartjs
+- **Styling**: Tailwind CSS (light design system; tokens in [tailwind.config.js](tailwind.config.js))
+- **Database**: PostgreSQL (Neon serverless, HTTP driver) via Drizzle ORM — primary read source
+- **Source of truth**: Google Sheets, synced into Postgres (see "Data Layer & Sync")
+- **Charts**: Chart.js with vue-chartjs (plus a custom CSS/flex stacked-bar chart for installments)
+- **Deployment**: Vercel (Nitro `vercel` preset, serverless functions + cron)
 - **Runtime**: Node.js 18+
 
 ## Project Structure
@@ -33,27 +35,39 @@ financial-control-app/
 ├── .env                            # Environment variables (git-ignored)
 ├── components/
 │   ├── Sidemenu.vue               # Navigation sidebar with global person filter
-│   ├── TransactionCard.vue        # Card display for transactions
-│   └── TransactionFilters.vue     # Filter controls for transactions
+│   ├── LightStatCard.vue          # KPI/stat card (light design system)
+│   ├── installments/
+│   │   └── CommitmentChart.vue    # Custom CSS/flex stacked-bar projection chart
+│   └── dashboard/                 # Dashboard-specific chart/list components
 ├── composables/
-│   ├── usePersonFilter.ts         # Global person filter UI state management
-│   ├── useTransactions.ts         # Transaction data fetching with server-side filtering
-│   ├── useInstallments.ts         # Client-side installment utilities (legacy)
-│   └── useDashboardAnalytics.ts   # Dashboard analytics and insights
+│   ├── usePersonFilter.ts         # Global person filter UI state (default: Gabriel)
+│   ├── useTransactions.ts         # Transaction fetching (useAsyncData + getCachedData)
+│   ├── useInstallments.ts         # Re-exports shared/installments (parse/expand)
+│   ├── useDashboardAnalytics.ts   # Dashboard analytics, invoice, insights
+│   ├── useFormatters.ts           # Currency/date/month formatting helpers
+│   └── useCacheStatus.ts          # Cache metadata status
 ├── pages/
-│   ├── index.vue                  # Dashboard overview with analytics
-│   ├── transactions.vue           # Full transaction list with advanced filters
-│   ├── categories.vue             # Category-based spending analysis
-│   ├── installments.vue           # Installment analysis with timeline chart
-│   └── fixed-costs.vue            # Fixed costs historical analysis (last 6 months)
+│   ├── index.vue                  # Dashboard ("Coluna Refinada" layout)
+│   ├── transactions.vue           # Full transaction list with filters
+│   ├── categories.vue             # Category spending (own /api/categories fetch)
+│   ├── installments.vue           # "Parcelas Ativas": commitment + 12-month projection
+│   ├── fixed-costs.vue            # Fixed costs historical analysis (6 months)
+│   ├── budget.vue                 # Monthly budgets (imperative fetch)
+│   └── budget-templates.vue       # Budget templates (imperative fetch)
 ├── server/
 │   ├── api/
-│   │   └── transactions.get.ts   # API endpoint with OpenAPI metadata
+│   │   ├── transactions.get.ts    # Main endpoint (DB read or Sheets+cache fallback)
+│   │   ├── sync.post.ts           # Manual Sheets → Postgres sync
+│   │   └── cron/sync.get.ts       # Daily cron sync (Vercel, CRON_SECRET guarded)
+│   ├── database/                  # Drizzle schema + Neon client
 │   └── utils/
 │       ├── googleSheets.ts        # Google Sheets data fetching
 │       ├── personIdentifier.ts    # Person identification logic
-│       ├── installmentProcessor.ts # Installment processing and expansion
+│       ├── installmentProcessor.ts # Re-exports shared/installments
+│       ├── syncTransactions.ts    # Batched upsert util (shared by sync + cron)
 │       └── transactionFilters.ts  # Server-side filtering logic
+├── shared/
+│   └── installments.ts            # Framework-agnostic installment logic (server + client)
 └── types/
     └── transaction.ts             # TypeScript type definitions and interfaces
 ```
@@ -78,32 +92,41 @@ financial-control-app/
 - **Dashboard (`/`)**: Financial overview with analytics, alerts, monthly stats, top spending categories, and upcoming expenses
 - **Transactions (`/transactions`)**: Full list with date range, description, and person filters
 - **Categories (`/categories`)**: Spending analysis by category (Destination), monthly filtering
-- **Installments (`/installments`)**: Timeline analysis of installments with 13-month chart (6 months back, current, 6 months ahead), active installments tracking, and monthly breakdown
+- **Installments (`/installments`)** — "Parcelas Ativas": how much income is committed to installments and when it eases. Hero cards (committed this month / total debt), KPIs (active count, next relief, end date), a 12-month commitment projection (stacked bar per parcela that shrinks as series end, with a 30%-of-income healthy-limit line), relief insight, and a sortable list with progress + drill-down modal
 - **Fixed Costs (`/fixed-costs`)**: Historical analysis of fixed costs over the last 6 months with chart visualization and category breakdown
 
-### 4. Installments Feature
-The installments page provides comprehensive analysis of recurring payments:
+### 4. Installments Feature ("Parcelas Ativas")
+The installments page answers: how much of my income is committed to installments,
+when does it ease, and which installments are active?
 
 **Features:**
-- **Timeline Chart**: Bar chart showing 13 months of data (6 months before and after current month)
-  - Past months shown in gray
-  - Current month highlighted in dark blue
-  - Future months shown in light blue
-- **Summary Cards**:
-  - Active Installments: Count of payment series with future installments remaining
-  - Current Month Total: Total value of installments for the current month
-  - Average Monthly Total: Average across the 13-month period
-- **Active Installments List**: Shows all payment series with pending installments
-  - Progress bar showing paid vs. total installments
-  - First and last payment dates
-  - Monthly payment amount
-- **Monthly Breakdown Table**: Detailed view of installment count and total per month
+- **Hero band**: "Comprometido este mês" (sum of installments due in the reference
+  month, % of income, healthy-limit badge) and "Saldo devedor total" (sum of all
+  remaining installments + payoff month).
+- **KPIs**: active count, "Próximo alívio" (first month a parcela ends and how much/month
+  frees up), and projected end month.
+- **Commitment chart** ([components/installments/CommitmentChart.vue](components/installments/CommitmentChart.vue)):
+  custom CSS/flex stacked bars over 12 months — one segment per parcela, shrinking as
+  series finish. Future months are dashed (projection), with a dashed amber line at the
+  30%-of-income healthy limit and a color→parcela legend.
+- **Relief insight** + **sortable list** (maior parcela / termina antes / a pagar) with
+  progress bars and a drill-down detail modal.
 
-**Technical Details:**
-- Uses `useInstallments()` composable to process and expand installments across months
-- Leverages Chart.js for interactive bar charts
-- Automatically identifies installments by `Installments/Financing` category
-- Parses installment format (e.g., "Netflix 01/12") to track series
+**Technical Details — installment math (IMPORTANT):**
+- `paid`/`remaining` are derived by **date arithmetic from the installment number**, not by
+  counting how many distinct months the data carries. The source sheet often clusters every
+  installment row on a single date, so month-counting wildly under-counts `paid` and keeps
+  finished series looking active.
+- For each series (grouped by base description + origin + total): anchor on the lowest-numbered
+  installment present (`NN` + its month), back out the month installment #1 was due
+  (`startIdx = monthIdx − (NN − 1)`), then `paid = clamp(refMonthIdx − startIdx, 0, total)`.
+- A series bills in a month only if that month ∈ `[startIdx, startIdx + total)`.
+- Installment identity/parse/expansion lives in [shared/installments.ts](shared/installments.ts)
+  (re-exported by `useInstallments()` and `installmentProcessor.ts`). `processInstallments`
+  only regenerates a monthly schedule when the first installment (`01/XX`) is present; series
+  without it stay as-is — which is exactly why the page computes from the installment number.
+- Recognizes installments by `Installments/Financing` category **or** any credit-card-origin
+  purchase with an `NN/NN` marker (e.g., "Netflix 01/12").
 
 ### 5. Dashboard Analytics
 The dashboard provides intelligent financial insights and alerts:
@@ -173,9 +196,10 @@ The fixed costs page provides historical analysis of recurring expenses:
 
 ### Client-Side Composables
 - [composables/usePersonFilter.ts](composables/usePersonFilter.ts): Global person filter **UI state management** (identification moved to server)
-- [composables/useTransactions.ts](composables/useTransactions.ts): Transaction fetching with **server-side filtering** via query params
-- [composables/useInstallments.ts](composables/useInstallments.ts): Legacy client-side installment utilities (kept for compatibility)
-- [composables/useDashboardAnalytics.ts](composables/useDashboardAnalytics.ts): Dashboard analytics, alerts, forecasts, and insights
+- [composables/useTransactions.ts](composables/useTransactions.ts): Transaction fetching (`useAsyncData` + `getCachedData` for instant navigation) with server-side filtering via query params
+- [composables/useInstallments.ts](composables/useInstallments.ts): Thin re-export of [shared/installments.ts](shared/installments.ts) (parse/identify/expand installments)
+- [composables/useDashboardAnalytics.ts](composables/useDashboardAnalytics.ts): Dashboard analytics, credit-card invoice, alerts, forecasts, insights (uses `parseLocalDate` for month bucketing)
+- [composables/useFormatters.ts](composables/useFormatters.ts): Currency/date/month formatting helpers
 
 ### Key Pages
 - [pages/index.vue](pages/index.vue): Dashboard with analytics and insights
@@ -200,6 +224,11 @@ npm run preview      # Preview production build
 3. Create Service Account and download JSON key
 4. Share target Google Sheets with service account email
 5. Configure `.env` with credentials and spreadsheet ID
+6. Set `DATABASE_URL` (Neon Postgres). Without it, the app falls back to Sheets + on-disk cache.
+7. Set `CRON_SECRET` (in Vercel env vars) so the daily cron endpoint is protected in production.
+
+**Key env vars:** `NUXT_PUBLIC_GOOGLE_SPREADSHEET_ID`, `NUXT_GOOGLE_CLIENT_EMAIL`,
+`NUXT_GOOGLE_PRIVATE_KEY`, `DATABASE_URL`, `CRON_SECRET`.
 
 ## Customization Points
 
@@ -367,17 +396,21 @@ When you add or modify API endpoints:
 
 ## Architecture & Design Patterns
 
-### Server-Side Architecture (NEW)
+### Server-Side Architecture
 
 The application uses a **server-first architecture** where all heavy processing happens on the Nitro server:
 
-**Data Flow:**
-1. Client makes request to `/api/transactions` with optional query parameters
-2. Server fetches raw data from Google Sheets ([googleSheets.ts](server/utils/googleSheets.ts))
-3. Server enriches transactions with person identification ([personIdentifier.ts](server/utils/personIdentifier.ts))
-4. Server processes installments and expands recurring payments ([installmentProcessor.ts](server/utils/installmentProcessor.ts))
-5. Server applies all filters (person, date, search, etc.) ([transactionFilters.ts](server/utils/transactionFilters.ts))
-6. Server returns filtered, processed data to client
+**Data Flow (`/api/transactions`):**
+1. Client requests `/api/transactions` with optional query parameters.
+2. Server reads transactions from **PostgreSQL** when `DATABASE_URL` is set (the normal path);
+   otherwise it falls back to Google Sheets + on-disk cache.
+3. Server enriches with person identification ([personIdentifier.ts](server/utils/personIdentifier.ts))
+   when reading from Sheets (DB rows already carry `person` from the sync).
+4. Server processes/expands installments ([installmentProcessor.ts](server/utils/installmentProcessor.ts) → [shared/installments.ts](shared/installments.ts)).
+5. Server applies filters (person, date, search, etc.) ([transactionFilters.ts](server/utils/transactionFilters.ts)).
+6. Server returns processed data to the client.
+
+See **"Data Layer & Sync"** below for how Postgres stays in sync with the sheet.
 
 **Benefits:**
 - ✅ **Better Performance**: Reduced client-side processing, lower bandwidth usage
@@ -445,13 +478,45 @@ await fetchTransactions({
 - `.env` file is git-ignored
 - Service Account has read-only access to specific spreadsheet
 
+## Data Layer & Sync
+
+- **Read path**: `/api/transactions` reads from **PostgreSQL** (Neon) when `DATABASE_URL` is set.
+  The schema (`transactions`, `budgets`, `sync_metadata`) lives in [server/database/schema.ts](server/database/schema.ts).
+- **Source of truth** is still the **Google Sheet**. Postgres is a synced mirror.
+- **Sync** is implemented once in [server/utils/syncTransactions.ts](server/utils/syncTransactions.ts)
+  as a batched bulk upsert (`INSERT … ON CONFLICT DO UPDATE`, ~500 rows/batch) — fast enough to
+  finish inside the serverless timeout. Two entry points reuse it:
+  - `POST /api/sync` — manual sync.
+  - `GET /api/cron/sync` — **daily Vercel cron at `0 9 * * *` (09:00 UTC = 06:00 BRT)**, declared in
+    `nuxt.config.ts` under `nitro.vercel.config.crons` (function `maxDuration: 60`). Guarded by
+    `CRON_SECRET` (must be set as a Vercel env var; Vercel sends it as `Authorization: Bearer …`).
+- **Gotcha**: Postgres can lag the sheet (sync is daily, not live). If dashboard numbers look
+  stale/wrong, run the sync **before** debugging code.
+
+## Conventions & Gotchas
+
+- **Dates are timezone-sensitive.** `new Date("2026-06-01")` parses as UTC midnight, which in
+  UTC-3 rolls back to the previous month — leaking day-01 transactions (incl. salary) into the
+  wrong month. Use `parseLocalDate()` in [useDashboardAnalytics.ts](composables/useDashboardAnalytics.ts),
+  or bucket by `YYYY-MM` **string** keys (as the installments page does). Never bucket months
+  with raw `new Date(isoDate)`.
+- **Navigation caching.** `useTransactions` and `categories` pass `getCachedData` to `useAsyncData`
+  so client-side navigation reuses already-loaded data instead of refetching (no loading flash).
+  Refetch happens only on full reload, an explicit refresh, or a filter/param change. The four
+  transaction pages share the same cache key, so after the first load they're instant.
+- **Credit-card invoice** (`getCreditCardInvoice` in [useDashboardAnalytics.ts](composables/useDashboardAnalytics.ts))
+  is computed from the synced transactions by billing cycle — there is no hardcoded seed anymore.
+- **Installment math** anchors on the installment number (see Installments Feature above), not on
+  counting months — keep that property if you touch the calculation.
+
 ## Known Limitations
 
-- Read-only access to Google Sheets (no write operations)
+- Read-only access to Google Sheets (no write operations); sheet is the source of truth.
 - Single spreadsheet support
 - No user authentication
-- No data caching (fetches from Google Sheets on each API request)
-- Fetches all data from Google Sheets then filters (no database layer)
+- Postgres sync is **daily (cron), not real-time** — data can lag the sheet until the next sync.
+- `budget.vue` / `budget-templates.vue` still use an imperative `loading` ref (not the cached
+  `useAsyncData` pattern), so they show a loading state on navigation.
 
 ## Future Enhancement Ideas
 
