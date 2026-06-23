@@ -387,7 +387,9 @@ const donutSegments = computed(() =>
   categories.value
     .slice()
     .sort((a, b) => b.current - a.current)
-    .map(c => ({ key: c.key, name: c.name, color: c.color, value: c.current }))
+    // Keep the full Category (current/previous/count/...) so the legend can call
+    // pct(cat) and formatCurrency(cat.current); `value` is what CategoryDonut needs.
+    .map(c => ({ ...c, value: c.current }))
 )
 const hovered = ref<string | null>(null)
 
