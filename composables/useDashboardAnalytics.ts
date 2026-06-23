@@ -75,6 +75,26 @@ export const useDashboardAnalytics = () => {
     return originLower.includes('bank account') || originLower.includes('credit card')
   }
 
+  // A destination that is itself an account/card means the money just moved
+  // between accounts (credit-card payment, transfer) — not real spending. The
+  // categories page (pages/categories.vue) excludes these by destination, so
+  // the dashboard must do the same to stay consistent.
+  const isTransferDestination = (transaction: Transaction): boolean => {
+    const dest = (transaction.destination || '').toLowerCase()
+    return dest.includes('bank account') ||
+           dest.includes('credit card') ||
+           dest.includes('credit account')
+  }
+
+  // Single source of truth for "this is real spending": money left an
+  // account/card, the destination is a spending category (not a transfer), and
+  // it isn't an adjustment or automatic-debit bookkeeping row.
+  const isRealExpense = (transaction: Transaction): boolean =>
+    isExpense(transaction) &&
+    !isTransferDestination(transaction) &&
+    !EXCLUDED_CATEGORIES.includes((transaction.destination || '').toLowerCase()) &&
+    !EXCLUDED_DESCRIPTIONS.includes((transaction.description || '').toLowerCase())
+
   // Get stats for a specific month
   const getMonthStats = (transactions: Transaction[], monthOffset: number = 0) => {
     const now = new Date()
@@ -92,7 +112,7 @@ export const useDashboardAnalytics = () => {
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
     const expenses = monthTransactions
-      .filter(t => isExpense(t) && !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()) && !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase()))
+      .filter(t => isRealExpense(t))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
     return {
@@ -170,12 +190,12 @@ export const useDashboardAnalytics = () => {
     const currentMonth = now.getMonth()
     const currentYear = now.getFullYear()
 
-    // Filter to current month and only expenses
+    // Filter to current month and only real expenses (excludes transfers)
     const monthTransactions = transactions.filter(t => {
       const date = parseLocalDate(t.date)
       return date.getMonth() === currentMonth &&
              date.getFullYear() === currentYear &&
-             isExpense(t)
+             isRealExpense(t)
     })
 
     // Group by destination (category)
@@ -183,9 +203,6 @@ export const useDashboardAnalytics = () => {
 
     monthTransactions.forEach(t => {
       const category = t.destination || 'Sem categoria'
-      // Exclude unwanted categories
-      if (EXCLUDED_CATEGORIES.includes(category.toLowerCase())) return
-      if (EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase())) return
       const existing = categoryMap.get(category) || { total: 0, count: 0 }
       categoryMap.set(category, {
         total: existing.total + Math.abs(t.amount),
@@ -220,8 +237,7 @@ export const useDashboardAnalytics = () => {
         const date = parseLocalDate(t.date)
         return date.getMonth() === currentMonth &&
                date.getFullYear() === currentYear &&
-               isExpense(t) &&
-               !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()) && !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase())
+               isRealExpense(t)
       })
       .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
   }
@@ -256,7 +272,7 @@ export const useDashboardAnalytics = () => {
     })
 
     const previousMonthExpenses = previousMonthTransactions
-      .filter(t => isExpense(t))
+      .filter(t => isRealExpense(t))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
     // Alert: Spending above previous month
