@@ -83,6 +83,16 @@
               <span class="num">{{ monthlyStats.transactionCount }} transações</span>
             </div>
 
+            <!-- Parcela futura entra em "saídas" como se já tivesse acontecido.
+                 Enquanto for parte do total, o mês precisa dizer quanto dele
+                 ainda não saiu da conta. -->
+            <p v-if="projectedShare > 0 && !isMonthEmpty" class="text-meta text-text-3">
+              <span class="maskable num">{{ formatCurrency(projectedShare) }}</span>
+              são parcelas ainda a vencer;
+              <span class="maskable num">{{ formatCurrency(monthlyStats.expenses - projectedShare) }}</span>
+              já saíram
+            </p>
+
             <!-- Consumo da receita -->
             <div class="mt-3 flex items-center gap-[10px] max-sm:flex-col max-sm:items-stretch">
               <div class="flex-1 h-2 rounded-full bg-rule overflow-hidden flex">
@@ -245,7 +255,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { currentMonthKey, monthIndexOfKey, monthKeyOf } from '~/shared/dates'
-import { categoryNameOf, UNCATEGORIZED } from '~/shared/expenseRules'
+import { categoryNameOf, UNCATEGORIZED, isRealExpense } from '~/shared/expenseRules'
 import { inkScale } from '~/shared/inkScale'
 import type { Transaction } from '~/types/transaction'
 
@@ -288,6 +298,13 @@ const isMonthEmpty = computed(() =>
   ).length === 0
 )
 const projectedOnlyTotal = computed(() => (isMonthEmpty.value ? monthlyStats.value.expenses : 0))
+
+/** How much of the month's "saídas" is a forecast rather than money already spent. */
+const projectedShare = computed(() =>
+  filteredTransactions.value
+    .filter(t => monthKeyOf(t.date) === selectedMonth.value && t.projected && isRealExpense(t))
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+)
 
 /**
  * "R$ 1.163" — thin space after the currency so the serif doesn't crowd, and an
