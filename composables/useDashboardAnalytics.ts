@@ -444,35 +444,58 @@ export const useDashboardAnalytics = () => {
     dueYear: number
   }
 
-  const INVOICE_CLOSING_DAY = 1
+  /**
+   * The card closes on the LAST day of the month and is due on the 8th of the
+   * next one.
+   *
+   * Both ends come from the card itself: the bank reports "melhor dia de compra
+   * = 01", and the best purchase day is by definition the day after closing, so
+   * closing is the last day of the month. The due day is visible in the data —
+   * seven consecutive `PAGAMENTO DEBITO AUTOMATICO` rows land on the 8th/9th.
+   *
+   * So the cycle is simply the calendar month: purchases from 01/07 to 31/07
+   * close on 31/07 and are paid on 08/08.
+   */
   const INVOICE_DUE_DAY = 8
 
   const getCreditCardInvoice = (
     transactions: Transaction[],
     options?: {
       cardOrigin?: string
-      closingDay?: number
+      /** Day the invoice closes; 'last' (default) means the last day of the month. */
+      closingDay?: number | 'last'
       dueDay?: number
       referenceDate?: Date
     }
   ): CreditCardInvoice => {
     const cardOrigin = options?.cardOrigin ?? 'Credit Card Gabriel'
-    const closingDay = options?.closingDay ?? INVOICE_CLOSING_DAY
+    const closingDay = options?.closingDay ?? 'last'
     const dueDay = options?.dueDay ?? INVOICE_DUE_DAY
     const today = options?.referenceDate ?? new Date()
 
-    // The open cycle is the one whose closing date is still ahead of us.
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const lastDayOf = (year: number, month: number) => new Date(year, month + 1, 0).getDate()
+
+    // The open cycle is the one whose closing date has not passed yet. On the
+    // closing day itself the cycle is still open — that is the case that broke:
+    // on 31/07 the old code jumped to the invoice closing in August, which held
+    // nothing but projected installments.
     let closeYear = today.getFullYear()
     let closeMonth = today.getMonth()
-    if (today.getDate() > closingDay) {
+    const closeDayIn = (year: number, month: number) =>
+      closingDay === 'last' ? lastDayOf(year, month) : Math.min(closingDay, lastDayOf(year, month))
+
+    if (today.getDate() > closeDayIn(closeYear, closeMonth)) {
       closeMonth += 1
       if (closeMonth > 11) { closeMonth = 0; closeYear += 1 }
     }
 
-    const pad = (n: number) => String(n).padStart(2, '0')
-    const closingDate = `${closeYear}-${pad(closeMonth + 1)}-${pad(closingDay)}`
-    const openedAfter = new Date(closeYear, closeMonth - 1, closingDay)
-    const openingDate = `${openedAfter.getFullYear()}-${pad(openedAfter.getMonth() + 1)}-${pad(openedAfter.getDate())}`
+    const closingDate = `${closeYear}-${pad(closeMonth + 1)}-${pad(closeDayIn(closeYear, closeMonth))}`
+
+    // The cycle opens the day after the previous one closed.
+    const prevMonth = closeMonth === 0 ? 11 : closeMonth - 1
+    const prevYear = closeMonth === 0 ? closeYear - 1 : closeYear
+    const openingDate = `${prevYear}-${pad(prevMonth + 1)}-${pad(closeDayIn(prevYear, prevMonth))}`
 
     const items = transactions
       .filter(t => (t.origin || '') === cardOrigin)
@@ -486,8 +509,8 @@ export const useDashboardAnalytics = () => {
       .filter(t => t.projected)
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
-    // Due in the same month the cycle closes, on the due day.
-    const dueDate = new Date(closeYear, closeMonth, dueDay)
+    // Paid on the due day of the month AFTER the cycle closes.
+    const dueDate = new Date(closeYear, closeMonth + 1, dueDay)
 
     return {
       total,
