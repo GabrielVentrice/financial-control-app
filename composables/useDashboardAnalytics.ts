@@ -57,6 +57,20 @@ export interface SmartInsight {
   priority: number // 1-5, higher = more important
 }
 
+export interface CashFlowMonth {
+  key: string
+  income: number
+  expenses: number
+  net: number
+}
+
+/** The single conclusion shown as "Sinal do mês" on the dashboard. */
+export interface MonthSignal {
+  positive: boolean
+  title: string
+  detail: string
+}
+
 /**
  * Dashboard analytics.
  *
@@ -299,6 +313,104 @@ export const useDashboardAnalytics = () => {
     return insights.sort((a, b) => b.priority - a.priority)
   }
 
+  /**
+   * Paired income/expense series for the chart, ending on the reference month.
+   * The axis top is a fixed R$ 18k rounded up to the next multiple of 6k when a
+   * month overflows it, so the bars stay comparable between months instead of
+   * rescaling on every navigation.
+   */
+  const getCashFlow = (
+    transactions: Transaction[],
+    refMonth: string = currentMonthKey(),
+    months: number = 6
+  ): { series: CashFlowMonth[]; axisTop: number } => {
+    const series = Array.from({ length: months }, (_, i) => {
+      const key = addMonthsToKey(refMonth, i - (months - 1))
+      const { income, expenses } = getMonthStats(transactions, key)
+      return { key, income, expenses, net: income - expenses }
+    })
+
+    const peak = Math.max(0, ...series.flatMap(m => [m.income, m.expenses]))
+    const STEP = 6000
+    const axisTop = Math.max(18000, Math.ceil(peak / STEP) * STEP)
+
+    return { series, axisTop }
+  }
+
+  /**
+   * The one conclusion the month is telling you — never a list.
+   *
+   * Ordered by what would change a decision: a hole in the month first, then a
+   * sustained direction, then position against the recent average. Every branch
+   * carries the numbers that justify it, because "you're spending a lot" without
+   * a figure is not actionable.
+   */
+  const getMonthSignal = (
+    transactions: Transaction[],
+    refMonth: string = currentMonthKey()
+  ): MonthSignal | null => {
+    const stats = getCurrentMonthStats(transactions, refMonth)
+    if (stats.transactionCount === 0) return null
+
+    const fmt = (v: number) => `R$ ${Math.round(v).toLocaleString('pt-BR')}`
+
+    if (stats.balance < 0) {
+      return {
+        positive: false,
+        title: 'Saídas maiores que entradas',
+        detail: `Faltam ${fmt(Math.abs(stats.balance))} para fechar o mês no zero.`,
+      }
+    }
+
+    // Sustained direction: daily average this quarter vs. the previous one.
+    const quarterAvg = (offset: number) => {
+      const totals = [0, 1, 2].map(i => {
+        const key = addMonthsToKey(refMonth, offset - i)
+        return { spent: getMonthStats(transactions, key).expenses, days: daysInMonthKey(key) }
+      })
+      const spent = totals.reduce((s, t) => s + t.spent, 0)
+      const days = totals.reduce((s, t) => s + t.days, 0)
+      return days > 0 ? spent / days : 0
+    }
+
+    const thisQuarter = quarterAvg(0)
+    const lastQuarter = quarterAvg(-3)
+
+    if (lastQuarter > 0 && thisQuarter > 0) {
+      const delta = (thisQuarter - lastQuarter) / lastQuarter
+      if (delta <= -0.08) {
+        return {
+          positive: true,
+          title: 'Gasto em queda no trimestre',
+          detail: `Média de ${fmt(thisQuarter)}/dia, contra ${fmt(lastQuarter)}/dia no trimestre anterior.`,
+        }
+      }
+      if (delta >= 0.08) {
+        return {
+          positive: false,
+          title: 'Gasto em alta no trimestre',
+          detail: `Média de ${fmt(thisQuarter)}/dia, contra ${fmt(lastQuarter)}/dia no trimestre anterior.`,
+        }
+      }
+    }
+
+    const vsAvg = stats.comparison.expensesVsAvg
+    if (Math.abs(vsAvg) >= 10) {
+      const above = vsAvg > 0
+      return {
+        positive: !above,
+        title: above ? 'Acima da média dos 3 meses' : 'Abaixo da média dos 3 meses',
+        detail: `${fmt(stats.expenses)} gastos, ${Math.abs(vsAvg).toFixed(0)}% ${above ? 'acima' : 'abaixo'} do normal recente.`,
+      }
+    }
+
+    return {
+      positive: true,
+      title: 'Mês dentro do padrão',
+      detail: `${fmt(stats.expenses)} gastos, em linha com a média dos últimos 3 meses.`,
+    }
+  }
+
   // Credit card invoice (fatura) for a billing cycle that closes on the last day
   // of the month: a purchase belongs to the invoice of month(date + 1 day).
   // So a purchase on 31/05 belongs to June's invoice, paid in July.
@@ -372,6 +484,8 @@ export const useDashboardAnalytics = () => {
     getUpcomingExpenses,
     getHistoricalExpenses,
     getSmartInsights,
+    getCashFlow,
+    getMonthSignal,
     getCreditCardInvoice,
   }
 }

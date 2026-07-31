@@ -1,332 +1,334 @@
 <template>
   <Sidemenu>
-    <div class="bg-background-page min-h-screen">
-      <main class="max-w-[1180px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
-        <!-- Loading State -->
-        <LoadingState v-if="loading" message="Carregando dados financeiros..." />
+    <main class="min-h-screen max-w-app px-30 pt-26 pb-34 max-lg:px-5 flex flex-col gap-26">
+      <!-- Controles do período. Ficam discretos de propósito: o número do hero é
+           o que manda na tela. -->
+      <div class="flex flex-wrap items-center justify-end gap-3">
+        <button
+          type="button"
+          @click="togglePrivacy"
+          :aria-pressed="isPrivate"
+          class="px-2.5 py-1.5 rounded-control border border-[color:var(--border)] bg-surface-1 text-body-sm font-semibold text-ink hover:bg-surface-2 transition-colors duration-[120ms] ease-ease"
+        >{{ isPrivate ? 'mostrar valores' : 'ocultar valores' }}</button>
+        <MonthSelector v-model="selectedMonth" />
+        <SyncButton />
+      </div>
 
-        <!-- Error State -->
-        <ErrorState v-else-if="error" :message="error" />
+      <!-- Erro de sincronização: faixa acima do hero, nunca modal nem toast -->
+      <div
+        v-if="syncError"
+        role="alert"
+        class="px-4 py-3 rounded-control border border-[color:var(--border)] bg-warn-wash text-body text-ink"
+      >
+        Não foi possível sincronizar: {{ syncError }}.
+        <button type="button" @click="syncNow()" class="font-semibold text-accent hover:text-pos-text">
+          tentar novamente →
+        </button>
+      </div>
 
-        <!-- Dashboard Content -->
-        <template v-else>
-          <!-- 1. Header (in-column) -->
-          <header class="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
-            <div class="min-w-0">
-              <p class="text-xs font-medium text-text-muted uppercase tracking-wider">Dashboard</p>
-              <h1 class="text-2xl font-semibold text-text-primary tracking-tight mt-0.5">Visão geral</h1>
+      <!-- Mês sem nada sincronizado: as parcelas projetadas não são gasto realizado -->
+      <div
+        v-else-if="isMonthEmpty"
+        class="px-4 py-3 rounded-control border border-[color:var(--border)] bg-warn-wash text-body text-ink"
+      >
+        Nenhum lançamento sincronizado em {{ selectedMonthLong }}.
+        <template v-if="projectedOnlyTotal > 0">
+          Os {{ formatCurrency(projectedOnlyTotal) }} abaixo são parcelas projetadas, não gastos realizados.
+        </template>
+        <button type="button" @click="syncNow()" class="font-semibold text-accent hover:text-pos-text">
+          sincronizar →
+        </button>
+      </div>
+
+      <ErrorState v-if="error" :message="error" />
+
+      <template v-else>
+        <!-- ═══ HERO ═══ -->
+        <section class="grid grid-cols-[1.35fr_1fr] max-xl:grid-cols-2 max-lg:grid-cols-1 gap-30 max-lg:gap-18 pb-26 border-b border-[color:var(--border)]">
+          <!-- Saldo -->
+          <div class="flex flex-col gap-[10px]">
+            <p class="om-rise text-label uppercase text-text-3" :style="om(40, 520)">
+              Saldo disponível hoje
+            </p>
+
+            <div class="flex items-baseline gap-[14px] flex-wrap">
+              <span
+                v-if="loading"
+                class="block w-[300px] h-[74px] rounded-control bg-rule"
+                aria-hidden="true"
+              ></span>
+              <span
+                v-else
+                class="om-rise maskable font-display text-hero max-xl:text-[64px] max-lg:text-[52px] text-ink num"
+                :style="om(90, 760)"
+              >{{ heroValue }}</span>
+
+              <span
+                v-if="!loading && balanceTrend"
+                class="om-rise inline-flex items-center gap-1 px-2.5 py-1 rounded-control text-[12.5px] font-bold"
+                :class="balanceTrend.positive ? 'bg-accent-wash text-pos-text' : 'bg-neg-wash text-neg-text'"
+                :style="om(320, 520)"
+              >{{ balanceTrend.label }}</span>
             </div>
 
-            <div class="sm:ml-auto flex items-start gap-3">
-              <MonthSelector v-model="selectedMonth" />
-              <SyncButton />
+            <div class="om-rise flex flex-wrap gap-22 mt-1 text-body text-text-2" :style="om(240, 560)">
+              <span>
+                <b class="maskable font-semibold text-ink num">{{ formatCurrency(monthlyStats.income) }}</b> entradas
+              </span>
+              <span class="text-rule-strong" aria-hidden="true">/</span>
+              <span>
+                <b class="maskable font-semibold text-ink num">{{ formatCurrency(monthlyStats.expenses) }}</b> saídas
+              </span>
+              <span class="text-rule-strong" aria-hidden="true">/</span>
+              <span class="num">{{ monthlyStats.transactionCount }} transações</span>
             </div>
-          </header>
 
-          <!-- Empty month: the sheet may simply not be synced yet -->
-          <div
-            v-if="isMonthEmpty"
-            class="mb-6 bg-background-card border border-amber-200 rounded-xl p-5 flex items-start gap-3"
-          >
-            <span class="w-2 h-2 rounded-full flex-shrink-0 mt-1.5 bg-amber-500" aria-hidden="true"></span>
-            <div class="min-w-0">
-              <p class="text-[15px] font-semibold text-text-primary">
-                Nenhum lançamento sincronizado em {{ selectedMonthLong }}
-              </p>
-              <p class="text-[13px] text-text-secondary mt-0.5">
-                <template v-if="projectedOnlyTotal > 0">
-                  Os {{ formatCurrency(projectedOnlyTotal) }} abaixo são
-                  <strong class="font-medium">parcelas projetadas</strong>, não gastos realizados.
-                </template>
-                Os dados vêm do Postgres, que espelha a planilha — clique em Atualizar para sincronizar.
-              </p>
+            <!-- Consumo da receita -->
+            <div class="mt-3 flex items-center gap-[10px] max-sm:flex-col max-sm:items-stretch">
+              <div class="flex-1 h-2 rounded-full bg-rule overflow-hidden flex">
+                <div
+                  class="om-grow-x h-full rounded-full"
+                  :style="{ width: `${spendBar.width}%`, background: spendBar.color, ...om(400, 760) }"
+                ></div>
+              </div>
+              <span class="text-meta text-text-2 whitespace-nowrap">{{ spendBar.legend }}</span>
             </div>
           </div>
 
-          <div class="space-y-6">
-            <!-- 2. Hero band: Saldo Disponível + Fatura do cartão -->
-            <section class="grid grid-cols-1 md:grid-cols-[1.3fr_0.9fr] gap-4">
-              <!-- Saldo Disponível (hero) -->
-              <div class="bg-background-card border border-border-subtle rounded-xl">
-                <LightStatCard
-                  label="Saldo Disponível"
-                  :value="monthlyStats.balance"
-                  format="currency"
-                  :value-color="monthlyStats.balance >= 0 ? 'positive' : 'negative'"
-                  size="xl"
-                  :trend="monthlyStats.trend.balance"
-                  :secondary-stat="{
-                    value: `${formatCurrency(monthlyStats.income)} entradas`,
-                    label: `${formatCurrency(monthlyStats.expenses)} saídas`
-                  }"
-                />
-              </div>
-
-              <!-- Fatura do cartão -->
-              <div class="bg-background-card border border-red-200 rounded-xl px-6 py-6 flex flex-col">
-                <p class="text-[13px] font-medium text-text-muted uppercase tracking-wider">
-                  Fatura do cartão · {{ invoiceOwner }}
-                </p>
-                <p class="text-kpi-lg text-negative mt-2 whitespace-nowrap">
+          <!-- Fatura + sinal -->
+          <div class="flex flex-col gap-[14px] pl-30 border-l border-[color:var(--border)] max-lg:pl-0 max-lg:border-l-0 max-lg:pt-18 max-lg:border-t">
+            <div class="om-rise flex flex-col gap-1.5" :style="om(300, 620)">
+              <p class="text-label uppercase text-text-3">Fatura do cartão · {{ invoiceOwner }}</p>
+              <div class="flex items-baseline justify-between gap-2.5">
+                <span class="maskable font-display text-hero-2 text-ink num">
                   {{ formatCurrency(creditCardInvoice.total, { decimals: true }) }}
-                </p>
-                <p class="text-[13px] text-text-secondary mt-1">
-                  {{ creditCardInvoice.count }} {{ creditCardInvoice.count === 1 ? 'lançamento' : 'lançamentos' }}
-                  · vence em {{ dueMonthName }}
-                </p>
+                </span>
                 <NuxtLink
                   :to="{ path: '/transactions', query: { origin: invoiceCardOrigin } }"
-                  class="mt-auto pt-4 inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline self-start"
-                >
-                  ver fatura →
-                </NuxtLink>
+                  class="text-body-sm font-semibold text-accent hover:text-pos-text whitespace-nowrap"
+                >ver fatura →</NuxtLink>
               </div>
-            </section>
+              <p class="text-body-sm text-text-2">
+                {{ creditCardInvoice.count }}
+                {{ creditCardInvoice.count === 1 ? 'lançamento' : 'lançamentos' }}
+                · vence em {{ dueLabel }}
+              </p>
+            </div>
 
-            <!-- 3. Insights -->
-            <section v-if="smartInsights.length > 0">
-              <p class="text-xs font-medium text-text-muted uppercase tracking-wider mb-3">Insights de {{ selectedMonthLong }}</p>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div
-                  v-for="(insight, index) in smartInsights.slice(0, 2)"
-                  :key="index"
-                  class="bg-background-card border border-border-subtle rounded-xl p-5 flex items-start gap-3"
-                >
-                  <span
-                    class="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
-                    :class="insightDotClass[insight.type]"
-                    aria-hidden="true"
-                  ></span>
-                  <div class="min-w-0">
-                    <p class="text-[15px] font-semibold text-text-primary">{{ insight.title }}</p>
-                    <p class="text-[13px] text-text-secondary mt-0.5">
-                      {{ insight.message }}
-                      <span v-if="insight.value !== undefined"> · {{ formatCurrency(insight.value) }}</span>
-                    </p>
-                  </div>
+            <div class="h-px bg-[color:var(--border)]"></div>
+
+            <div v-if="monthSignal" class="om-rise flex flex-col gap-2" :style="om(420, 620)">
+              <p class="text-label uppercase text-text-3">Sinal do mês</p>
+              <div class="flex items-start gap-[10px]">
+                <span
+                  class="w-[7px] h-[7px] mt-1.5 flex-none rounded-full"
+                  :class="monthSignal.positive ? 'bg-accent' : 'bg-neg'"
+                  aria-hidden="true"
+                ></span>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-[14.5px] font-semibold text-ink">{{ monthSignal.title }}</span>
+                  <span class="maskable text-body-sm text-text-2 [text-wrap:pretty]">{{ monthSignal.detail }}</span>
                 </div>
               </div>
-            </section>
-
-            <!-- 4. KPIs: Gastado este mês + Receitas -->
-            <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="bg-background-card border border-border-subtle rounded-xl">
-                <LightStatCard
-                  :label="`Gastado em ${selectedMonthLong}`"
-                  :value="monthlyStats.expenses"
-                  format="currency"
-                  value-color="negative"
-                  size="lg"
-                  :trend="monthlyStats.trend.expenses"
-                  :invert-trend-colors="true"
-                  :secondary-stat="{
-                    value: `${formatCurrency(monthlyStats.dailyAverage)}/dia`,
-                    label: `${monthlyStats.transactionCount} transações`
-                  }"
-                />
-              </div>
-
-              <div class="bg-background-card border border-border-subtle rounded-xl">
-                <LightStatCard
-                  label="Receitas"
-                  :value="monthlyStats.income"
-                  format="currency"
-                  value-color="positive"
-                  size="lg"
-                  :trend="monthlyStats.trend.income"
-                  :secondary-stat="{ value: '', label: 'entradas do mês' }"
-                />
-              </div>
-            </section>
-
-            <!-- 5. Fluxo de Caixa -->
-            <section>
-              <DashboardCashFlowChart :transactions="filteredTransactions" />
-            </section>
-
-            <!-- 6. Bottom band: Categorias + Todos os Gastos -->
-            <section class="grid grid-cols-1 md:grid-cols-[1fr_1.1fr] gap-6 items-start">
-              <!-- Categorias -->
-              <div class="bg-background-card border border-border-subtle rounded-xl p-5">
-                <div class="flex items-center justify-between mb-4">
-                  <h2 class="text-xs font-medium text-text-muted uppercase tracking-wider">Categorias</h2>
-                  <span class="text-[11px] text-text-muted">{{ allCategories.length }}</span>
-                </div>
-
-                <div v-if="allCategories.length > 0" class="space-y-1 max-h-[480px] overflow-y-auto pr-1">
-                  <!-- Todas -->
-                  <button
-                    type="button"
-                    @click="selectedCategory = null"
-                    class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-colors duration-150"
-                    :class="selectedCategory === null ? 'bg-background-section' : 'hover:bg-background-section/60'"
-                  >
-                    <span class="text-[14px] font-medium text-text-primary">Todas</span>
-                    <span class="text-[14px] font-semibold text-text-primary">{{ formatCurrency(totalExpenses) }}</span>
-                  </button>
-
-                  <!-- Category items -->
-                  <button
-                    v-for="(category, index) in allCategories"
-                    :key="category.name"
-                    type="button"
-                    @click="selectedCategory = category.name"
-                    class="w-full px-3 py-2.5 rounded-lg text-left transition-colors duration-150"
-                    :class="[
-                      selectedCategory === category.name ? 'bg-background-section' : 'hover:bg-background-section/60',
-                      category.name === 'Sem categoria' ? 'ring-1 ring-amber-200' : ''
-                    ]"
-                  >
-                    <div class="flex items-center justify-between gap-3">
-                      <div class="flex items-center gap-2 min-w-0">
-                        <span
-                          class="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                          :style="{ backgroundColor: swatchColor(category.name, index) }"
-                          aria-hidden="true"
-                        ></span>
-                        <span class="text-[14px] text-text-primary truncate">{{ category.name }}</span>
-                        <span class="text-[12px] text-text-muted flex-shrink-0">{{ category.count }}</span>
-                      </div>
-                      <span class="text-[14px] font-semibold text-negative whitespace-nowrap">
-                        {{ formatCurrency(category.total) }}
-                      </span>
-                    </div>
-                    <!-- Proportion bar -->
-                    <div class="mt-2 h-1.5 bg-background-hover rounded-full overflow-hidden">
-                      <div
-                        class="h-full rounded-full transition-all duration-500 ease-out"
-                        :style="{
-                          width: `${maxCategoryTotal > 0 ? (category.total / maxCategoryTotal) * 100 : 0}%`,
-                          backgroundColor: swatchColor(category.name, index)
-                        }"
-                      ></div>
-                    </div>
-                  </button>
-                </div>
-                <div v-else class="p-8 text-center">
-                  <p class="text-[13px] text-text-secondary">Nenhum gasto registrado</p>
-                </div>
-              </div>
-
-              <!-- Todos os Gastos -->
-              <div class="bg-background-card border border-border-subtle rounded-xl p-5">
-                <div class="flex items-center justify-between mb-3">
-                  <h2 class="text-xs font-medium text-text-muted uppercase tracking-wider">
-                    {{ selectedCategory ? `Gastos · ${selectedCategory}` : 'Todos os Gastos' }}
-                  </h2>
-                  <span class="text-[11px] text-text-muted">
-                    {{ displayedExpenses.length }} {{ displayedExpenses.length === 1 ? 'lançamento' : 'lançamentos' }}
-                  </span>
-                </div>
-
-                <!-- Search -->
-                <div class="relative mb-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  <input
-                    v-model="transactionQuery"
-                    type="search"
-                    aria-label="Buscar transações"
-                    placeholder="buscar por descrição, valor…"
-                    class="w-full h-11 pl-9 pr-3 rounded-lg bg-background-section border border-border-subtle text-[14px] text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-1"
-                  />
-                </div>
-
-                <div v-if="displayedExpenses.length > 0" class="max-h-[420px] overflow-y-auto -mx-1 px-1">
-                  <div
-                    v-for="expense in displayedExpenses"
-                    :key="expense.transactionId"
-                    class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-background-section transition-colors duration-150"
-                    :title="expense.description"
-                  >
-                    <span class="w-2 h-2 rounded-full bg-negative/50 flex-shrink-0" aria-hidden="true"></span>
-                    <div class="min-w-0 flex-1">
-                      <p class="text-[15px] font-medium text-text-primary truncate">{{ expense.description }}</p>
-                      <p class="text-[13px] text-text-muted mt-0.5">
-                        {{ formatDate(expense.date) }} · {{ expense.destination || 'Sem categoria' }}
-                      </p>
-                    </div>
-                    <span class="text-[15px] font-semibold text-negative whitespace-nowrap">
-                      – {{ formatCurrency(Math.abs(expense.amount)) }}
-                    </span>
-                    <span class="text-text-muted/60 flex-shrink-0" aria-hidden="true">›</span>
-                  </div>
-                </div>
-                <div v-else class="p-8 text-center">
-                  <p class="text-[13px] text-text-secondary">Nenhum gasto encontrado</p>
-                </div>
-
-                <NuxtLink
-                  to="/transactions"
-                  class="mt-3 inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline"
-                >
-                  ver todos →
-                </NuxtLink>
-              </div>
-            </section>
+            </div>
           </div>
-        </template>
-      </main>
-    </div>
+        </section>
+
+        <!-- ═══ FLUXO DE CAIXA ═══ -->
+        <DashboardCashFlowChart :series="cashFlow.series" :axis-top="cashFlow.axisTop" />
+
+        <!-- ═══ BASE ═══ -->
+        <section class="grid grid-cols-[0.85fr_1.15fr] max-lg:grid-cols-1 gap-30 max-lg:gap-26 pt-26 border-t border-[color:var(--border)]">
+          <!-- Para onde foi -->
+          <div class="flex flex-col gap-[14px]">
+            <div class="om-rise flex items-baseline justify-between gap-3" :style="om(660, 560)">
+              <h2 class="font-display text-section text-ink">Para onde foi</h2>
+              <span class="text-meta text-text-3">
+                {{ allCategories.length }} {{ allCategories.length === 1 ? 'categoria' : 'categorias' }}
+              </span>
+            </div>
+
+            <p v-if="allCategories.length === 0" class="text-body text-text-3">
+              Nenhum gasto neste mês.
+            </p>
+
+            <ul v-else class="flex flex-col">
+              <li v-for="(cat, i) in displayedCategories" :key="cat.name">
+                <NuxtLink
+                  :to="{ path: '/transactions', query: { destination: cat.name } }"
+                  class="om-rise flex flex-col gap-[7px] py-[11px] border-b border-rule hover:bg-surface-2 transition-colors duration-[120ms] ease-ease"
+                  :style="om(700 + i * 45, 560)"
+                >
+                  <div class="flex items-baseline justify-between gap-2.5">
+                    <span class="text-[14.5px] font-medium text-ink truncate">{{ cat.name }}</span>
+                    <span class="flex items-baseline gap-2.5 flex-none">
+                      <span class="text-micro text-text-4 num">{{ cat.count }}×</span>
+                      <span class="maskable text-[14.5px] font-semibold text-ink num">
+                        {{ formatCurrency(cat.total) }}
+                      </span>
+                    </span>
+                  </div>
+                  <div class="h-1 rounded-full bg-rule overflow-hidden">
+                    <div
+                      class="om-grow-x h-full rounded-full"
+                      :style="{
+                        width: `${(cat.total / maxCategoryTotal) * 100}%`,
+                        background: inkScale(i),
+                        ...om(780 + i * 45, 760)
+                      }"
+                    ></div>
+                  </div>
+                </NuxtLink>
+              </li>
+
+              <li v-if="collapsedCategories.count > 0" class="flex items-baseline justify-between gap-2.5 py-[11px] border-b border-rule">
+                <span class="text-[14.5px] text-text-3">outras {{ collapsedCategories.count }}</span>
+                <span class="maskable text-[14.5px] font-semibold text-text-3 num">
+                  {{ formatCurrency(collapsedCategories.total) }}
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Últimos lançamentos -->
+          <div class="flex flex-col gap-[14px]">
+            <div class="om-rise flex items-center justify-between gap-[16px] max-sm:flex-col max-sm:items-stretch" :style="om(740, 560)">
+              <h2 class="font-display text-section text-ink whitespace-nowrap">Últimos lançamentos</h2>
+              <input
+                v-model="txQueryInput"
+                type="search"
+                aria-label="Buscar lançamentos"
+                placeholder="buscar descrição ou valor…"
+                class="flex-1 max-w-[260px] max-sm:max-w-none px-3 py-2 rounded-control bg-surface-2 border border-[color:var(--border)] text-body text-ink placeholder:text-text-4"
+              />
+            </div>
+
+            <p v-if="displayedTransactions.length === 0" class="text-body text-text-3">
+              {{ txQuery ? 'Nenhum lançamento encontrado.' : 'Nenhum lançamento neste mês.' }}
+            </p>
+
+            <ul v-else class="flex flex-col">
+              <li
+                v-for="(t, i) in displayedTransactions"
+                :key="t.transactionId"
+                class="om-rise flex items-center gap-[16px] py-[11px] pr-1 border-b border-rule hover:bg-surface-2 transition-colors duration-[120ms] ease-ease"
+                :style="om(780 + i * 45, 560)"
+              >
+                <span class="w-[42px] flex-none text-micro font-semibold text-text-4 num">
+                  {{ shortDate(t.date) }}
+                </span>
+                <span class="flex-1 min-w-0 flex flex-col gap-px">
+                  <span class="text-item text-ink truncate">{{ t.description }}</span>
+                  <span
+                    class="text-micro"
+                    :class="isUncategorized(t) ? 'text-warn' : 'text-text-3'"
+                  >{{ categoryNameOf(t) }}</span>
+                </span>
+                <span class="maskable text-value text-neg-text num whitespace-nowrap">
+                  − {{ formatCurrency(Math.abs(t.amount)) }}
+                </span>
+              </li>
+            </ul>
+
+            <NuxtLink
+              v-if="monthExpenses.length > 0"
+              to="/transactions"
+              class="self-start text-body font-semibold text-accent hover:text-pos-text"
+            >ver todos os {{ monthExpenses.length }} lançamentos →</NuxtLink>
+          </div>
+        </section>
+      </template>
+    </main>
   </Sidemenu>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import type { SmartInsight } from '~/composables/useDashboardAnalytics'
+import { computed, ref, watch } from 'vue'
 import { currentMonthKey, monthIndexOfKey, monthKeyOf } from '~/shared/dates'
+import { categoryNameOf, UNCATEGORIZED } from '~/shared/expenseRules'
+import { inkScale } from '~/shared/inkScale'
+import type { Transaction } from '~/types/transaction'
 
 const { transactions, loading, error } = useTransactions()
-
 const { selectedPerson } = usePersonFilter()
+const { syncError, syncNow } = useSync()
+const { isPrivate, toggle: togglePrivacy } = usePrivacyMode()
+const { om } = useEntryMotion()
+const { formatCurrency, formatNumber, formatMonthName } = useFormatters()
 
 const {
   getCurrentMonthStats,
   getAllCategories,
   getMonthExpenses,
-  getSmartInsights,
-  getCreditCardInvoice
+  getCashFlow,
+  getMonthSignal,
+  getCreditCardInvoice,
 } = useDashboardAnalytics()
-
-const { formatCurrency, formatMonthName, formatDate } = useFormatters()
 
 const selectedMonth = ref(currentMonthKey())
 const selectedMonthLong = computed(() => formatMonthName(monthIndexOfKey(selectedMonth.value)))
 
-const selectedCategory = ref<string | null>(null)
-const transactionQuery = ref('')
-
-const filteredTransactions = computed(() => {
-  let filtered = transactions.value
-
-  if (selectedPerson.value !== 'Ambos') {
-    filtered = filtered.filter(transaction => transaction.person === selectedPerson.value)
-  }
-
-  return filtered
-})
+const filteredTransactions = computed(() =>
+  selectedPerson.value === 'Ambos'
+    ? transactions.value
+    : transactions.value.filter(t => t.person === selectedPerson.value)
+)
 
 const monthlyStats = computed(() => getCurrentMonthStats(filteredTransactions.value, selectedMonth.value))
 const allCategories = computed(() => getAllCategories(filteredTransactions.value, selectedMonth.value))
-const smartInsights = computed(() => getSmartInsights(filteredTransactions.value, selectedMonth.value))
+const monthExpenses = computed(() => getMonthExpenses(filteredTransactions.value, selectedMonth.value))
+const cashFlow = computed(() => getCashFlow(filteredTransactions.value, selectedMonth.value))
+const monthSignal = computed(() => getMonthSignal(filteredTransactions.value, selectedMonth.value))
 
-// A month can look busy while holding nothing but projected installments —
-// that is exactly what an un-synced month looks like, so treat it as empty and
-// say so, instead of presenting a forecast as if it had already happened.
-const realMonthRows = computed(() =>
-  filteredTransactions.value.filter(t => monthKeyOf(t.date) === selectedMonth.value && !t.projected)
+// A month holding nothing but projected installments is an un-synced month, not
+// a month where you spent that much.
+const isMonthEmpty = computed(() =>
+  filteredTransactions.value.filter(
+    t => monthKeyOf(t.date) === selectedMonth.value && !t.projected
+  ).length === 0
 )
-const isMonthEmpty = computed(() => realMonthRows.value.length === 0)
 const projectedOnlyTotal = computed(() => (isMonthEmpty.value ? monthlyStats.value.expenses : 0))
 
-// Credit card invoice follows the billing cycle, not the calendar month, so it
-// isn't tied to the month selector. It does follow the person filter: with
-// "Ambos" there is no single card to show, so we fall back to Gabriel's.
+/**
+ * "R$ 1.163" — thin space after the currency so the serif doesn't crowd, and an
+ * explicit minus U+2212 (not a hyphen) when the month closed in the red.
+ */
+const heroValue = computed(() => {
+  const v = monthlyStats.value.balance
+  const digits = formatNumber(Math.abs(v))
+  return `${v < 0 ? '− ' : ''}R$ ${digits}`
+})
+
+/**
+ * The chip reads as the user experiences it: a balance that fell is bad news,
+ * regardless of the arithmetic sign of the delta.
+ */
+const balanceTrend = computed(() => {
+  const pct = monthlyStats.value.trend.balance
+  if (!isFinite(pct) || Math.round(Math.abs(pct) * 10) === 0) return null
+  const up = pct > 0
+  return {
+    positive: up,
+    label: `${up ? '▴' : '▾'} ${Math.abs(pct).toFixed(1).replace('.', ',')}%`,
+  }
+})
+
+/** Below 70% of income spent is healthy, 70–90% deserves attention, above is red. */
+const spendBar = computed(() => {
+  const { income, expenses } = monthlyStats.value
+  const pct = income > 0 ? (expenses / income) * 100 : 0
+  const color =
+    pct > 90 ? 'var(--neg-fill)' : pct >= 70 ? 'var(--warn)' : 'var(--accent)'
+
+  return {
+    width: Math.min(100, pct),
+    color,
+    legend: income > 0
+      ? `${Math.round(pct)}% da receita já gasta`
+      : 'sem receita registrada no mês',
+  }
+})
+
 const invoiceCardOrigin = computed(() =>
   selectedPerson.value === 'Juliana' ? 'Credit Card Juliana' : 'Credit Card Gabriel'
 )
@@ -334,45 +336,47 @@ const invoiceOwner = computed(() => (selectedPerson.value === 'Juliana' ? 'Julia
 const creditCardInvoice = computed(() =>
   getCreditCardInvoice(transactions.value, { cardOrigin: invoiceCardOrigin.value })
 )
-const dueMonthName = computed(() => formatMonthName(creditCardInvoice.value.dueMonth))
+const dueLabel = computed(() => formatMonthName(creditCardInvoice.value.dueMonth))
 
-const totalExpenses = computed(() => allCategories.value.reduce((sum, cat) => sum + cat.total, 0))
-const maxCategoryTotal = computed(() => allCategories.value.reduce((max, cat) => Math.max(max, cat.total), 0))
-
-const currentMonthExpenses = computed(() => getMonthExpenses(filteredTransactions.value, selectedMonth.value))
-
-const displayedExpenses = computed(() => {
-  let list = currentMonthExpenses.value
-
-  if (selectedCategory.value) {
-    list = list.filter(t => (t.destination || 'Sem categoria') === selectedCategory.value)
-  }
-
-  const q = transactionQuery.value.trim().toLowerCase()
-  if (q) {
-    list = list.filter(t => {
-      const desc = (t.description || '').toLowerCase()
-      const cat = (t.destination || 'Sem categoria').toLowerCase()
-      const amount = Math.abs(t.amount).toString()
-      const amountBr = formatCurrency(Math.abs(t.amount)).toLowerCase()
-      return desc.includes(q) || cat.includes(q) || amount.includes(q) || amountBr.includes(q)
-    })
-  }
-
-  return list
+// --- Categorias: as 8 maiores, o resto colapsa ---
+const TOP_CATEGORIES = 8
+const maxCategoryTotal = computed(() => Math.max(1, ...allCategories.value.map(c => c.total)))
+const displayedCategories = computed(() => allCategories.value.slice(0, TOP_CATEGORIES))
+const collapsedCategories = computed(() => {
+  const rest = allCategories.value.slice(TOP_CATEGORIES)
+  return { count: rest.length, total: rest.reduce((sum, c) => sum + c.total, 0) }
 })
 
-const insightDotClass: Record<SmartInsight['type'], string> = {
-  success: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  danger: 'bg-rose-500',
-  info: 'bg-blue-500'
-}
 
-// Category swatches: a small on-palette set, amber reserved for "Sem categoria".
-const SWATCH_PALETTE = ['#4F46E5', '#2563EB', '#059669', '#0891B2', '#7C3AED', '#DB2777', '#0D9488', '#CA8A04']
-const swatchColor = (name: string, index: number): string => {
-  if (name === 'Sem categoria') return '#D97706'
-  return SWATCH_PALETTE[index % SWATCH_PALETTE.length]
+// --- Lançamentos: busca com debounce de 200ms ---
+const TOP_TRANSACTIONS = 8
+const txQueryInput = ref('')
+const txQuery = ref('')
+let debounce: ReturnType<typeof setTimeout>
+
+watch(txQueryInput, value => {
+  clearTimeout(debounce)
+  debounce = setTimeout(() => { txQuery.value = value.trim().toLowerCase() }, 200)
+})
+
+const displayedTransactions = computed(() => {
+  const q = txQuery.value
+  const list = q
+    ? monthExpenses.value.filter(t =>
+        (t.description || '').toLowerCase().includes(q) ||
+        categoryNameOf(t).toLowerCase().includes(q) ||
+        String(Math.abs(t.amount)).includes(q) ||
+        formatCurrency(Math.abs(t.amount)).toLowerCase().includes(q)
+      )
+    : monthExpenses.value
+  return list.slice(0, TOP_TRANSACTIONS)
+})
+
+// The one splash of colour in the list: an uncategorized row is a pending action.
+const isUncategorized = (t: Transaction) => categoryNameOf(t) === UNCATEGORIZED
+
+const shortDate = (iso: string) => {
+  const [, m, d] = iso.split('-')
+  return `${d}/${m}`
 }
 </script>
