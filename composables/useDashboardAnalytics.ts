@@ -1,4 +1,19 @@
 import type { Transaction } from '~/types/transaction'
+import {
+  isIncome,
+  isRealExpense,
+  isExcludedCategory,
+  isExcludedDescription,
+  categoryNameOf,
+  expenseAmount,
+} from '~/shared/expenseRules'
+import {
+  monthKeyOf,
+  currentMonthKey,
+  addMonthsToKey,
+  daysInMonthKey,
+  parseLocalDate,
+} from '~/shared/dates'
 
 export interface CategorySummary {
   name: string
@@ -7,13 +22,6 @@ export interface CategorySummary {
   percentage: number
   trend?: number // Percentage change vs previous month
   avgLast3Months?: number
-}
-
-export interface Alert {
-  type: 'warning' | 'danger' | 'info' | 'success'
-  title: string
-  message: string
-  amount?: number
 }
 
 export interface MonthlyStats {
@@ -49,416 +57,245 @@ export interface SmartInsight {
   priority: number // 1-5, higher = more important
 }
 
+/**
+ * Dashboard analytics.
+ *
+ * Every function takes an optional `refMonth` ("YYYY-MM") so the dashboard can
+ * navigate between months instead of being pinned to today. Months are bucketed
+ * by string key, never by building a Date out of the ISO day — see
+ * shared/dates.ts for why. What counts as income/expense lives in
+ * shared/expenseRules.ts, shared with the categories and fixed-costs screens so
+ * the three can't drift apart again.
+ */
 export const useDashboardAnalytics = () => {
-  const EXCLUDED_CATEGORIES = ['adjustment']
-  const EXCLUDED_DESCRIPTIONS = ['pagamento debito automatico']
+  const inMonth = (t: Transaction, monthKey: string) => monthKeyOf(t.date) === monthKey
 
-  // Parse a "YYYY-MM-DD" date as LOCAL time. Using `new Date("2026-06-01")`
-  // parses as UTC midnight, which in a negative-offset timezone (e.g. UTC-3)
-  // rolls back to the previous day/month — so day-01 transactions (including
-  // salary) leaked into the previous month. Building the Date from explicit
-  // components keeps it on the intended calendar day.
-  const parseLocalDate = (dateStr: string): Date => {
-    const [y, m, d] = (dateStr || '').split('-').map(Number)
-    if (!y || !m || !d) return new Date(dateStr)
-    return new Date(y, m - 1, d)
-  }
-
-  // Helper function to check if transaction is income
-  const isIncome = (transaction: Transaction): boolean => {
-    return transaction.destination.toLowerCase().includes('bank account')
-  }
-
-  // Helper function to check if transaction is expense
-  const isExpense = (transaction: Transaction): boolean => {
-    const originLower = transaction.origin.toLowerCase()
-    return originLower.includes('bank account') || originLower.includes('credit card')
-  }
-
-  // A destination that is itself an account/card means the money just moved
-  // between accounts (credit-card payment, transfer) — not real spending. The
-  // categories page (pages/categories.vue) excludes these by destination, so
-  // the dashboard must do the same to stay consistent.
-  const isTransferDestination = (transaction: Transaction): boolean => {
-    const dest = (transaction.destination || '').toLowerCase()
-    return dest.includes('bank account') ||
-           dest.includes('credit card') ||
-           dest.includes('credit account')
-  }
-
-  // Single source of truth for "this is real spending": money left an
-  // account/card, the destination is a spending category (not a transfer), and
-  // it isn't an adjustment or automatic-debit bookkeeping row.
-  const isRealExpense = (transaction: Transaction): boolean =>
-    isExpense(transaction) &&
-    !isTransferDestination(transaction) &&
-    !EXCLUDED_CATEGORIES.includes((transaction.destination || '').toLowerCase()) &&
-    !EXCLUDED_DESCRIPTIONS.includes((transaction.description || '').toLowerCase())
-
-  // Get stats for a specific month
-  const getMonthStats = (transactions: Transaction[], monthOffset: number = 0) => {
+  /** Days to divide by for a daily average: the full month unless it's still running. */
+  const elapsedDaysIn = (monthKey: string): number => {
     const now = new Date()
-    const targetDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
-    const targetMonth = targetDate.getMonth()
-    const targetYear = targetDate.getFullYear()
+    if (monthKey === currentMonthKey(now)) return now.getDate()
+    return daysInMonthKey(monthKey)
+  }
 
-    const monthTransactions = transactions.filter(t => {
-      const date = parseLocalDate(t.date)
-      return date.getMonth() === targetMonth && date.getFullYear() === targetYear
-    })
+  const getMonthStats = (transactions: Transaction[], monthKey: string) => {
+    const monthTransactions = transactions.filter(t => inMonth(t, monthKey))
 
     const income = monthTransactions
-      .filter(t => isIncome(t))
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      .filter(t => isIncome(t) && !isExcludedCategory(t) && !isExcludedDescription(t))
+      .reduce((sum, t) => sum + expenseAmount(t), 0)
 
     const expenses = monthTransactions
-      .filter(t => isRealExpense(t))
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      .filter(isRealExpense)
+      .reduce((sum, t) => sum + expenseAmount(t), 0)
 
     return {
       income,
       expenses,
       balance: income - expenses,
-      count: monthTransactions.length
+      count: monthTransactions.length,
     }
   }
 
-  const getCurrentMonthStats = (transactions: Transaction[]): MonthlyStats => {
-    const now = new Date()
-    const currentDay = now.getDate()
+  const pctChange = (current: number, base: number): number =>
+    base > 0 ? ((current - base) / base) * 100 : 0
 
-    // Current month
-    const current = getMonthStats(transactions, 0)
+  const getCurrentMonthStats = (
+    transactions: Transaction[],
+    refMonth: string = currentMonthKey()
+  ): MonthlyStats => {
+    const current = getMonthStats(transactions, refMonth)
+    const previous = getMonthStats(transactions, addMonthsToKey(refMonth, -1))
 
-    // Previous month
-    const previous = getMonthStats(transactions, -1)
-
-    // Last 3 months average (excluding current)
-    const last3Months = [-1, -2, -3].map(offset => getMonthStats(transactions, offset))
+    const last3Months = [-1, -2, -3].map(offset =>
+      getMonthStats(transactions, addMonthsToKey(refMonth, offset))
+    )
     const avg3MonthsIncome = last3Months.reduce((sum, m) => sum + m.income, 0) / 3
     const avg3MonthsExpenses = last3Months.reduce((sum, m) => sum + m.expenses, 0) / 3
-
-    // Calculate trends
-    const incomeTrend = previous.income > 0
-      ? ((current.income - previous.income) / previous.income) * 100
-      : 0
-
-    const expensesTrend = previous.expenses > 0
-      ? ((current.expenses - previous.expenses) / previous.expenses) * 100
-      : 0
 
     const balanceTrend = previous.balance !== 0
       ? ((current.balance - previous.balance) / Math.abs(previous.balance)) * 100
       : 0
-
-    // Comparison with 3-month average
-    const incomeVsAvg = avg3MonthsIncome > 0
-      ? ((current.income - avg3MonthsIncome) / avg3MonthsIncome) * 100
-      : 0
-
-    const expensesVsAvg = avg3MonthsExpenses > 0
-      ? ((current.expenses - avg3MonthsExpenses) / avg3MonthsExpenses) * 100
-      : 0
-
-    // Daily average (considering current day of month)
-    const dailyAverage = currentDay > 0 ? current.expenses / currentDay : 0
 
     return {
       income: current.income,
       expenses: current.expenses,
       balance: current.balance,
       transactionCount: current.count,
-      dailyAverage,
+      dailyAverage: current.expenses / elapsedDaysIn(refMonth),
       trend: {
-        income: incomeTrend,
-        expenses: expensesTrend,
-        balance: balanceTrend
+        income: pctChange(current.income, previous.income),
+        expenses: pctChange(current.expenses, previous.expenses),
+        balance: balanceTrend,
       },
       comparison: {
-        incomeVsAvg,
-        expensesVsAvg
-      }
+        incomeVsAvg: pctChange(current.income, avg3MonthsIncome),
+        expensesVsAvg: pctChange(current.expenses, avg3MonthsExpenses),
+      },
     }
   }
 
-  const getTopCategories = (transactions: Transaction[], limit: number = 5): CategorySummary[] => {
-    return getAllCategories(transactions).slice(0, limit)
-  }
+  const getAllCategories = (
+    transactions: Transaction[],
+    refMonth: string = currentMonthKey()
+  ): CategorySummary[] => {
+    const monthTransactions = transactions.filter(t => inMonth(t, refMonth) && isRealExpense(t))
 
-  const getAllCategories = (transactions: Transaction[]): CategorySummary[] => {
-    const now = new Date()
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
-
-    // Filter to current month and only real expenses (excludes transfers)
-    const monthTransactions = transactions.filter(t => {
-      const date = parseLocalDate(t.date)
-      return date.getMonth() === currentMonth &&
-             date.getFullYear() === currentYear &&
-             isRealExpense(t)
-    })
-
-    // Group by destination (category)
     const categoryMap = new Map<string, { total: number; count: number }>()
-
     monthTransactions.forEach(t => {
-      const category = t.destination || 'Sem categoria'
+      const category = categoryNameOf(t)
       const existing = categoryMap.get(category) || { total: 0, count: 0 }
       categoryMap.set(category, {
-        total: existing.total + Math.abs(t.amount),
-        count: existing.count + 1
+        total: existing.total + expenseAmount(t),
+        count: existing.count + 1,
       })
     })
 
-    // Calculate total expenses for percentage
     const totalExpenses = Array.from(categoryMap.values())
       .reduce((sum, cat) => sum + cat.total, 0)
 
-    // Convert to array and sort
-    const categories = Array.from(categoryMap.entries())
+    return Array.from(categoryMap.entries())
       .map(([name, data]) => ({
         name,
         total: data.total,
         count: data.count,
-        percentage: totalExpenses > 0 ? (data.total / totalExpenses) * 100 : 0
+        percentage: totalExpenses > 0 ? (data.total / totalExpenses) * 100 : 0,
       }))
       .sort((a, b) => b.total - a.total)
-
-    return categories
   }
 
-  const getCurrentMonthExpenses = (transactions: Transaction[]): Transaction[] => {
-    const now = new Date()
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
+  const getTopCategories = (
+    transactions: Transaction[],
+    limit: number = 5,
+    refMonth: string = currentMonthKey()
+  ): CategorySummary[] => getAllCategories(transactions, refMonth).slice(0, limit)
 
-    return transactions
-      .filter(t => {
-        const date = parseLocalDate(t.date)
-        return date.getMonth() === currentMonth &&
-               date.getFullYear() === currentYear &&
-               isRealExpense(t)
-      })
-      .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
-  }
+  const getMonthExpenses = (
+    transactions: Transaction[],
+    refMonth: string = currentMonthKey()
+  ): Transaction[] =>
+    transactions
+      .filter(t => inMonth(t, refMonth) && isRealExpense(t))
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
 
+  /**
+   * Scheduled spending in the 30 days ahead. Uses isRealExpense so card
+   * payments and transfers between accounts don't show up as upcoming spending.
+   */
   const getUpcomingExpenses = (transactions: Transaction[]): Transaction[] => {
     const now = new Date()
-    const nextMonth = new Date(now)
-    nextMonth.setMonth(nextMonth.getMonth() + 1)
+    const horizon = new Date(now)
+    horizon.setMonth(horizon.getMonth() + 1)
 
     return transactions
       .filter(t => {
         const date = parseLocalDate(t.date)
-        return date > now && date <= nextMonth && isExpense(t)
+        return date > now && date <= horizon && isRealExpense(t)
       })
-      .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime())
+      .sort((a, b) => (a.date < b.date ? -1 : 1))
   }
 
-  const generateAlerts = (transactions: Transaction[]): Alert[] => {
-    const alerts: Alert[] = []
-    const now = new Date()
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
+  const getHistoricalExpenses = (
+    transactions: Transaction[],
+    refMonth: string = currentMonthKey()
+  ): HistoricalData => {
+    const last6Months = [-5, -4, -3, -2, -1, 0].map(
+      offset => getMonthStats(transactions, addMonthsToKey(refMonth, offset)).expenses
+    )
 
-    // Get current and previous month stats
-    const currentMonthStats = getCurrentMonthStats(transactions)
-
-    const previousMonthTransactions = transactions.filter(t => {
-      const date = parseLocalDate(t.date)
-      const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
-      const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
-      return date.getMonth() === prevMonth && date.getFullYear() === prevYear
-    })
-
-    const previousMonthExpenses = previousMonthTransactions
-      .filter(t => isRealExpense(t))
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-
-    // Alert: Spending above previous month
-    if (previousMonthExpenses > 0 && currentMonthStats.expenses > previousMonthExpenses * 1.2) {
-      alerts.push({
-        type: 'warning',
-        title: 'Gastos Acima do Esperado',
-        message: `Seus gastos estão 20% acima do mês passado`,
-        amount: currentMonthStats.expenses - previousMonthExpenses
-      })
-    }
-
-    // Alert: High value transactions this month
-    const highValueTransactions = transactions.filter(t => {
-      const date = parseLocalDate(t.date)
-      return date.getMonth() === currentMonth &&
-             date.getFullYear() === currentYear &&
-             Math.abs(t.amount) > 1000
-    })
-
-    if (highValueTransactions.length > 0) {
-      alerts.push({
-        type: 'info',
-        title: 'Transações de Alto Valor',
-        message: `${highValueTransactions.length} transação(ões) acima de R$ 1.000`,
-        amount: highValueTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0)
-      })
-    }
-
-    // Alert: Negative balance
-    if (currentMonthStats.balance < 0) {
-      alerts.push({
-        type: 'danger',
-        title: 'Saldo Negativo',
-        message: 'Suas despesas estão maiores que sua receita este mês',
-        amount: Math.abs(currentMonthStats.balance)
-      })
-    }
-
-    // Alert: Low transaction count (might indicate missing data)
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
-    const currentDay = now.getDate()
-    const expectedTransactions = (currentDay / daysInMonth) * 20 // Assume ~20 transactions per month
-
-    if (currentMonthStats.transactionCount < expectedTransactions * 0.5 && currentDay > 10) {
-      alerts.push({
-        type: 'warning',
-        title: 'Poucas Transações Registradas',
-        message: 'Você pode ter transações não registradas este mês'
-      })
-    }
-
-    return alerts
-  }
-
-  const getMonthlyForecast = (transactions: Transaction[]) => {
-    const now = new Date()
-    const nextMonthDate = new Date(now)
-    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1)
-
-    const upcomingExpenses = getUpcomingExpenses(transactions)
-    const totalUpcoming = upcomingExpenses.reduce((sum, t) => sum + Math.abs(t.amount), 0)
-
-    // Estimate income based on current month pattern
-    const currentStats = getCurrentMonthStats(transactions)
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-    const currentDay = now.getDate()
-    const projectedIncome = currentDay > 5 ? (currentStats.income / currentDay) * daysInMonth : currentStats.income
-
-    return {
-      projectedIncome,
-      upcomingExpenses: totalUpcoming,
-      projectedBalance: projectedIncome - totalUpcoming,
-      upcomingCount: upcomingExpenses.length
-    }
-  }
-
-  // Get historical data for sparklines
-  const getHistoricalExpenses = (transactions: Transaction[]): HistoricalData => {
-    // Get last 6 months of expenses
-    const last6Months = [-5, -4, -3, -2, -1, 0].map(offset => {
-      return getMonthStats(transactions, offset).expenses
-    })
-
-    const currentMonth = last6Months[5]
     const last3MonthsAverage = (last6Months[2] + last6Months[3] + last6Months[4]) / 3
-
-    // Detect trend
-    let trend: 'increasing' | 'decreasing' | 'stable' = 'stable'
     const recentAvg = (last6Months[3] + last6Months[4] + last6Months[5]) / 3
     const olderAvg = (last6Months[0] + last6Months[1] + last6Months[2]) / 3
 
+    let trend: 'increasing' | 'decreasing' | 'stable' = 'stable'
     if (recentAvg > olderAvg * 1.1) trend = 'increasing'
     else if (recentAvg < olderAvg * 0.9) trend = 'decreasing'
 
-    return {
-      last6Months,
-      last3MonthsAverage,
-      currentMonth,
-      trend
-    }
+    return { last6Months, last3MonthsAverage, currentMonth: last6Months[5], trend }
   }
 
-  // Generate smart, prioritized insights
-  const getSmartInsights = (transactions: Transaction[]): SmartInsight[] => {
+  const getSmartInsights = (
+    transactions: Transaction[],
+    refMonth: string = currentMonthKey()
+  ): SmartInsight[] => {
     const insights: SmartInsight[] = []
-    const stats = getCurrentMonthStats(transactions)
-    const now = new Date()
-    const currentDay = now.getDate()
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    const stats = getCurrentMonthStats(transactions, refMonth)
 
-    // Critical: Negative balance
+    // An empty month says nothing about spending habits — don't invent insights.
+    if (stats.transactionCount === 0) return insights
+
+    const historical = getHistoricalExpenses(transactions, refMonth)
+
     if (stats.balance < 0) {
       insights.push({
         type: 'danger',
         title: 'Saldo Negativo',
         message: 'Despesas excedem receitas',
         value: Math.abs(stats.balance),
-        priority: 5
+        priority: 5,
       })
     }
 
-    // High priority: Significant expense increase
     if (stats.comparison.expensesVsAvg > 20) {
       insights.push({
         type: 'warning',
         title: `+${stats.comparison.expensesVsAvg.toFixed(0)}% vs média`,
         message: 'Gastos muito acima do normal dos últimos 3 meses',
         value: stats.expenses,
-        priority: 4
+        priority: 4,
       })
     }
 
-    // High daily average warning
-    const projectedMonthly = stats.dailyAverage * daysInMonth
-    const last3MonthsAvg = getHistoricalExpenses(transactions).last3MonthsAverage
-    if (projectedMonthly > last3MonthsAvg * 1.15 && currentDay > 7) {
+    // Only meaningful while the month is still running.
+    const projectedMonthly = stats.dailyAverage * daysInMonthKey(refMonth)
+    if (
+      refMonth === currentMonthKey() &&
+      new Date().getDate() > 7 &&
+      projectedMonthly > historical.last3MonthsAverage * 1.15
+    ) {
       insights.push({
         type: 'warning',
         title: 'Ritmo de gastos elevado',
-        message: `Média de R$ ${(stats.dailyAverage).toFixed(0)}/dia pode exceder orçamento`,
-        priority: 4
+        message: `Média de R$ ${stats.dailyAverage.toFixed(0)}/dia pode exceder orçamento`,
+        priority: 4,
       })
     }
 
-    // Medium priority: Unusual spending in category
-    const topCat = getTopCategories(transactions, 1)[0]
+    const topCat = getTopCategories(transactions, 1, refMonth)[0]
     if (topCat && topCat.percentage > 40) {
       insights.push({
         type: 'info',
         title: `${topCat.name} dominante`,
         message: `${topCat.percentage.toFixed(0)}% dos gastos concentrados`,
         value: topCat.total,
-        priority: 3
+        priority: 3,
       })
     }
 
-    // Positive: Under budget
     if (stats.comparison.expensesVsAvg < -10) {
       insights.push({
         type: 'success',
         title: 'Gastos controlados',
         message: `${Math.abs(stats.comparison.expensesVsAvg).toFixed(0)}% abaixo da média`,
-        priority: 2
+        priority: 2,
       })
     }
 
-    // Info: Trend detection
-    const historical = getHistoricalExpenses(transactions)
     if (historical.trend === 'increasing') {
       insights.push({
         type: 'info',
         title: 'Tendência de aumento',
         message: 'Gastos crescendo nos últimos meses',
-        priority: 2
+        priority: 2,
       })
     } else if (historical.trend === 'decreasing') {
       insights.push({
         type: 'success',
         title: 'Tendência de redução',
         message: 'Gastos diminuindo nos últimos meses',
-        priority: 2
+        priority: 2,
       })
     }
 
-    // Sort by priority
     return insights.sort((a, b) => b.priority - a.priority)
   }
 
@@ -469,6 +306,7 @@ export const useDashboardAnalytics = () => {
     total: number
     items: Transaction[]
     count: number
+    cardOrigin: string
     closingMonth: number // 0-11
     closingYear: number
     dueMonth: number // 0-11
@@ -483,7 +321,6 @@ export const useDashboardAnalytics = () => {
     const closingDay = options?.closingDay ?? 'last'
     const referenceDate = options?.referenceDate ?? new Date()
 
-    // Resolve which invoice month a given date falls into.
     const invoiceMonthOf = (d: Date): { year: number; month: number } => {
       if (closingDay === 'last') {
         // Closing on the last day: the last day's purchases roll into next month.
@@ -491,7 +328,6 @@ export const useDashboardAnalytics = () => {
         shifted.setDate(shifted.getDate() + 1)
         return { year: shifted.getFullYear(), month: shifted.getMonth() }
       }
-      // Fixed closing day: date after the closing day rolls into next month.
       let month = d.getMonth()
       let year = d.getFullYear()
       if (d.getDate() > closingDay) {
@@ -505,41 +341,37 @@ export const useDashboardAnalytics = () => {
 
     const items = transactions
       .filter(t => (t.origin || '') === cardOrigin)
-      .filter(t => !EXCLUDED_DESCRIPTIONS.includes((t.description || '').toLowerCase()))
-      .filter(t => !EXCLUDED_CATEGORIES.includes((t.destination || '').toLowerCase()))
+      .filter(t => !isExcludedDescription(t) && !isExcludedCategory(t))
       .filter(t => {
         const im = invoiceMonthOf(parseLocalDate(t.date))
         return im.year === currentInvoice.year && im.month === currentInvoice.month
       })
-      .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
 
     // Net total (purchases positive, refunds/estornos negative).
     const total = items.reduce((sum, t) => sum + t.amount, 0)
-
-    const dueMonth = (currentInvoice.month + 1) % 12
-    const dueYear = currentInvoice.month === 11 ? currentInvoice.year + 1 : currentInvoice.year
 
     return {
       total,
       items,
       count: items.length,
+      cardOrigin,
       closingMonth: currentInvoice.month,
       closingYear: currentInvoice.year,
-      dueMonth,
-      dueYear
+      dueMonth: (currentInvoice.month + 1) % 12,
+      dueYear: currentInvoice.month === 11 ? currentInvoice.year + 1 : currentInvoice.year,
     }
   }
 
   return {
+    getMonthStats,
     getCurrentMonthStats,
     getTopCategories,
     getAllCategories,
-    getCurrentMonthExpenses,
+    getMonthExpenses,
     getUpcomingExpenses,
-    generateAlerts,
-    getMonthlyForecast,
     getHistoricalExpenses,
     getSmartInsights,
-    getCreditCardInvoice
+    getCreditCardInvoice,
   }
 }

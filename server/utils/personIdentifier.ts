@@ -87,11 +87,17 @@ export function enrichTransactionsWithPerson(transactions: Transaction[]): Trans
         person: identifyPersonFromDestination(transaction.destination),
       }
     }
-    
-    // For expense transactions, identify person from origin
+
+    // For expense transactions, identify person from origin. The origin isn't
+    // always an account — the sheet also uses category-shaped values there
+    // ("Installments/Financing") and leaves it blank on card payments, which
+    // left those rows with no person and made them vanish under the default
+    // person filter. Fall back to the destination before giving up.
     return {
       ...transaction,
-      person: identifyPerson(transaction.origin),
+      person:
+        identifyPerson(transaction.origin) ??
+        identifyPersonFromDestination(transaction.destination),
     }
   })
 }

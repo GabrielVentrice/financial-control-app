@@ -53,7 +53,7 @@ function transactionsToCSV(transactions: Transaction[]): string {
     }
 
     return [
-      escape(t.id),
+      escape(t.transactionId),
       escape(t.date),
       escape(t.origin),
       escape(t.destination),
