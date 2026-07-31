@@ -13,24 +13,9 @@
               <h1 class="text-2xl font-semibold text-text-primary tracking-tight mt-0.5">Para onde foi o dinheiro</h1>
             </div>
 
-            <div class="sm:ml-auto flex items-center gap-3">
-              <div class="inline-flex items-center h-11 rounded-full border border-border-base bg-background-card" role="group" aria-label="Mês de referência">
-                <button type="button" aria-label="Mês anterior" class="px-3 h-full text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded-l-full" @click="changeMonth(-1)">‹</button>
-                <span class="px-1 text-[14px] font-medium text-text-primary min-w-[88px] text-center">{{ selectedMonthLong }}</span>
-                <button type="button" aria-label="Próximo mês" class="px-3 h-full text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded-r-full" @click="changeMonth(1)">›</button>
-              </div>
-
-              <button
-                type="button"
-                :disabled="loading || refreshing"
-                @click="refreshData"
-                class="inline-flex items-center gap-2 h-11 px-4 rounded-full border border-border-base bg-background-card text-[14px] font-medium text-text-secondary hover:bg-background-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-1"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Atualizar
-              </button>
+            <div class="sm:ml-auto flex items-start gap-3">
+              <MonthSelector v-model="selectedMonth" />
+              <SyncButton />
             </div>
           </header>
 
@@ -256,41 +241,21 @@
 import { computed, ref, nextTick } from 'vue'
 import type { Transaction } from '~/types/transaction'
 
-const { transactions: rawTransactions, loading, error, refreshing, refreshCache } = useTransactions()
+import { monthKeyOf, currentMonthKey, addMonthsToKey, monthIndexOfKey } from '~/shared/dates'
+import { isRealExpense, categoryNameOf, expenseAmount } from '~/shared/expenseRules'
+
+const { transactions, loading, error } = useTransactions()
 const { selectedPerson } = usePersonFilter()
-const { processInstallments } = useInstallments()
-const { fetchCacheStatus } = useCacheStatus()
 const { formatCurrency, formatMonthName, formatDate } = useFormatters()
 
-const transactions = computed(() => processInstallments(rawTransactions.value))
-
-// --- Month helpers (string YYYY-MM keys, timezone-safe) ---
-const toKey = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, '0')}`
-const addMonths = (key: string, delta: number) => {
-  const [y, m] = key.split('-').map(Number)
-  const d = new Date(y, m - 1 + delta, 1)
-  return toKey(d.getFullYear(), d.getMonth())
-}
-const now = new Date()
-const selectedMonth = ref(toKey(now.getFullYear(), now.getMonth()))
-const changeMonth = (delta: number) => { selectedMonth.value = addMonths(selectedMonth.value, delta) }
-const selectedMonthLong = computed(() => formatMonthName(Number(selectedMonth.value.split('-')[1]) - 1))
+const selectedMonth = ref(currentMonthKey())
+const selectedMonthLong = computed(() => formatMonthName(monthIndexOfKey(selectedMonth.value)))
 
 // --- Person-filtered transactions ---
 const personTransactions = computed(() => {
   if (selectedPerson.value === 'Ambos') return transactions.value
   return transactions.value.filter(t => t.person === selectedPerson.value)
 })
-
-// Destinations that are accounts/cards/adjustments are not spending categories.
-const EXCLUDED = new Set([
-  'adjustment',
-  'credit account juliana', 'credit account gabriel',
-  'bank account juliana', 'bank account gabriel',
-  'credit card juliana', 'credit card gabriel'
-])
-const categoryNameOf = (t: Transaction) => (t.destination || '').trim() || 'Sem categoria'
-const isSpending = (t: Transaction) => !EXCLUDED.has((t.destination || '').trim().toLowerCase())
 
 // --- Categorical color (deterministic by name; amber for "Sem categoria") ---
 const PALETTE = ['#4F46E5', '#2563EB', '#0891B2', '#0D9488', '#059669', '#65A30D', '#CA8A04', '#EA580C', '#DB2777', '#9333EA', '#7C3AED', '#0369A1']
@@ -301,15 +266,16 @@ const categoryColor = (name: string): string => {
   return PALETTE[h % PALETTE.length]
 }
 
-// Aggregate spending by category for a given month key.
+// Aggregate spending by category for a given month key. Uses the shared
+// isRealExpense so this screen and the dashboard can't disagree on the total.
 const aggregateMonth = (monthKey: string) => {
   const map = new Map<string, { total: number; count: number; transactions: Transaction[] }>()
   personTransactions.value
-    .filter(t => t.date.substring(0, 7) === monthKey && isSpending(t))
+    .filter(t => monthKeyOf(t.date) === monthKey && isRealExpense(t))
     .forEach(t => {
       const name = categoryNameOf(t)
       const e = map.get(name) || { total: 0, count: 0, transactions: [] }
-      e.total += t.amount
+      e.total += expenseAmount(t)
       e.count += 1
       e.transactions.push(t)
       map.set(name, e)
@@ -330,7 +296,7 @@ interface Category {
 // Merge current + previous month into one model per category.
 const categories = computed<Category[]>(() => {
   const cur = aggregateMonth(selectedMonth.value)
-  const prev = aggregateMonth(addMonths(selectedMonth.value, -1))
+  const prev = aggregateMonth(addMonthsToKey(selectedMonth.value, -1))
   const names = new Set<string>([...cur.keys(), ...prev.keys()])
 
   return Array.from(names)
@@ -445,13 +411,5 @@ const openDetail = async (cat: Category) => {
 }
 const closeDetail = () => { selectedCategory.value = null }
 
-// --- Refresh ---
-const refreshData = async () => {
-  try {
-    await refreshCache()
-    await fetchCacheStatus()
-  } catch (e) {
-    console.error('Erro ao atualizar categorias:', e)
-  }
-}
+useModalDismiss(computed(() => selectedCategory.value !== null), closeDetail)
 </script>

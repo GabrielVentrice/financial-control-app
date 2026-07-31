@@ -1,247 +1,209 @@
 <template>
   <Sidemenu>
     <div class="bg-background-page min-h-screen">
-      <!-- Header -->
-      <PageHeader title="Transacoes" :subtitle="selectedPerson">
-        <template #actions>
-          <RefreshButton :disabled="loading || refreshing" :spinning="refreshing" @click="refreshData" />
-        </template>
-      </PageHeader>
-
-      <!-- Filters -->
-      <div class="px-6 py-4 bg-white">
-        <div class="max-w-7xl mx-auto">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <input
-                v-model="searchTerm"
-                type="text"
-                placeholder="Buscar descricao..."
-                class="w-full px-3 py-2 bg-gray-50 text-gray-700 text-[13px] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
-              />
-            </div>
-
-            <div>
-              <input
-                v-model="startDate"
-                type="date"
-                class="w-full px-3 py-2 bg-gray-50 text-gray-700 text-[13px] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
-              />
-            </div>
-
-            <div>
-              <input
-                v-model="endDate"
-                type="date"
-                class="w-full px-3 py-2 bg-gray-50 text-gray-700 text-[13px] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
-              />
-            </div>
-          </div>
-
-          <!-- Active filter chips -->
-          <div v-if="hasActiveFilters" class="mt-3 flex items-center flex-wrap gap-2">
-            <span v-if="searchTerm" class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-background-section text-text-secondary text-[13px] rounded-full">
-              "{{ searchTerm }}"
-              <button
-                @click="searchTerm = ''"
-                aria-label="Remover filtro de busca"
-                class="w-4 h-4 inline-flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors"
-              >×</button>
-            </span>
-            <span v-if="startDate || endDate" class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-background-section text-text-secondary text-[13px] rounded-full">
-              {{ dateRangeLabel }}
-              <button
-                @click="startDate = ''; endDate = ''"
-                aria-label="Remover filtro de data"
-                class="w-4 h-4 inline-flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors"
-              >×</button>
-            </span>
-            <button
-              @click="clearFilters"
-              class="px-2.5 py-1 text-[13px] text-accent hover:underline transition-colors"
-            >
-              Limpar tudo
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Content -->
-      <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        <!-- Loading State -->
-        <LoadingState v-if="loading" message="Carregando..." />
-
-        <!-- Error State -->
+      <main class="max-w-[1180px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
+        <LoadingState v-if="loading" message="Carregando transações..." />
         <ErrorState v-else-if="error" :message="error" />
 
-        <!-- Content -->
         <template v-else>
-          <!-- Summary Stats -->
-          <section class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100">
-            <LightStatCard
-              label="Total"
-              :value="filteredTransactions.length"
-              format="number"
-              value-color="neutral"
-              size="md"
-            />
-
-            <LightStatCard
-              label="Receitas"
-              :value="incomeCount"
-              format="number"
-              value-color="positive"
-              size="md"
-            />
-
-            <LightStatCard
-              label="Despesas"
-              :value="expenseCount"
-              format="number"
-              value-color="negative"
-              size="md"
-            />
-
-            <LightStatCard
-              label="Saldo"
-              :value="totalAmount"
-              format="currency"
-              :value-color="totalAmount >= 0 ? 'positive' : 'negative'"
-              size="md"
-            />
-          </section>
-
-          <!-- Transactions Table -->
-          <section class="overflow-hidden flex flex-col" style="max-height: calc(100vh - 400px); min-height: 500px;">
-            <!-- Header -->
-            <div class="px-1 py-3 flex-shrink-0 flex items-center justify-between">
-              <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Transacoes</h2>
-              <span class="text-[11px] text-gray-500">{{ filteredTransactions.length }} resultados</span>
+          <!-- 1. Header -->
+          <header class="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+            <div class="min-w-0">
+              <p class="text-xs font-medium text-text-muted uppercase tracking-wider">Transações</p>
+              <h1 class="text-2xl font-semibold text-text-primary tracking-tight mt-0.5">Todos os lançamentos</h1>
             </div>
 
-            <!-- Desktop Table -->
-            <div class="hidden lg:block overflow-x-auto overflow-y-auto flex-1">
-              <table class="min-w-full">
-                <thead>
-                  <tr>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
-                      Data
-                    </th>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
-                      Origem
-                    </th>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
-                      Destino
-                    </th>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500">
-                      Descricao
-                    </th>
-                    <th class="px-4 py-3 text-right text-[11px] font-normal text-gray-500">
-                      Valor
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="transaction in paginatedTransactions"
-                    :key="transaction.transactionId"
-                    class="hover:bg-gray-50/80 transition-colors"
+            <div class="sm:ml-auto flex items-start gap-3">
+              <SyncButton />
+            </div>
+          </header>
+
+          <div class="space-y-6">
+            <!-- 2. KPIs -->
+            <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="bg-background-card border border-border-subtle rounded-xl px-5 py-5">
+                <p class="text-[13px] text-text-muted">Entradas</p>
+                <p class="text-kpi-md text-positive mt-1.5 whitespace-nowrap">{{ formatCurrency(totals.income) }}</p>
+                <p class="text-[12px] text-text-muted mt-1">{{ totals.incomeCount }} lançamentos</p>
+              </div>
+
+              <div class="bg-background-card border border-border-subtle rounded-xl px-5 py-5">
+                <p class="text-[13px] text-text-muted">Saídas</p>
+                <p class="text-kpi-md text-negative mt-1.5 whitespace-nowrap">{{ formatCurrency(totals.expenses) }}</p>
+                <p class="text-[12px] text-text-muted mt-1">{{ totals.expenseCount }} lançamentos</p>
+              </div>
+
+              <div class="bg-background-card border border-border-subtle rounded-xl px-5 py-5">
+                <p class="text-[13px] text-text-muted">Saldo</p>
+                <p
+                  class="text-kpi-md mt-1.5 whitespace-nowrap"
+                  :class="totals.balance >= 0 ? 'text-positive' : 'text-negative'"
+                >{{ formatCurrency(totals.balance) }}</p>
+                <p class="text-[12px] text-text-muted mt-1">entradas − saídas</p>
+              </div>
+
+              <div class="bg-background-card border border-border-subtle rounded-xl px-5 py-5">
+                <p class="text-[13px] text-text-muted">Transferências</p>
+                <p class="text-kpi-md text-text-secondary mt-1.5 whitespace-nowrap">{{ formatCurrency(totals.transfers) }}</p>
+                <p class="text-[12px] text-text-muted mt-1">entre contas · não é gasto</p>
+              </div>
+            </section>
+
+            <!-- 3. Filters -->
+            <section class="bg-background-card border border-border-subtle rounded-xl p-5">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="relative">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"
                   >
-                    <td class="px-4 py-3.5 whitespace-nowrap text-[13px] text-gray-500">
-                      {{ formatDateCompact(transaction.date) }}
-                    </td>
-                    <td class="px-4 py-3.5 text-[13px] text-gray-500 truncate max-w-[150px]">
-                      {{ transaction.origin }}
-                    </td>
-                    <td class="px-4 py-3.5 text-[13px] text-gray-500 truncate max-w-[150px]">
-                      {{ transaction.destination }}
-                    </td>
-                    <td class="px-4 py-3.5 text-[15px] font-medium text-gray-700 truncate max-w-md">
-                      {{ transaction.description }}
-                    </td>
-                    <td class="px-4 py-3.5 whitespace-nowrap text-right text-[15px] font-semibold" :class="{
-                      'text-positive': transaction.amount >= 0,
-                      'text-negative': transaction.amount < 0
-                    }">
-                      {{ formatCurrencyCompact(transaction.amount) }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Mobile Cards - whitespace separation -->
-            <div class="lg:hidden overflow-y-auto flex-1">
-              <div
-                v-for="transaction in paginatedTransactions"
-                :key="transaction.transactionId"
-                class="px-4 py-3.5 hover:bg-gray-50/80 transition-colors"
-              >
-                <div class="flex justify-between items-start gap-3 mb-2">
-                  <div class="min-w-0 flex-1">
-                    <p class="text-[15px] font-medium text-gray-700 truncate">{{ transaction.description }}</p>
-                    <p class="text-[13px] text-gray-500 mt-0.5">{{ formatDateCompact(transaction.date) }}</p>
-                  </div>
-                  <p class="text-[15px] font-semibold whitespace-nowrap" :class="{
-                    'text-positive': transaction.amount >= 0,
-                    'text-negative': transaction.amount < 0
-                  }">
-                    {{ formatCurrencyCompact(transaction.amount) }}
-                  </p>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    v-model="searchTerm"
+                    type="search"
+                    aria-label="Buscar por descrição"
+                    placeholder="buscar por descrição…"
+                    class="w-full h-11 pl-9 pr-3 rounded-lg bg-background-section border border-border-subtle text-[14px] text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-1"
+                  />
                 </div>
-                <div class="flex items-center gap-2 text-[13px] text-gray-500">
-                  <span class="truncate">{{ transaction.origin }}</span>
-                  <span>→</span>
-                  <span class="truncate">{{ transaction.destination }}</span>
+
+                <div>
+                  <label for="tx-start" class="sr-only">Data inicial</label>
+                  <input
+                    id="tx-start"
+                    v-model="startDate"
+                    type="date"
+                    class="w-full h-11 px-3 rounded-lg bg-background-section border border-border-subtle text-[14px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-1"
+                  />
+                </div>
+
+                <div>
+                  <label for="tx-end" class="sr-only">Data final</label>
+                  <input
+                    id="tx-end"
+                    v-model="endDate"
+                    type="date"
+                    class="w-full h-11 px-3 rounded-lg bg-background-section border border-border-subtle text-[14px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-1"
+                  />
                 </div>
               </div>
-            </div>
 
-            <!-- Empty State -->
-            <EmptyState
-              v-if="filteredTransactions.length === 0"
-              icon="🔍"
-              :title="hasActiveFilters ? 'Nenhum resultado' : 'Nenhuma transacao'"
-              :description="hasActiveFilters ? 'Nenhuma transacao corresponde aos filtros atuais.' : 'Nao ha transacoes para exibir.'"
-            >
-              <template v-if="hasActiveFilters" #action>
-                <button
-                  @click="clearFilters"
-                  class="px-4 py-2 text-[13px] font-medium text-text-inverse bg-accent-primary hover:bg-accent-primary-hover rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2"
-                >
-                  Limpar filtros
-                </button>
-              </template>
-            </EmptyState>
-
-            <!-- Pagination -->
-            <div v-if="filteredTransactions.length > pageSize" class="px-4 py-3 flex items-center justify-between flex-shrink-0">
-              <div class="text-[13px] text-gray-500">
-                <span class="font-medium text-gray-700">{{ startIndex + 1 }}-{{ Math.min(endIndex, filteredTransactions.length) }}</span>
-                <span class="mx-1">de</span>
-                <span class="font-medium text-gray-700">{{ filteredTransactions.length }}</span>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  @click="prevPage"
-                  :disabled="currentPage === 1"
-                  class="px-3 py-1.5 text-[13px] text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  ← Anterior
-                </button>
-                <span class="px-3 py-1.5 text-[13px] text-gray-500">
-                  {{ currentPage }} / {{ totalPages }}
+              <!-- Active filter chips -->
+              <div v-if="hasActiveFilters" class="mt-3 flex items-center flex-wrap gap-2">
+                <span v-if="searchTerm" class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-background-section text-text-secondary text-[13px] rounded-full">
+                  "{{ searchTerm }}"
+                  <button
+                    @click="searchTerm = ''"
+                    aria-label="Remover filtro de busca"
+                    class="w-4 h-4 inline-flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors"
+                  >×</button>
+                </span>
+                <span v-if="originFilter" class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-background-section text-text-secondary text-[13px] rounded-full">
+                  {{ originFilter }}
+                  <button
+                    @click="originFilter = ''"
+                    aria-label="Remover filtro de conta"
+                    class="w-4 h-4 inline-flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors"
+                  >×</button>
+                </span>
+                <span v-if="startDate || endDate" class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-background-section text-text-secondary text-[13px] rounded-full">
+                  {{ dateRangeLabel }}
+                  <button
+                    @click="startDate = ''; endDate = ''"
+                    aria-label="Remover filtro de data"
+                    class="w-4 h-4 inline-flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors"
+                  >×</button>
                 </span>
                 <button
-                  @click="nextPage"
-                  :disabled="currentPage === totalPages"
-                  class="px-3 py-1.5 text-[13px] text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  @click="clearFilters"
+                  class="px-2.5 py-1 text-[13px] font-medium text-accent hover:underline transition-colors"
                 >
-                  Proxima →
+                  Limpar tudo
                 </button>
               </div>
-            </div>
-          </section>
+            </section>
+
+            <!-- 4. List -->
+            <section class="bg-background-card border border-border-subtle rounded-xl p-5">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xs font-medium text-text-muted uppercase tracking-wider">Lançamentos</h2>
+                <span class="text-[11px] text-text-muted">
+                  {{ filteredTransactions.length }} {{ filteredTransactions.length === 1 ? 'resultado' : 'resultados' }}
+                </span>
+              </div>
+
+              <EmptyState
+                v-if="filteredTransactions.length === 0"
+                icon="🔍"
+                :title="hasActiveFilters ? 'Nenhum resultado' : 'Nenhuma transação'"
+                :description="hasActiveFilters ? 'Nenhuma transação corresponde aos filtros atuais.' : 'Não há transações para exibir.'"
+              >
+                <template v-if="hasActiveFilters" #action>
+                  <button
+                    @click="clearFilters"
+                    class="px-4 py-2 text-[13px] font-medium text-text-inverse bg-accent-primary hover:bg-accent-primary-hover rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2"
+                  >
+                    Limpar filtros
+                  </button>
+                </template>
+              </EmptyState>
+
+              <ul v-else class="divide-y divide-border-subtle">
+                <li
+                  v-for="transaction in paginatedTransactions"
+                  :key="transaction.transactionId"
+                  class="flex items-center gap-3 py-3.5 px-2 -mx-2 rounded-lg hover:bg-background-section/60 transition-colors"
+                >
+                  <span
+                    class="w-2 h-2 rounded-full flex-shrink-0"
+                    :class="dotClass(transaction)"
+                    aria-hidden="true"
+                  ></span>
+
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[15px] font-medium text-text-primary truncate">{{ transaction.description }}</p>
+                    <p class="text-[13px] text-text-muted mt-0.5 truncate">
+                      {{ formatDate(transaction.date, 'medium') }} ·
+                      {{ transaction.origin || '—' }} → {{ transaction.destination || 'Sem categoria' }}
+                    </p>
+                  </div>
+
+                  <span
+                    class="text-[15px] font-semibold whitespace-nowrap"
+                    :class="amountClass(transaction)"
+                  >
+                    {{ amountPrefix(transaction) }}{{ formatCurrency(Math.abs(transaction.amount)) }}
+                  </span>
+                </li>
+              </ul>
+
+              <!-- Pagination -->
+              <div
+                v-if="filteredTransactions.length > pageSize"
+                class="mt-4 pt-4 border-t border-border-subtle flex items-center justify-between"
+              >
+                <p class="text-[13px] text-text-muted">
+                  <span class="font-medium text-text-secondary">{{ startIndex + 1 }}–{{ Math.min(endIndex, filteredTransactions.length) }}</span>
+                  de <span class="font-medium text-text-secondary">{{ filteredTransactions.length }}</span>
+                </p>
+                <div class="flex items-center gap-2">
+                  <button
+                    @click="prevPage"
+                    :disabled="currentPage === 1"
+                    class="px-3 h-9 rounded-full text-[13px] font-medium text-text-secondary hover:bg-background-section disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+                  >← Anterior</button>
+                  <span class="text-[13px] text-text-muted tabular-nums">{{ currentPage }} / {{ totalPages }}</span>
+                  <button
+                    @click="nextPage"
+                    :disabled="currentPage === totalPages"
+                    class="px-3 h-9 rounded-full text-[13px] font-medium text-text-secondary hover:bg-background-section disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+                  >Próxima →</button>
+                </div>
+              </div>
+            </section>
+          </div>
         </template>
       </main>
     </div>
@@ -250,158 +212,126 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import type { Transaction } from '~/types/transaction'
+import { isIncome, isRealExpense, isTransfer, expenseAmount } from '~/shared/expenseRules'
 
-// Composables - transactions fetched automatically via SSR
-const {
-  transactions,
-  loading,
-  error,
-  refreshing,
-  refreshCache
-} = useTransactions()
-
+const { transactions, loading, error } = useTransactions()
 const { selectedPerson } = usePersonFilter()
-const { fetchCacheStatus } = useCacheStatus()
+const { formatCurrency, formatDate } = useFormatters()
+const route = useRoute()
 
-// Local filter state
 const searchTerm = ref('')
 const startDate = ref('')
 const endDate = ref('')
+// Seeded from the query string so "ver fatura" on the dashboard lands here
+// already scoped to that card.
+const originFilter = ref((route.query.origin as string) || '')
 const currentPage = ref(1)
 const pageSize = 50
 
-// Computed
 const filteredTransactions = computed(() => {
   let filtered = transactions.value
 
-  // Filter by person
   if (selectedPerson.value !== 'Ambos') {
-    filtered = filtered.filter(transaction => {
-      return transaction.person === selectedPerson.value
-    })
+    filtered = filtered.filter(t => t.person === selectedPerson.value)
   }
 
-  // Filter by search term
+  if (originFilter.value) {
+    filtered = filtered.filter(t => t.origin === originFilter.value)
+  }
+
   if (searchTerm.value) {
-    filtered = filtered.filter(t =>
-      t.description.toLowerCase().includes(searchTerm.value.toLowerCase())
-    )
+    const q = searchTerm.value.toLowerCase()
+    filtered = filtered.filter(t => (t.description || '').toLowerCase().includes(q))
   }
 
-  // Filter by date range
-  if (startDate.value) {
-    const start = new Date(startDate.value)
-    filtered = filtered.filter(t => new Date(t.date) >= start)
+  // Dates are plain calendar days, so comparing the ISO strings is both correct
+  // and immune to the UTC-parsing shift that bit the other screens.
+  if (startDate.value) filtered = filtered.filter(t => t.date >= startDate.value)
+  if (endDate.value) filtered = filtered.filter(t => t.date <= endDate.value)
+
+  return [...filtered].sort((a, b) => (a.date < b.date ? 1 : -1))
+})
+
+/**
+ * Totals by what the transaction *is*, not by the sign of the amount. Amounts
+ * in the sheet are unsigned, so the old `amount >= 0` split reported every row
+ * as income and exactly zero expenses.
+ */
+const totals = computed(() => {
+  let income = 0, incomeCount = 0
+  let expenses = 0, expenseCount = 0
+  let transfers = 0
+
+  for (const t of filteredTransactions.value) {
+    if (isIncome(t)) {
+      income += expenseAmount(t)
+      incomeCount++
+    } else if (isRealExpense(t)) {
+      expenses += expenseAmount(t)
+      expenseCount++
+    } else if (isTransfer(t)) {
+      transfers += expenseAmount(t)
+    }
   }
 
-  if (endDate.value) {
-    const end = new Date(endDate.value)
-    filtered = filtered.filter(t => new Date(t.date) <= end)
-  }
-
-  // Sort by date (newest first)
-  return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return { income, incomeCount, expenses, expenseCount, transfers, balance: income - expenses }
 })
 
-const totalAmount = computed(() => {
-  return filteredTransactions.value.reduce((sum, t) => sum + t.amount, 0)
-})
+const kindOf = (t: Transaction): 'income' | 'expense' | 'transfer' => {
+  if (isIncome(t)) return 'income'
+  if (isRealExpense(t)) return 'expense'
+  return 'transfer'
+}
 
-const incomeCount = computed(() => {
-  return filteredTransactions.value.filter(t => t.amount >= 0).length
-})
+const dotClass = (t: Transaction) => ({
+  income: 'bg-positive/60',
+  expense: 'bg-negative/50',
+  transfer: 'bg-text-muted/40',
+}[kindOf(t)])
 
-const expenseCount = computed(() => {
-  return filteredTransactions.value.filter(t => t.amount < 0).length
-})
+const amountClass = (t: Transaction) => ({
+  income: 'text-positive',
+  expense: 'text-negative',
+  transfer: 'text-text-muted',
+}[kindOf(t)])
 
-const totalPages = computed(() => {
-  return Math.ceil(filteredTransactions.value.length / pageSize)
-})
+const amountPrefix = (t: Transaction) => ({
+  income: '+ ',
+  expense: '– ',
+  transfer: '',
+}[kindOf(t)])
 
-const startIndex = computed(() => {
-  return (currentPage.value - 1) * pageSize
-})
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredTransactions.value.length / pageSize)))
+const startIndex = computed(() => (currentPage.value - 1) * pageSize)
+const endIndex = computed(() => startIndex.value + pageSize)
+const paginatedTransactions = computed(() =>
+  filteredTransactions.value.slice(startIndex.value, endIndex.value)
+)
 
-const endIndex = computed(() => {
-  return startIndex.value + pageSize
-})
-
-const paginatedTransactions = computed(() => {
-  return filteredTransactions.value.slice(startIndex.value, endIndex.value)
-})
-
-const hasActiveFilters = computed(() => {
-  return Boolean(searchTerm.value || startDate.value || endDate.value)
-})
+const hasActiveFilters = computed(() =>
+  Boolean(searchTerm.value || startDate.value || endDate.value || originFilter.value)
+)
 
 const dateRangeLabel = computed(() => {
-  if (startDate.value && endDate.value) {
-    return `${formatDateCompact(startDate.value)} - ${formatDateCompact(endDate.value)}`
-  } else if (startDate.value) {
-    return `Desde ${formatDateCompact(startDate.value)}`
-  } else if (endDate.value) {
-    return `Ate ${formatDateCompact(endDate.value)}`
-  }
+  if (startDate.value && endDate.value) return `${formatDate(startDate.value, 'medium')} – ${formatDate(endDate.value, 'medium')}`
+  if (startDate.value) return `Desde ${formatDate(startDate.value, 'medium')}`
+  if (endDate.value) return `Até ${formatDate(endDate.value, 'medium')}`
   return ''
 })
-
-// Methods
-const formatDateCompact = (dateString: string) => {
-  if (!dateString) return '-'
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' })
-  } catch {
-    return dateString
-  }
-}
-
-const formatCurrencyCompact = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value)
-}
-
-// Refresh cache and reload data
-const refreshData = async () => {
-  try {
-    const result = await refreshCache()
-
-    if (result.success) {
-      console.log('Cache atualizado:', result.message)
-    }
-
-    await fetchCacheStatus()
-  } catch (e) {
-    console.error('Error refreshing data:', e)
-  }
-}
 
 const clearFilters = () => {
   searchTerm.value = ''
   startDate.value = ''
   endDate.value = ''
+  originFilter.value = ''
   currentPage.value = 1
 }
 
-const prevPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--
-  }
-}
+const prevPage = () => { if (currentPage.value > 1) currentPage.value-- }
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++ }
 
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++
-  }
-}
-
-// Watch for filters changes - reset to page 1
-watch([searchTerm, startDate, endDate, selectedPerson], () => {
+watch([searchTerm, startDate, endDate, originFilter, selectedPerson], () => {
   currentPage.value = 1
 })
 </script>

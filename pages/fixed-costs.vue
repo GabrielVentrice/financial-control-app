@@ -1,225 +1,162 @@
 <template>
   <Sidemenu>
     <div class="bg-background-page min-h-screen">
-      <!-- Header -->
-      <PageHeader title="Custos Fixos" :subtitle="selectedPerson">
-        <template #actions>
-          <RefreshButton :disabled="loading || refreshing" :spinning="refreshing" @click="refreshData" />
-        </template>
-      </PageHeader>
-
-      <!-- Categories Info -->
-      <div v-if="FIXED_COST_CATEGORIES.length > 0" class="px-6 py-3 bg-white">
-        <details class="text-[13px]">
-          <summary class="cursor-pointer text-gray-500 hover:text-gray-700 transition-colors">
-            {{ FIXED_COST_CATEGORIES.length }} categorias configuradas
-          </summary>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <span
-              v-for="category in FIXED_COST_CATEGORIES"
-              :key="category"
-              class="px-2 py-1 bg-gray-50 text-gray-500 text-[11px] rounded"
-            >
-              {{ category }}
-            </span>
-          </div>
-        </details>
-      </div>
-
-      <!-- Content -->
-      <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        <!-- Loading State -->
+      <main class="max-w-[1180px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
         <LoadingState v-if="loading" message="Carregando custos fixos..." />
-
-        <!-- Error State -->
         <ErrorState v-else-if="error" :message="error" />
 
-        <!-- Content -->
         <template v-else>
-          <!-- Summary Cards -->
-          <section class="grid grid-cols-1 md:grid-cols-3 divide-x divide-gray-100">
-            <LightStatCard
-              label="Mes Atual"
-              :value="currentMonthTotal"
-              format="currency"
-              value-color="warning"
-              size="lg"
-              :secondary-stat="{ label: formatCurrentMonthCompact(), value: '' }"
-            />
-
-            <LightStatCard
-              label="Media Mensal"
-              :value="averageMonthlyTotal"
-              format="currency"
-              value-color="neutral"
-              size="lg"
-              :secondary-stat="{ label: '6 meses', value: '' }"
-            />
-
-            <LightStatCard
-              label="Categorias Ativas"
-              :value="activeCategoriesCount"
-              format="number"
-              value-color="neutral"
-              size="lg"
-              :secondary-stat="{ label: 'Com gastos', value: '' }"
-            />
-          </section>
-
-          <!-- Chart + Table -->
-          <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Chart -->
-            <div class="px-6 py-5">
-              <div class="mb-5">
-                <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Evolucao dos Custos Fixos</h2>
-                <p class="text-[13px] text-gray-500 mt-1">Ultimos 6 meses</p>
-              </div>
-              <div class="h-64" role="img" aria-label="Grafico de barras da evolucao dos custos fixos mensais nos ultimos 6 meses">
-                <Bar
-                  v-if="chartData"
-                  :data="chartData"
-                  :options="chartOptions"
-                />
-              </div>
+          <!-- 1. Header -->
+          <header class="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+            <div class="min-w-0">
+              <p class="text-xs font-medium text-text-muted uppercase tracking-wider">Custos Fixos</p>
+              <h1 class="text-2xl font-semibold text-text-primary tracking-tight mt-0.5">O que se repete todo mês</h1>
             </div>
 
-            <!-- Detailed Table -->
-            <div class="overflow-hidden flex flex-col" style="max-height: 400px;">
-              <div class="px-1 py-3 flex-shrink-0">
-                <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Detalhamento</h2>
-                <p class="text-[13px] text-gray-500 mt-1">Valores mensais</p>
+            <div class="sm:ml-auto flex items-start gap-3">
+              <MonthSelector v-model="selectedMonth" />
+              <SyncButton />
+            </div>
+          </header>
+
+          <EmptyState
+            v-if="categoryBreakdown.length === 0"
+            icon="💰"
+            title="Nenhum custo fixo encontrado"
+            description="Não há custos fixos registrados nos últimos 6 meses para as categorias configuradas."
+          />
+
+          <div v-else class="space-y-6">
+            <!-- 2. Hero band -->
+            <section class="grid grid-cols-1 md:grid-cols-[1.3fr_0.9fr] gap-4">
+              <div class="bg-background-card border border-border-subtle rounded-xl px-6 py-6">
+                <p class="text-[13px] font-normal text-text-muted">Custo fixo em {{ selectedMonthLong }}</p>
+                <p class="text-kpi-xl text-negative leading-tight mt-2">{{ formatCurrency(currentMonthTotal) }}</p>
+                <p class="text-[13px] mt-2 flex flex-wrap items-center gap-x-1.5">
+                  <span v-if="vsAverage" :class="['inline-flex items-center gap-1 font-medium', vsAverage.cls]">
+                    <span aria-hidden="true">{{ vsAverage.arrow }}</span>{{ vsAverage.label }}
+                  </span>
+                  <span v-if="vsAverage" class="text-text-muted">vs. média de 6 meses</span>
+                </p>
+                <p class="text-[13px] text-text-muted mt-1">
+                  {{ activeCategoriesCount }} {{ activeCategoriesCount === 1 ? 'categoria ativa' : 'categorias ativas' }}
+                </p>
               </div>
 
-              <!-- Desktop Table -->
-              <div class="hidden lg:block overflow-x-auto overflow-y-auto flex-1">
-              <table class="min-w-full">
-                <thead>
-                  <tr>
-                    <th class="px-4 py-3 text-left text-[11px] font-normal text-gray-500 sticky left-0 bg-[#FAFBFC] z-10">
-                      Categoria
-                    </th>
-                    <th
-                      v-for="month in monthLabels"
-                      :key="month"
-                      class="px-4 py-3 text-right text-[11px] font-normal text-gray-500 whitespace-nowrap"
-                    >
-                      {{ month }}
-                    </th>
-                    <th class="px-4 py-3 text-right text-[11px] font-normal text-gray-500 whitespace-nowrap">
-                      Total
-                    </th>
-                    <th class="px-4 py-3 text-right text-[11px] font-normal text-gray-500 whitespace-nowrap">
-                      Media
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="category in categoryBreakdown"
-                    :key="category.name"
-                    class="hover:bg-gray-50/80 transition-colors"
-                  >
-                    <td class="px-4 py-5 whitespace-nowrap sticky left-0 bg-[#FAFBFC]">
-                      <span class="text-[13px] font-normal text-gray-700">{{ category.name }}</span>
-                    </td>
-                    <td
-                      v-for="month in monthLabels"
-                      :key="month"
-                      class="px-4 py-5 whitespace-nowrap text-right text-[13px]"
-                      :class="getCellClass(category.monthlyTotals[month])"
-                    >
-                      {{ formatCurrencyCompact(category.monthlyTotals[month] || 0) }}
-                    </td>
-                    <td class="px-4 py-5 whitespace-nowrap text-right text-[15px] font-medium text-[#111111]">
-                      {{ formatCurrencyCompact(category.total) }}
-                    </td>
-                    <td class="px-4 py-5 whitespace-nowrap text-right text-[13px] text-gray-500">
-                      {{ formatCurrencyCompact(category.average) }}
-                    </td>
-                  </tr>
+              <div class="bg-background-card border border-border-subtle rounded-xl px-6 py-6 flex flex-col">
+                <p class="text-[13px] font-normal text-text-muted">Média mensal</p>
+                <p class="text-kpi-lg text-text-primary leading-tight mt-2 whitespace-nowrap">
+                  {{ formatCurrency(averageMonthlyTotal) }}
+                </p>
+                <p class="text-[13px] text-text-secondary mt-1">últimos 6 meses</p>
+                <p class="text-[13px] text-text-muted mt-auto pt-4">
+                  total no período <span class="font-medium text-text-secondary">{{ formatCurrency(grandTotal) }}</span>
+                </p>
+              </div>
+            </section>
 
-                  <!-- Total Row -->
-                  <tr class="font-normal border-t border-gray-200">
-                    <td class="px-4 py-5 whitespace-nowrap sticky left-0 bg-[#FAFBFC] text-[13px] text-gray-700 font-medium">
-                      TOTAL
-                    </td>
-                    <td
-                      v-for="month in monthLabels"
-                      :key="month"
-                      class="px-4 py-5 whitespace-nowrap text-right text-[13px] text-gray-700"
-                    >
-                      {{ formatCurrencyCompact(getMonthTotal(month)) }}
-                    </td>
-                    <td class="px-4 py-5 whitespace-nowrap text-right text-kpi-sm text-[#111111]">
-                      {{ formatCurrencyCompact(grandTotal) }}
-                    </td>
-                    <td class="px-4 py-5 whitespace-nowrap text-right text-[15px] font-medium text-[#111111]">
-                      {{ formatCurrencyCompact(averageMonthlyTotal) }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <!-- 3. Evolution -->
+            <section class="bg-background-card border border-border-subtle rounded-xl p-5">
+              <div class="flex items-center justify-between mb-5">
+                <h2 class="text-xs font-medium text-text-muted uppercase tracking-wider">Evolução</h2>
+                <span class="text-[11px] text-text-muted">6 meses</span>
+              </div>
 
-              <!-- Mobile Cards -->
-              <div class="lg:hidden overflow-y-auto flex-1">
               <div
-                v-for="category in categoryBreakdown"
-                :key="category.name"
-                class="p-3 space-y-2"
+                class="flex items-end gap-2 h-48"
+                role="img"
+                :aria-label="`Evolução dos custos fixos: ${chartAltText}`"
               >
-                <div class="flex items-start justify-between">
+                <div v-for="m in months" :key="m.key" class="flex-1 flex flex-col items-center gap-2 h-full">
+                  <div class="flex-1 w-full flex items-end">
+                    <div
+                      class="w-full rounded-t-md transition-all duration-500"
+                      :class="m.key === selectedMonth ? 'bg-accent-primary' : 'bg-accent-primary/25'"
+                      :style="{ height: `${barHeight(m.total)}%` }"
+                      :title="`${m.label}: ${formatCurrency(m.total)}`"
+                    ></div>
+                  </div>
+                  <p class="text-[11px] tabular-nums" :class="m.key === selectedMonth ? 'text-text-primary font-medium' : 'text-text-muted'">
+                    {{ m.label }}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <!-- 4. Breakdown -->
+            <section class="bg-background-card border border-border-subtle rounded-xl p-5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <h2 class="text-xs font-medium text-text-muted uppercase tracking-wider">Por categoria</h2>
+                <details class="text-[12px]">
+                  <summary class="cursor-pointer text-text-muted hover:text-text-secondary transition-colors">
+                    {{ FIXED_COST_CATEGORIES.length }} categorias configuradas
+                  </summary>
+                  <div class="mt-3 flex flex-wrap gap-2 max-w-md">
+                    <span
+                      v-for="category in FIXED_COST_CATEGORIES"
+                      :key="category"
+                      class="px-2 py-1 bg-background-section text-text-muted text-[11px] rounded"
+                    >{{ category }}</span>
+                  </div>
+                </details>
+              </div>
+
+              <ul class="divide-y divide-border-subtle">
+                <li
+                  v-for="category in categoryBreakdown"
+                  :key="category.name"
+                  class="flex flex-wrap items-center gap-x-4 gap-y-2 py-4"
+                >
                   <div class="min-w-0 flex-1">
-                    <h3 class="text-[13px] font-medium text-gray-700 truncate">{{ category.name }}</h3>
-                    <div class="flex items-center gap-2 text-[11px] text-gray-500">
-                      <span>Total: {{ formatCurrencyCompact(category.total) }}</span>
-                      <span>Media: {{ formatCurrencyCompact(category.average) }}</span>
+                    <p class="text-[15px] font-medium text-text-primary truncate">{{ category.name }}</p>
+                    <p class="text-[13px] text-text-muted mt-0.5">
+                      média {{ formatCurrency(category.average) }}/mês
+                    </p>
+                    <div class="mt-2 h-1.5 bg-background-hover rounded-full overflow-hidden max-w-xs">
+                      <div
+                        class="h-full rounded-full bg-accent-primary/60"
+                        :style="{ width: `${categoryBarPct(category.total)}%` }"
+                      ></div>
                     </div>
                   </div>
-                </div>
 
-                <div class="grid grid-cols-3 gap-1.5 text-[11px]">
-                  <div
-                    v-for="(month, index) in monthLabels"
-                    :key="month"
-                    class="flex justify-between p-1.5 bg-gray-50 rounded"
-                  >
-                    <span class="text-gray-500">{{ month }}:</span>
-                    <span
-                      :class="getCellClass(category.monthlyTotals[last6Months[index]])"
-                      class="font-medium"
-                    >
-                      {{ formatCurrencyCompact(category.monthlyTotals[last6Months[index]] || 0) }}
-                    </span>
+                  <!-- Per-month sparkline of values -->
+                  <div class="hidden sm:flex items-center gap-3">
+                    <div v-for="m in months" :key="m.key" class="text-right w-16">
+                      <p class="text-[10px] text-text-muted">{{ m.label }}</p>
+                      <p
+                        class="text-[12px] tabular-nums"
+                        :class="category.monthlyTotals[m.key] ? 'text-text-secondary' : 'text-text-muted/50'"
+                      >
+                        {{ formatCurrency(category.monthlyTotals[m.key] || 0) }}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              <!-- Mobile Total -->
-              <div class="p-3 space-y-2">
-                <h3 class="text-[13px] font-semibold text-gray-700">TOTAL GERAL</h3>
-                <div class="grid grid-cols-2 gap-3 text-[12px]">
-                  <div class="text-right">
-                    <span class="text-gray-500">Total: </span>
-                    <span class="font-semibold text-[#111111]">{{ formatCurrencyCompact(grandTotal) }}</span>
+                  <div class="text-right ml-auto sm:ml-0 w-24">
+                    <p class="text-[15px] font-semibold text-negative whitespace-nowrap">
+                      {{ formatCurrency(category.monthlyTotals[selectedMonth] || 0) }}
+                    </p>
+                    <p class="text-[12px] text-text-muted whitespace-nowrap">{{ selectedMonthShort }}</p>
                   </div>
-                  <div class="text-right">
-                    <span class="text-gray-500">Media: </span>
-                    <span class="font-semibold text-[#111111]">{{ formatCurrencyCompact(averageMonthlyTotal) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+                </li>
 
-              <!-- Empty State -->
-              <EmptyState
-                v-if="categoryBreakdown.length === 0"
-                icon="💰"
-                title="Nenhum custo fixo encontrado"
-                description="Nao ha custos fixos registrados nos ultimos 6 meses para as categorias configuradas."
-              />
-            </div>
-          </section>
+                <li class="flex items-center gap-4 py-4 border-t border-border-base">
+                  <p class="text-[13px] font-medium text-text-secondary uppercase tracking-wider flex-1">Total</p>
+                  <div class="hidden sm:flex items-center gap-3">
+                    <div v-for="m in months" :key="m.key" class="text-right w-16">
+                      <p class="text-[12px] tabular-nums text-text-secondary">{{ formatCurrency(m.total) }}</p>
+                    </div>
+                  </div>
+                  <div class="text-right ml-auto sm:ml-0 w-24">
+                    <p class="text-[15px] font-semibold text-text-primary whitespace-nowrap">
+                      {{ formatCurrency(currentMonthTotal) }}
+                    </p>
+                  </div>
+                </li>
+              </ul>
+            </section>
+          </div>
         </template>
       </main>
     </div>
@@ -227,37 +164,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Bar } from 'vue-chartjs'
+import { computed, ref } from 'vue'
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  type ChartOptions
-} from 'chart.js'
+  monthKeyOf,
+  currentMonthKey,
+  addMonthsToKey,
+  monthIndexOfKey,
+} from '~/shared/dates'
+import { isRealExpense, categoryNameOf, expenseAmount } from '~/shared/expenseRules'
 
-// Register Chart.js components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
-
-// Composables - transactions fetched automatically via SSR
-const {
-  transactions: rawTransactions,
-  loading,
-  error,
-  refreshing,
-  refreshCache
-} = useTransactions()
-
+// The server already expands installments across months (/api/transactions),
+// so this page consumes the schedule as-is.
+const { transactions, loading, error } = useTransactions()
 const { selectedPerson } = usePersonFilter()
-const { processInstallments } = useInstallments()
-const { fetchCacheStatus } = useCacheStatus()
-
-// Process installments to expand them across months
-const transactions = computed(() => processInstallments(rawTransactions.value))
+const { formatCurrency, formatMonthName } = useFormatters()
 
 // ===== CONFIGURAÇÃO: Categorias de Custos Fixos =====
 const FIXED_COST_CATEGORIES = [
@@ -272,118 +192,68 @@ const FIXED_COST_CATEGORIES = [
   'Medical'
 ]
 
-// Helper function to check if a category is a fixed cost
 const isFixedCostCategory = (categoryName: string): boolean => {
   const lowerCaseName = categoryName.toLowerCase()
-  return FIXED_COST_CATEGORIES.some(fixed =>
-    lowerCaseName.includes(fixed.toLowerCase())
-  )
+  return FIXED_COST_CATEGORIES.some(fixed => lowerCaseName.includes(fixed.toLowerCase()))
 }
 
-// Generate last 6 months including current month
-const getLast6Months = () => {
-  const months = []
-  const now = new Date()
+const selectedMonth = ref(currentMonthKey())
+const selectedMonthLong = computed(() => formatMonthName(monthIndexOfKey(selectedMonth.value)))
+const selectedMonthShort = computed(() => formatMonthName(monthIndexOfKey(selectedMonth.value), true))
 
-  for (let i = 5; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    months.push(`${year}-${month}`)
-  }
+/** The six months ending on the selected one, as "YYYY-MM" keys. */
+const monthKeys = computed(() =>
+  [-5, -4, -3, -2, -1, 0].map(offset => addMonthsToKey(selectedMonth.value, offset))
+)
 
-  return months
-}
-
-const last6Months = getLast6Months()
-
-// Format month for display
-const formatMonthLabel = (yearMonth: string) => {
-  const [year, month] = yearMonth.split('-')
-  const date = new Date(parseInt(year), parseInt(month) - 1)
-  return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
-}
-
-const monthLabels = computed(() => last6Months.map(formatMonthLabel))
-
-// Filter transactions by person
 const filteredTransactions = computed(() => {
-  let filtered = transactions.value
-
-  if (selectedPerson.value !== 'Ambos') {
-    filtered = filtered.filter(transaction => {
-      return transaction.person === selectedPerson.value
-    })
-  }
-
-  return filtered
+  if (selectedPerson.value === 'Ambos') return transactions.value
+  return transactions.value.filter(t => t.person === selectedPerson.value)
 })
 
-// Filter only fixed cost transactions
-const fixedCostTransactions = computed(() => {
-  return filteredTransactions.value.filter(t => {
-    const category = t.destination || 'Sem Categoria'
-    return isFixedCostCategory(category)
-  })
-})
+const fixedCostTransactions = computed(() =>
+  filteredTransactions.value.filter(t => isRealExpense(t) && isFixedCostCategory(categoryNameOf(t)))
+)
 
-// Get transactions for a specific month
-const getMonthTransactions = (yearMonth: string) => {
-  const [year, month] = yearMonth.split('-')
-  return fixedCostTransactions.value.filter(t => {
-    const date = new Date(t.date)
-    return date.getFullYear() === parseInt(year) &&
-           date.getMonth() === parseInt(month) - 1
-  })
-}
-
-// Calculate monthly totals
+/**
+ * Monthly totals, bucketed by the "YYYY-MM" slice of the date string.
+ *
+ * This page used to bucket with `new Date(t.date).getMonth()`, which parses the
+ * plain calendar day as UTC midnight and rolls back a day in UTC-3 — so every
+ * day-01 charge (rent above all) was counted in the previous month.
+ */
 const monthlyTotals = computed(() => {
   const totals: Record<string, number> = {}
+  for (const key of monthKeys.value) totals[key] = 0
 
-  last6Months.forEach(month => {
-    const monthTransactions = getMonthTransactions(month)
-    totals[month] = monthTransactions.reduce((sum, t) => sum + t.amount, 0)
-  })
+  for (const t of fixedCostTransactions.value) {
+    const key = monthKeyOf(t.date)
+    if (key in totals) totals[key] += expenseAmount(t)
+  }
 
   return totals
 })
 
-// Current month data
-const currentMonthTotal = computed(() => {
-  const currentMonth = last6Months[last6Months.length - 1]
-  return monthlyTotals.value[currentMonth] || 0
+const months = computed(() =>
+  monthKeys.value.map(key => ({
+    key,
+    label: formatMonthName(monthIndexOfKey(key), true),
+    total: monthlyTotals.value[key] || 0,
+  }))
+)
+
+const currentMonthTotal = computed(() => monthlyTotals.value[selectedMonth.value] || 0)
+const grandTotal = computed(() => months.value.reduce((sum, m) => sum + m.total, 0))
+const averageMonthlyTotal = computed(() => grandTotal.value / monthKeys.value.length)
+
+const vsAverage = computed(() => {
+  if (averageMonthlyTotal.value <= 0) return null
+  const pct = Math.round(((currentMonthTotal.value - averageMonthlyTotal.value) / averageMonthlyTotal.value) * 100)
+  if (pct > 0) return { label: `${pct}%`, arrow: '↑', cls: 'text-negative' }
+  if (pct < 0) return { label: `${Math.abs(pct)}%`, arrow: '↓', cls: 'text-positive' }
+  return { label: '0%', arrow: '', cls: 'text-text-muted' }
 })
 
-const currentMonthLabel = computed(() => {
-  const currentMonth = last6Months[last6Months.length - 1]
-  const [year, month] = currentMonth.split('-')
-  const date = new Date(parseInt(year), parseInt(month) - 1)
-  return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
-})
-
-// Average monthly total
-const averageMonthlyTotal = computed(() => {
-  const total = Object.values(monthlyTotals.value).reduce((sum, val) => sum + val, 0)
-  return total / last6Months.length
-})
-
-// Grand total
-const grandTotal = computed(() => {
-  return Object.values(monthlyTotals.value).reduce((sum, val) => sum + val, 0)
-})
-
-// Active categories (categories with expenses in the period)
-const activeCategoriesCount = computed(() => {
-  const categories = new Set<string>()
-  fixedCostTransactions.value.forEach(t => {
-    const category = t.destination || 'Sem Categoria'
-    categories.add(category)
-  })
-  return categories.size
-})
-
-// Category breakdown
 interface CategoryBreakdown {
   name: string
   monthlyTotals: Record<string, number>
@@ -391,160 +261,39 @@ interface CategoryBreakdown {
   average: number
 }
 
-const categoryBreakdown = computed(() => {
+const categoryBreakdown = computed<CategoryBreakdown[]>(() => {
   const categoryMap = new Map<string, CategoryBreakdown>()
 
-  fixedCostTransactions.value.forEach(transaction => {
-    const category = transaction.destination || 'Sem Categoria'
-    const date = new Date(transaction.date)
-    const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+  for (const t of fixedCostTransactions.value) {
+    const key = monthKeyOf(t.date)
+    if (!monthKeys.value.includes(key)) continue
 
-    if (!last6Months.includes(yearMonth)) return
-
-    if (!categoryMap.has(category)) {
-      categoryMap.set(category, {
-        name: category,
-        monthlyTotals: {},
-        total: 0,
-        average: 0
-      })
+    const name = categoryNameOf(t)
+    if (!categoryMap.has(name)) {
+      categoryMap.set(name, { name, monthlyTotals: {}, total: 0, average: 0 })
     }
 
-    const data = categoryMap.get(category)!
-    data.monthlyTotals[yearMonth] = (data.monthlyTotals[yearMonth] || 0) + transaction.amount
-    data.total += transaction.amount
-  })
+    const data = categoryMap.get(name)!
+    data.monthlyTotals[key] = (data.monthlyTotals[key] || 0) + expenseAmount(t)
+    data.total += expenseAmount(t)
+  }
 
-  const result: CategoryBreakdown[] = []
-  categoryMap.forEach(data => {
-    data.average = data.total / last6Months.length
-    result.push(data)
-  })
-
-  return result.sort((a, b) => b.total - a.total)
+  return Array.from(categoryMap.values())
+    .map(data => ({ ...data, average: data.total / monthKeys.value.length }))
+    .sort((a, b) => b.total - a.total)
 })
 
-// Get total for a specific month (formatted label)
-const getMonthTotal = (monthLabel: string) => {
-  const index = monthLabels.value.indexOf(monthLabel)
-  if (index === -1) return 0
-  const yearMonth = last6Months[index]
-  return monthlyTotals.value[yearMonth] || 0
-}
+const activeCategoriesCount = computed(
+  () => categoryBreakdown.value.filter(c => (c.monthlyTotals[selectedMonth.value] || 0) > 0).length
+)
 
-// Chart data
-const chartData = computed(() => {
-  return {
-    labels: monthLabels.value,
-    datasets: [
-      {
-        label: 'Custo Fixo Mensal',
-        data: last6Months.map(month => monthlyTotals.value[month] || 0),
-        backgroundColor: 'rgba(251, 191, 36, 0.6)',
-        borderColor: 'rgba(251, 191, 36, 0.8)',
-        borderWidth: 1,
-        borderRadius: 6
-      }
-    ]
-  }
-})
+const chartMax = computed(() => Math.max(1, ...months.value.map(m => m.total)))
+const barHeight = (value: number) => Math.max(value > 0 ? 2 : 0, (value / chartMax.value) * 100)
 
-const chartOptions: ChartOptions<'bar'> = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: false
-    },
-    tooltip: {
-      backgroundColor: '#1F2937',
-      titleColor: '#F9FAFB',
-      bodyColor: '#9CA3AF',
-      borderColor: '#374151',
-      borderWidth: 1,
-      padding: 12,
-      displayColors: false,
-      callbacks: {
-        label: (context) => {
-          const value = context.parsed.y
-          return `Custo: ${formatCurrency(value || 0)}`
-        }
-      }
-    }
-  },
-  scales: {
-    x: {
-      grid: {
-        display: false
-      },
-      ticks: {
-        color: '#9CA3AF',
-        font: {
-          size: 11
-        }
-      }
-    },
-    y: {
-      beginAtZero: true,
-      grid: {
-        color: '#F3F4F6'
-      },
-      ticks: {
-        color: '#9CA3AF',
-        font: {
-          size: 11
-        },
-        callback: (value) => {
-          return 'R$ ' + (value as number).toLocaleString('pt-BR')
-        }
-      }
-    }
-  }
-}
+const categoryMax = computed(() => Math.max(1, ...categoryBreakdown.value.map(c => c.total)))
+const categoryBarPct = (value: number) => Math.round((value / categoryMax.value) * 100)
 
-// Methods
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value)
-}
-
-const formatCurrencyCompact = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value)
-}
-
-const formatCurrentMonthCompact = () => {
-  const currentMonth = last6Months[last6Months.length - 1]
-  const [year, month] = currentMonth.split('-')
-  const date = new Date(parseInt(year), parseInt(month) - 1)
-  return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
-}
-
-const getCellClass = (value: number | undefined) => {
-  if (!value || value === 0) {
-    return 'text-gray-500'
-  }
-  return 'text-gray-700 font-normal'
-}
-
-// Refresh cache and reload data
-const refreshData = async () => {
-  try {
-    const result = await refreshCache()
-
-    if (result.success) {
-      console.log('Cache atualizado:', result.message)
-    }
-
-    await fetchCacheStatus()
-  } catch (e) {
-    console.error('Error refreshing data:', e)
-  }
-}
+const chartAltText = computed(() =>
+  months.value.map(m => `${m.label} ${formatCurrency(m.total)}`).join(', ')
+)
 </script>

@@ -17,55 +17,31 @@
               <h1 class="text-2xl font-semibold text-text-primary tracking-tight mt-0.5">Visão geral</h1>
             </div>
 
-            <div class="sm:ml-auto flex items-center gap-3">
-              <!-- Month selector (visual; current month) -->
-              <div
-                class="inline-flex items-center h-11 rounded-full border border-border-base bg-background-card"
-                role="group"
-                aria-label="Mês de referência"
-              >
-                <button
-                  type="button"
-                  disabled
-                  aria-label="Mês anterior"
-                  title="Navegação de meses em breve"
-                  class="px-3 h-full text-text-muted opacity-40 cursor-not-allowed"
-                >‹</button>
-                <span class="px-1 text-[14px] font-medium text-text-primary min-w-[64px] text-center">
-                  {{ currentMonthName }}
-                </span>
-                <button
-                  type="button"
-                  disabled
-                  aria-label="Próximo mês"
-                  title="Navegação de meses em breve"
-                  class="px-3 h-full text-text-muted opacity-40 cursor-not-allowed"
-                >›</button>
-              </div>
-
-              <!-- Refresh -->
-              <button
-                type="button"
-                :disabled="loading || refreshing"
-                @click="refresh"
-                class="inline-flex items-center gap-2 h-11 px-4 rounded-full border border-border-base bg-background-card text-[14px] font-medium text-text-secondary hover:bg-background-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-1"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  :class="{ 'animate-spin': refreshing }"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Atualizar
-              </button>
+            <div class="sm:ml-auto flex items-start gap-3">
+              <MonthSelector v-model="selectedMonth" />
+              <SyncButton />
             </div>
           </header>
+
+          <!-- Empty month: the sheet may simply not be synced yet -->
+          <div
+            v-if="isMonthEmpty"
+            class="mb-6 bg-background-card border border-amber-200 rounded-xl p-5 flex items-start gap-3"
+          >
+            <span class="w-2 h-2 rounded-full flex-shrink-0 mt-1.5 bg-amber-500" aria-hidden="true"></span>
+            <div class="min-w-0">
+              <p class="text-[15px] font-semibold text-text-primary">
+                Nenhum lançamento sincronizado em {{ selectedMonthLong }}
+              </p>
+              <p class="text-[13px] text-text-secondary mt-0.5">
+                <template v-if="projectedOnlyTotal > 0">
+                  Os {{ formatCurrency(projectedOnlyTotal) }} abaixo são
+                  <strong class="font-medium">parcelas projetadas</strong>, não gastos realizados.
+                </template>
+                Os dados vêm do Postgres, que espelha a planilha — clique em Atualizar para sincronizar.
+              </p>
+            </div>
+          </div>
 
           <div class="space-y-6">
             <!-- 2. Hero band: Saldo Disponível + Fatura do cartão -->
@@ -89,7 +65,7 @@
               <!-- Fatura do cartão -->
               <div class="bg-background-card border border-red-200 rounded-xl px-6 py-6 flex flex-col">
                 <p class="text-[13px] font-medium text-text-muted uppercase tracking-wider">
-                  Fatura do cartão · Gabriel
+                  Fatura do cartão · {{ invoiceOwner }}
                 </p>
                 <p class="text-kpi-lg text-negative mt-2 whitespace-nowrap">
                   {{ formatCurrency(creditCardInvoice.total, { decimals: true }) }}
@@ -99,7 +75,7 @@
                   · vence em {{ dueMonthName }}
                 </p>
                 <NuxtLink
-                  to="/transactions"
+                  :to="{ path: '/transactions', query: { origin: invoiceCardOrigin } }"
                   class="mt-auto pt-4 inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline self-start"
                 >
                   ver fatura →
@@ -109,7 +85,7 @@
 
             <!-- 3. Insights -->
             <section v-if="smartInsights.length > 0">
-              <p class="text-xs font-medium text-text-muted uppercase tracking-wider mb-3">Insights do mês</p>
+              <p class="text-xs font-medium text-text-muted uppercase tracking-wider mb-3">Insights de {{ selectedMonthLong }}</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div
                   v-for="(insight, index) in smartInsights.slice(0, 2)"
@@ -136,7 +112,7 @@
             <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="bg-background-card border border-border-subtle rounded-xl">
                 <LightStatCard
-                  label="Gastado este mês"
+                  :label="`Gastado em ${selectedMonthLong}`"
                   :value="monthlyStats.expenses"
                   format="currency"
                   value-color="negative"
@@ -303,28 +279,24 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { SmartInsight } from '~/composables/useDashboardAnalytics'
+import { currentMonthKey, monthIndexOfKey, monthKeyOf } from '~/shared/dates'
 
-const {
-  transactions,
-  loading,
-  error,
-  refreshCache,
-  refreshing
-} = useTransactions()
+const { transactions, loading, error } = useTransactions()
 
 const { selectedPerson } = usePersonFilter()
-
-const { fetchCacheStatus } = useCacheStatus()
 
 const {
   getCurrentMonthStats,
   getAllCategories,
-  getCurrentMonthExpenses,
+  getMonthExpenses,
   getSmartInsights,
   getCreditCardInvoice
 } = useDashboardAnalytics()
 
 const { formatCurrency, formatMonthName, formatDate } = useFormatters()
+
+const selectedMonth = ref(currentMonthKey())
+const selectedMonthLong = computed(() => formatMonthName(monthIndexOfKey(selectedMonth.value)))
 
 const selectedCategory = ref<string | null>(null)
 const transactionQuery = ref('')
@@ -339,19 +311,35 @@ const filteredTransactions = computed(() => {
   return filtered
 })
 
-const monthlyStats = computed(() => getCurrentMonthStats([...filteredTransactions.value]))
-const allCategories = computed(() => getAllCategories([...filteredTransactions.value]))
-const smartInsights = computed(() => getSmartInsights([...filteredTransactions.value]))
+const monthlyStats = computed(() => getCurrentMonthStats(filteredTransactions.value, selectedMonth.value))
+const allCategories = computed(() => getAllCategories(filteredTransactions.value, selectedMonth.value))
+const smartInsights = computed(() => getSmartInsights(filteredTransactions.value, selectedMonth.value))
 
-// Credit card invoice for Gabriel's card (billing cycle, not calendar month).
-// Uses ALL transactions (not the person filter) and selects by card origin.
-const creditCardInvoice = computed(() => getCreditCardInvoice([...transactions.value]))
+// A month can look busy while holding nothing but projected installments —
+// that is exactly what an un-synced month looks like, so treat it as empty and
+// say so, instead of presenting a forecast as if it had already happened.
+const realMonthRows = computed(() =>
+  filteredTransactions.value.filter(t => monthKeyOf(t.date) === selectedMonth.value && !t.projected)
+)
+const isMonthEmpty = computed(() => realMonthRows.value.length === 0)
+const projectedOnlyTotal = computed(() => (isMonthEmpty.value ? monthlyStats.value.expenses : 0))
+
+// Credit card invoice follows the billing cycle, not the calendar month, so it
+// isn't tied to the month selector. It does follow the person filter: with
+// "Ambos" there is no single card to show, so we fall back to Gabriel's.
+const invoiceCardOrigin = computed(() =>
+  selectedPerson.value === 'Juliana' ? 'Credit Card Juliana' : 'Credit Card Gabriel'
+)
+const invoiceOwner = computed(() => (selectedPerson.value === 'Juliana' ? 'Juliana' : 'Gabriel'))
+const creditCardInvoice = computed(() =>
+  getCreditCardInvoice(transactions.value, { cardOrigin: invoiceCardOrigin.value })
+)
 const dueMonthName = computed(() => formatMonthName(creditCardInvoice.value.dueMonth))
 
 const totalExpenses = computed(() => allCategories.value.reduce((sum, cat) => sum + cat.total, 0))
 const maxCategoryTotal = computed(() => allCategories.value.reduce((max, cat) => Math.max(max, cat.total), 0))
 
-const currentMonthExpenses = computed(() => getCurrentMonthExpenses([...filteredTransactions.value]))
+const currentMonthExpenses = computed(() => getMonthExpenses(filteredTransactions.value, selectedMonth.value))
 
 const displayedExpenses = computed(() => {
   let list = currentMonthExpenses.value
@@ -374,8 +362,6 @@ const displayedExpenses = computed(() => {
   return list
 })
 
-const currentMonthName = computed(() => formatMonthName(new Date().getMonth()))
-
 const insightDotClass: Record<SmartInsight['type'], string> = {
   success: 'bg-emerald-500',
   warning: 'bg-amber-500',
@@ -388,21 +374,5 @@ const SWATCH_PALETTE = ['#4F46E5', '#2563EB', '#059669', '#0891B2', '#7C3AED', '
 const swatchColor = (name: string, index: number): string => {
   if (name === 'Sem categoria') return '#D97706'
   return SWATCH_PALETTE[index % SWATCH_PALETTE.length]
-}
-
-const refresh = async () => {
-  try {
-    const result = await refreshCache()
-
-    if (result.success) {
-      console.log('Cache atualizado com sucesso:', result.message)
-    } else {
-      console.error('Erro ao atualizar cache:', result.error)
-    }
-
-    await fetchCacheStatus()
-  } catch (e) {
-    console.error('Erro durante atualização:', e)
-  }
 }
 </script>

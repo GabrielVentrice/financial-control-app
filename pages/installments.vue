@@ -13,41 +13,9 @@
               <h1 class="text-2xl font-semibold text-text-primary tracking-tight mt-0.5">O que já está comprometido</h1>
             </div>
 
-            <div class="sm:ml-auto flex items-center gap-3">
-              <!-- Month selector -->
-              <div
-                class="inline-flex items-center h-11 rounded-full border border-border-base bg-background-card"
-                role="group"
-                aria-label="Mês de referência"
-              >
-                <button
-                  type="button"
-                  aria-label="Mês anterior"
-                  class="px-3 h-full text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded-l-full"
-                  @click="changeMonth(-1)"
-                >‹</button>
-                <span class="px-1 text-[14px] font-medium text-text-primary min-w-[88px] text-center">
-                  {{ selectedMonthLong }}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Próximo mês"
-                  class="px-3 h-full text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded-r-full"
-                  @click="changeMonth(1)"
-                >›</button>
-              </div>
-
-              <button
-                type="button"
-                :disabled="loading || refreshing"
-                @click="refreshData"
-                class="inline-flex items-center gap-2 h-11 px-4 rounded-full border border-border-base bg-background-card text-[14px] font-medium text-text-secondary hover:bg-background-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-1"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Atualizar
-              </button>
+            <div class="sm:ml-auto flex items-start gap-3">
+              <MonthSelector v-model="selectedMonth" />
+              <SyncButton />
             </div>
           </header>
 
@@ -273,54 +241,34 @@
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
 
-const {
-  transactions: rawTransactions,
-  loading,
-  error,
-  refreshing,
-  refreshCache
-} = useTransactions()
+import {
+  monthKeyOf,
+  currentMonthKey,
+  addMonthsToKey,
+  monthKeyToIdx as monthToIdx,
+  idxToMonthKey as idxToKey,
+  monthIndexOfKey,
+} from '~/shared/dates'
+import { isIncome, isExcludedCategory } from '~/shared/expenseRules'
+
+// The server already expands installments into their monthly schedule
+// (/api/transactions runs processInstallments), so this page only needs the
+// parsing helpers.
+const { transactions, loading, error } = useTransactions()
 
 const { selectedPerson } = usePersonFilter()
-const { processInstallments, parseInstallment, isInstallmentTransaction } = useInstallments()
-const { fetchCacheStatus } = useCacheStatus()
+const { parseInstallment, isInstallmentTransaction } = useInstallments()
 const { formatCurrency, formatMonthName } = useFormatters()
 
-// Expand installments into their full monthly schedule.
-const transactions = computed(() => processInstallments(rawTransactions.value))
-
-// --- Month helpers (string YYYY-MM keys — timezone-safe) ---
-const toKey = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, '0')}`
-const addMonths = (key: string, delta: number) => {
-  const [y, m] = key.split('-').map(Number)
-  const d = new Date(y, m - 1 + delta, 1)
-  return toKey(d.getFullYear(), d.getMonth())
-}
-// Absolute month index (year*12 + month) for arithmetic, and its inverse.
-const monthToIdx = (key: string) => {
-  const [y, m] = key.split('-').map(Number)
-  return y * 12 + (m - 1)
-}
-const idxToKey = (idx: number) => toKey(Math.floor(idx / 12), idx % 12)
-const shortMonth = (key: string) => {
-  const m = Number(key.split('-')[1])
-  return formatMonthName(m - 1, true)
-}
+const shortMonth = (key: string) => formatMonthName(monthIndexOfKey(key), true)
 const monthYear = (key: string) => {
   if (!key) return '—'
-  const [y, m] = key.split('-')
-  return `${formatMonthName(Number(m) - 1, true)}/${y}`
+  const [y] = key.split('-')
+  return `${formatMonthName(monthIndexOfKey(key), true)}/${y}`
 }
 
-const now = new Date()
-const currentMonthKey = toKey(now.getFullYear(), now.getMonth())
-const selectedMonth = ref(currentMonthKey)
-const changeMonth = (delta: number) => { selectedMonth.value = addMonths(selectedMonth.value, delta) }
-
-const selectedMonthLong = computed(() => {
-  const m = Number(selectedMonth.value.split('-')[1])
-  return formatMonthName(m - 1)
-})
+const selectedMonth = ref(currentMonthKey())
+const selectedMonthLong = computed(() => formatMonthName(monthIndexOfKey(selectedMonth.value)))
 
 // --- Person-filtered transactions ---
 const personTransactions = computed(() => {
@@ -399,7 +347,7 @@ const rawSeries = computed<Series[]>(() => {
     }
     map.get(key)!.rows.push({
       cur: info.current,
-      monthIdx: monthToIdx(t.date.substring(0, 7)),
+      monthIdx: monthToIdx(monthKeyOf(t.date)),
       amount: Math.abs(t.amount)
     })
   })
@@ -448,9 +396,8 @@ const activeSeries = computed<Series[]>(() => {
 // --- Reference month income (with fallback to a recent month) ---
 const monthIncome = (monthKey: string): number => {
   return personTransactions.value
-    .filter(t => t.date.substring(0, 7) === monthKey)
-    .filter(t => (t.destination || '').toLowerCase().includes('bank account'))
-    .filter(t => (t.destination || '').toLowerCase() !== 'adjustment')
+    .filter(t => monthKeyOf(t.date) === monthKey)
+    .filter(t => isIncome(t) && !isExcludedCategory(t))
     .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 }
 
@@ -459,7 +406,7 @@ const referenceIncome = computed(() => {
   if (direct > 0) return direct
   // Fall back to the most recent month with income within the last 6 months.
   for (let i = 1; i <= 6; i++) {
-    const v = monthIncome(addMonths(selectedMonth.value, -i))
+    const v = monthIncome(addMonthsToKey(selectedMonth.value, -i))
     if (v > 0) return v
   }
   return 0
@@ -597,13 +544,5 @@ const openDetail = async (series: Series) => {
 }
 const closeDetail = () => { selectedParcela.value = null }
 
-// --- Refresh ---
-const refreshData = async () => {
-  try {
-    await refreshCache()
-    await fetchCacheStatus()
-  } catch (e) {
-    console.error('Erro ao atualizar parcelas:', e)
-  }
-}
+useModalDismiss(computed(() => selectedParcela.value !== null), closeDetail)
 </script>
