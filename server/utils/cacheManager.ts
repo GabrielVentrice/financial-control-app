@@ -7,6 +7,7 @@ import { promises as fs } from 'fs'
 import { join, dirname } from 'path'
 import type { Transaction } from '~/types/transaction'
 import type { CacheMetadata, CacheStatus } from '~/types/cache'
+import { normalizeSheetDate } from '~/shared/dates'
 import {
   uploadFileToDrive,
   downloadFileFromDrive,
@@ -115,16 +116,22 @@ function csvToTransactions(csv: string): Transaction[] {
 
     // Create transaction object
     if (values.length >= 8) {
+      // The cached CSV holds whatever the sheet had, so it needs the same date
+      // normalization as the live Sheets read — this is a third entry point for
+      // transactions and it was handing raw "M/D/YYYY" straight to the app.
+      const date = normalizeSheetDate(values[1])
+      if (!date) continue
+
       transactions.push({
-        id: values[0] || '',
-        date: values[1] || '',
+        transactionId: values[0] || '',
+        date,
         origin: values[2] || '',
         destination: values[3] || '',
         description: values[4] || '',
         amount: parseFloat(values[5]) || 0,
         recordedAt: values[6] || '',
         remoteId: values[7] || '',
-        person: '' // Will be enriched by personIdentifier
+        person: null // Will be enriched by personIdentifier
       })
     }
   }
