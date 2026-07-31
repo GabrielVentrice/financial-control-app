@@ -1,45 +1,26 @@
 <template>
-  <div class="flex flex-col items-stretch sm:items-end gap-1">
+  <div class="inline-flex items-baseline gap-2.5">
     <button
       type="button"
       :disabled="syncing"
-      @click="run"
-      class="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-full border border-border-base bg-background-card text-[14px] font-medium text-text-secondary hover:bg-background-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-1"
+      @click="syncNow()"
+      class="px-2.5 py-1.5 rounded-control border border-[color:var(--border)] bg-surface-1 text-body-sm font-semibold text-ink hover:bg-surface-2 transition-colors duration-[120ms] ease-ease disabled:opacity-40 disabled:cursor-not-allowed"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-4 w-4"
-        :class="{ 'animate-spin': syncing }"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-        aria-hidden="true"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-      {{ syncing ? 'Sincronizando…' : 'Atualizar' }}
+      {{ syncing ? 'sincronizando…' : 'atualizar' }}
     </button>
 
-    <p
-      v-if="syncError"
-      role="alert"
-      class="text-[12px] text-negative max-w-[240px] sm:text-right"
-    >
-      {{ syncError }}
-    </p>
-    <p
-      v-else-if="lastSyncLabel"
-      class="text-[12px] sm:text-right"
-      :class="isStale ? 'text-warning font-medium' : 'text-text-muted'"
-    >
-      <span v-if="isStale" aria-hidden="true">⚠ </span>dados de {{ lastSyncLabel }}
-    </p>
+    <span
+      v-if="lastSyncLabel"
+      class="text-meta whitespace-nowrap"
+      :class="isStale ? 'text-warn font-semibold' : 'text-text-3'"
+    >dados de {{ lastSyncLabel }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
-const { syncing, syncError, lastSyncLabel, isStale, syncNow } = useSync()
-
-const run = () => syncNow()
+// The failure case is deliberately NOT rendered here: per the design system a
+// data error is a --warn-wash band above the hero, never a toast or a message
+// hanging off a control. The page reads `syncError` from this same composable
+// and renders that band itself.
+const { syncing, lastSyncLabel, isStale, syncNow } = useSync()
 </script>

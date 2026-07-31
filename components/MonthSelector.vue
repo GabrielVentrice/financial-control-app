@@ -1,24 +1,24 @@
 <template>
   <div
-    class="inline-flex items-center h-11 rounded-full border border-border-base bg-background-card"
+    class="inline-flex items-center rounded-control border border-[color:var(--border)] bg-surface-1"
     role="group"
     aria-label="Mês de referência"
   >
     <button
       type="button"
       aria-label="Mês anterior"
-      class="px-3 h-full text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded-l-full"
+      class="px-2.5 py-1.5 text-text-3 hover:text-ink transition-colors duration-[120ms] ease-ease"
       @click="shift(-1)"
     >‹</button>
 
-    <span class="px-1 text-[14px] font-medium text-text-primary min-w-[88px] text-center" aria-live="polite">
+    <span class="px-1 text-body-sm font-semibold text-ink min-w-[86px] text-center" aria-live="polite">
       {{ label }}
     </span>
 
     <button
       type="button"
       aria-label="Próximo mês"
-      class="px-3 h-full text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded-r-full"
+      class="px-2.5 py-1.5 text-text-3 hover:text-ink transition-colors duration-[120ms] ease-ease"
       @click="shift(1)"
     >›</button>
   </div>
