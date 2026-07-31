@@ -46,6 +46,38 @@ export function daysInMonthKey(key: string): number {
 }
 
 /**
+ * Normalizes a date coming out of the Google Sheet ("M/D/YYYY") to ISO
+ * "YYYY-MM-DD".
+ *
+ * The whole app assumes ISO — `monthKeyOf` is a string slice, dates are
+ * compared as strings — so a raw sheet date silently produces nonsense. The
+ * sync normalized it on the way into Postgres but the direct-from-Sheets
+ * fallback did not, which made every month calculation wrong the moment
+ * DATABASE_URL was missing. Both paths go through this now.
+ *
+ * Returns null for anything unparseable, so callers can drop the row instead of
+ * inventing a date for it.
+ */
+export function normalizeSheetDate(dateStr: string): string | null {
+  if (!dateStr) return null
+
+  const trimmed = dateStr.trim()
+
+  // Already ISO (possibly with a time component).
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10)
+
+  const parts = trimmed.split('/')
+  if (parts.length === 3) {
+    const [month, day, year] = parts
+    if (year.length === 4 && Number(month) >= 1 && Number(month) <= 12) {
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+    }
+  }
+
+  return null
+}
+
+/**
  * Parses "YYYY-MM-DD" as a LOCAL calendar day. Use only when you genuinely need
  * a Date (sorting, day-level comparisons) — for month bucketing use monthKeyOf.
  */

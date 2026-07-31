@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { db, transactions, syncMetadata } from '../database'
 import { fetchTransactionsFromGoogleSheets } from './googleSheets'
 import { enrichTransactionsWithPerson } from './personIdentifier'
+import { normalizeSheetDate } from '~/shared/dates'
 
 export interface SyncResult {
   total: number
@@ -32,10 +33,10 @@ export async function syncTransactionsFromSheets(): Promise<SyncResult> {
   console.log(`[Sync] Fetched ${enriched.length} transactions`)
 
   const rows = enriched
-    .filter(tx => tx.transactionId)
+    .filter(tx => tx.transactionId && normalizeSheetDate(tx.date))
     .map(tx => ({
       transactionId: tx.transactionId,
-      date: parseGoogleSheetsDate(tx.date),
+      date: normalizeSheetDate(tx.date)!,
       origin: tx.origin || null,
       destination: tx.destination || null,
       description: tx.description || null,
@@ -98,21 +99,3 @@ export async function recordSyncError(message: string): Promise<void> {
   }
 }
 
-/**
- * Parses a date string from Google Sheets (M/D/YYYY) into ISO (YYYY-MM-DD).
- */
-function parseGoogleSheetsDate(dateStr: string): string {
-  if (!dateStr) return new Date().toISOString().split('T')[0]
-
-  const parts = dateStr.split('/')
-  if (parts.length === 3) {
-    const [month, day, year] = parts
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-  }
-
-  if (dateStr.includes('-')) {
-    return dateStr.split('T')[0]
-  }
-
-  return new Date().toISOString().split('T')[0]
-}

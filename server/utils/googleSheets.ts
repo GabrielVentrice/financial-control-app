@@ -1,5 +1,6 @@
 import { google } from 'googleapis'
 import type { Transaction, SheetRow } from '~/types/transaction'
+import { normalizeSheetDate } from '~/shared/dates'
 
 const TRANSACTIONS_SHEET_NAME = 'Fluxo' // Nome da aba na planilha do Google Sheets
 const TRANSACTIONS_RANGE = `${TRANSACTIONS_SHEET_NAME}!A1:I` // Colunas A até I (Transaction Id, Status, Date, Origin, Destination, Description, Amount, Recorded at, Remote Id)
@@ -40,24 +41,32 @@ export async function fetchTransactionsFromGoogleSheets(): Promise<Transaction[]
     const headers = rows[0]
     const dataRows = rows.slice(1)
 
-    // Transform rows into Transaction objects
-    const transactions: Transaction[] = dataRows.map((row) => {
+    // Transform rows into Transaction objects.
+    // The sheet writes dates as M/D/YYYY; everything downstream assumes ISO
+    // (month bucketing is a string slice, date filters compare strings), so the
+    // conversion has to happen here — not only in the Postgres sync.
+    const transactions: Transaction[] = []
+
+    for (const row of dataRows) {
       const rowData: any = {}
       headers.forEach((header: string, index: number) => {
         rowData[header] = row[index] || ''
       })
 
-      return {
+      const date = normalizeSheetDate(rowData['Date'])
+      if (!date) continue // undated row: drop it rather than guess a date
+
+      transactions.push({
         transactionId: rowData['Transaction Id'] || '',
-        date: rowData['Date'] || '',
+        date,
         origin: rowData['Origin'] || '',
         destination: rowData['Destination'] || '',
         description: rowData['Description'] || '',
         amount: parseFloat(rowData['Amount']) || 0,
         recordedAt: rowData['Recorded at'] || '',
         remoteId: rowData['Remote Id'] || '',
-      }
-    })
+      })
+    }
 
     return transactions
   } catch (error: any) {
