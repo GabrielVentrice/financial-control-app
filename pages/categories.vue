@@ -243,6 +243,7 @@ import type { Transaction } from '~/types/transaction'
 
 import { monthKeyOf, currentMonthKey, addMonthsToKey, monthIndexOfKey } from '~/shared/dates'
 import { isRealExpense, categoryNameOf, expenseAmount } from '~/shared/expenseRules'
+import { inkScale } from '~/shared/inkScale'
 
 const { transactions, loading, error } = useTransactions()
 const { selectedPerson } = usePersonFilter()
@@ -257,14 +258,11 @@ const personTransactions = computed(() => {
   return transactions.value.filter(t => t.person === selectedPerson.value)
 })
 
-// --- Categorical color (deterministic by name; amber for "Sem categoria") ---
-const PALETTE = ['#4F46E5', '#2563EB', '#0891B2', '#0D9488', '#059669', '#65A30D', '#CA8A04', '#EA580C', '#DB2777', '#9333EA', '#7C3AED', '#0369A1']
-const categoryColor = (name: string): string => {
-  if (/sem categoria/i.test(name)) return '#D97706'
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
-  return PALETTE[h % PALETTE.length]
-}
+// --- Categorical colour: ink scale by rank, never one hue per category ---
+// "Sem categoria" keeps the warn tone because it is a pending action, and that
+// is the only place colour is allowed to mean something on this screen.
+const categoryColor = (name: string, rank: number): string =>
+  /sem categoria/i.test(name) ? 'var(--warn)' : inkScale(rank)
 
 // Aggregate spending by category for a given month key. Uses the shared
 // isRealExpense so this screen and the dashboard can't disagree on the total.
@@ -305,7 +303,7 @@ const categories = computed<Category[]>(() => {
       return {
         key: name,
         name,
-        color: categoryColor(name),
+        color: '',
         current: c?.total || 0,
         previous: prev.get(name)?.total || 0,
         count: c?.count || 0,
@@ -314,6 +312,9 @@ const categories = computed<Category[]>(() => {
     })
     // Keep categories that have spending in the current month (the screen is about "this month").
     .filter(c => c.current > 0)
+    // Colour comes from rank, so it has to be assigned after sorting by size.
+    .sort((a, b) => b.current - a.current)
+    .map((c, rank) => ({ ...c, color: categoryColor(c.name, rank) }))
 })
 
 const total = computed(() => categories.value.reduce((s, c) => s + c.current, 0))

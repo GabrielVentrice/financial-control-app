@@ -250,6 +250,7 @@ import {
   monthIndexOfKey,
 } from '~/shared/dates'
 import { isIncome, isExcludedCategory } from '~/shared/expenseRules'
+import { inkScaleStacked } from '~/shared/inkScale'
 
 // The server already expands installments into their monthly schedule
 // (/api/transactions runs processInstallments), so this page only needs the
@@ -287,17 +288,10 @@ const categoryOf = (destination: string): string => {
   return d
 }
 
-// Categorical palette — same color identifies a parcela in chart and list.
-// Curated, harmonious, AA-friendly on white. When there are more active series
-// than colors, fall back to evenly-spaced hues so every parcela stays distinct.
-const PALETTE = [
-  '#4F46E5', '#2563EB', '#0891B2', '#0D9488', '#059669', '#65A30D',
-  '#CA8A04', '#EA580C', '#DB2777', '#9333EA', '#7C3AED', '#0369A1'
-]
-const colorFor = (index: number, count: number): string => {
-  if (count <= PALETTE.length) return PALETTE[index]
-  return `hsl(${Math.round((index / count) * 360)}, 60%, 45%)`
-}
+// Same colour identifies a parcela in the chart and in the list. The system
+// forbids a hue per series, so the stacked bands run down an ink ramp instead —
+// see shared/inkScale.ts.
+const colorFor = (index: number, count: number): string => inkScaleStacked(index, count)
 
 interface Series {
   key: string

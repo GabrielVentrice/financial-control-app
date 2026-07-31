@@ -108,6 +108,14 @@
                     class="w-4 h-4 inline-flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors"
                   >×</button>
                 </span>
+                <span v-if="destinationFilter" class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-background-section text-text-secondary text-[13px] rounded-full">
+                  {{ destinationFilter }}
+                  <button
+                    @click="destinationFilter = ''"
+                    aria-label="Remover filtro de categoria"
+                    class="w-4 h-4 inline-flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors"
+                  >×</button>
+                </span>
                 <span v-if="startDate || endDate" class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-background-section text-text-secondary text-[13px] rounded-full">
                   {{ dateRangeLabel }}
                   <button
@@ -213,7 +221,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { Transaction } from '~/types/transaction'
-import { isIncome, isRealExpense, isTransfer, expenseAmount } from '~/shared/expenseRules'
+import { isIncome, isRealExpense, isTransfer, expenseAmount, categoryNameOf } from '~/shared/expenseRules'
 
 const { transactions, loading, error } = useTransactions()
 const { selectedPerson } = usePersonFilter()
@@ -223,9 +231,10 @@ const route = useRoute()
 const searchTerm = ref('')
 const startDate = ref('')
 const endDate = ref('')
-// Seeded from the query string so "ver fatura" on the dashboard lands here
-// already scoped to that card.
+// Seeded from the query string so the dashboard can hand off a scope: "ver
+// fatura" arrives with a card, a category row arrives with its category.
 const originFilter = ref((route.query.origin as string) || '')
+const destinationFilter = ref((route.query.destination as string) || '')
 const currentPage = ref(1)
 const pageSize = 50
 
@@ -238,6 +247,10 @@ const filteredTransactions = computed(() => {
 
   if (originFilter.value) {
     filtered = filtered.filter(t => t.origin === originFilter.value)
+  }
+
+  if (destinationFilter.value) {
+    filtered = filtered.filter(t => categoryNameOf(t) === destinationFilter.value)
   }
 
   if (searchTerm.value) {
@@ -310,7 +323,7 @@ const paginatedTransactions = computed(() =>
 )
 
 const hasActiveFilters = computed(() =>
-  Boolean(searchTerm.value || startDate.value || endDate.value || originFilter.value)
+  Boolean(searchTerm.value || startDate.value || endDate.value || originFilter.value || destinationFilter.value)
 )
 
 const dateRangeLabel = computed(() => {
@@ -325,13 +338,14 @@ const clearFilters = () => {
   startDate.value = ''
   endDate.value = ''
   originFilter.value = ''
+  destinationFilter.value = ''
   currentPage.value = 1
 }
 
 const prevPage = () => { if (currentPage.value > 1) currentPage.value-- }
 const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++ }
 
-watch([searchTerm, startDate, endDate, originFilter, selectedPerson], () => {
+watch([searchTerm, startDate, endDate, originFilter, destinationFilter, selectedPerson], () => {
   currentPage.value = 1
 })
 </script>
