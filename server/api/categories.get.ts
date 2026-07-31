@@ -1,9 +1,8 @@
 import type { Transaction, CategoriesQueryParams, CategoriesResponse, CategoryData, CategoryTotals, Budget } from '~/types/transaction'
-import { fetchTransactionsFromGoogleSheets } from '../utils/googleSheets'
-import { enrichTransactionsWithPerson } from '../utils/personIdentifier'
-import { processInstallments } from '../utils/installmentProcessor'
-import { applyFilters, validateQueryParams } from '../utils/transactionFilters'
+import { loadTransactions } from '../utils/loadTransactions'
+import { validateQueryParams } from '../utils/transactionFilters'
 import { fetchBudgetsFromGoogleSheets } from '../utils/budgetSheets'
+import { isSpendingCategory, expenseAmount, UNCATEGORIZED } from '~/shared/expenseRules'
 
 /**
  * Get category analysis and spending breakdown
@@ -74,55 +73,24 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('[API] Fetching categories with params:', query)
-
-    // STEP 1: Fetch raw data from Google Sheets
-    let transactions = await fetchTransactionsFromGoogleSheets()
-    console.log('[API] Fetched transactions from Google Sheets:', transactions.length)
-
-    // STEP 2: Enrich with person identification
-    transactions = enrichTransactionsWithPerson(transactions)
-    console.log('[API] Enriched transactions with person data')
-
-    // STEP 3: Process installments if requested (default: true)
-    const shouldProcessInstallments = query.processInstallments !== 'false' && query.processInstallments !== false
-    if (shouldProcessInstallments) {
-      transactions = processInstallments(transactions)
-      console.log('[API] Processed installments. New count:', transactions.length)
-    }
-
-    // STEP 4: Apply all filters
-    transactions = applyFilters(transactions, query)
-    console.log('[API] Applied filters. Final count:', transactions.length)
+    // STEP 1-4: same read path as /api/transactions (Postgres, person
+    // enrichment, installment expansion, filters).
+    const transactions = await loadTransactions(query)
 
     // STEP 5: Fetch budgets for the filtered period
     let budgets: Budget[] = []
     try {
       budgets = await fetchBudgetsFromGoogleSheets()
 
-      // If date filters are present, filter budgets to match the period
+      // If date filters are present, filter budgets to match the period.
+      // The month comes from the "YYYY-MM" slice — building a Date out of the
+      // ISO day parses it as UTC and can land on the previous month in UTC-3.
       if (query.endDate) {
-        console.log('[API] 🔧 Filtering budgets by endDate')
-        const unfilteredCount = budgets.length
-
-        const endDate = new Date(query.endDate)
-        const filterYear = endDate.getFullYear()
-        const filterMonth = endDate.getMonth() + 1 // Convert 0-indexed to 1-indexed
-
-        console.log('[API] 🔍 Filter → Year:', filterYear, 'Month:', filterMonth)
-
-        budgets = budgets.filter(budget => {
-          const match = budget.year === filterYear && budget.month === filterMonth
-          
-          console.log('[API] 🔍 Budget:', budget.category, 'Person:', budget.person, '→ Year:', budget.year, 'Month:', budget.month, '→ Match?', match)
-
-          return match
-        })
-
-        console.log(`[API] Filtered budgets: ${unfilteredCount} → ${budgets.length}`)
+        const [filterYear, filterMonth] = query.endDate.split('-').map(Number)
+        budgets = budgets.filter(
+          budget => budget.year === filterYear && budget.month === filterMonth
+        )
       }
-
-      console.log('[API] Fetched budgets for period:', budgets.length)
     } catch (error) {
       console.warn('[API] Could not fetch budgets, continuing without budget data:', error)
     }
@@ -159,18 +127,6 @@ function processCategoriesData(
   includeTransactions: boolean,
   selectedPerson?: 'Juliana' | 'Gabriel' | 'Ambos'
 ): CategoriesResponse {
-  // Configuration - Categories that should be excluded from analysis
-  const EXCLUDED_CATEGORIES = [
-    'Sem Categoria',
-    'Credit Account Juliana',
-    'Credit Account Gabriel',
-    'Bank Account Juliana',
-    'Bank Account Gabriel',
-    'Credit Card Juliana',
-    'Credit Card Gabriel',
-    'Adjustment'
-  ]
-
   // Configuration - Categories with same value every month (fixed costs)
   const CUSTOS_FIXOS_CATEGORIES = [
     'Rent',
@@ -191,13 +147,6 @@ function processCategoriesData(
   ]
 
   // Helper functions
-  const shouldExcludeCategory = (categoryName: string): boolean => {
-    const lowerCaseName = categoryName.toLowerCase()
-    return EXCLUDED_CATEGORIES.some(excluded =>
-      excluded.toLowerCase() === lowerCaseName
-    )
-  }
-
   const isCustoFixoCategory = (categoryName: string): boolean => {
     const lowerCaseName = categoryName.toLowerCase()
     return CUSTOS_FIXOS_CATEGORIES.some(fixed =>
@@ -212,28 +161,26 @@ function processCategoriesData(
     )
   }
 
-  // Filter out excluded categories
-  const filteredTransactions = transactions.filter(t => {
-    const category = t.destination || 'Sem Categoria'
-    return !shouldExcludeCategory(category)
-  })
+  // Keep only rows whose destination is an actual spending category — accounts,
+  // cards and adjustments are movements, not spending (shared/expenseRules.ts).
+  const filteredTransactions = transactions.filter(t => isSpendingCategory(t.destination))
 
   // Group transactions by category
   const categoryMap = new Map<string, { count: number; total: number; transactions: Transaction[] }>()
 
   filteredTransactions.forEach(transaction => {
-    const category = transaction.destination || 'Sem Categoria'
+    const category = transaction.destination || UNCATEGORIZED
     const existing = categoryMap.get(category) || { count: 0, total: 0, transactions: [] }
 
     categoryMap.set(category, {
       count: existing.count + 1,
-      total: existing.total + transaction.amount,
+      total: existing.total + expenseAmount(transaction),
       transactions: [...existing.transactions, transaction]
     })
   })
 
   // Calculate total amount for percentage calculations
-  const totalAmount = filteredTransactions.reduce((sum, t) => sum + t.amount, 0)
+  const totalAmount = filteredTransactions.reduce((sum, t) => sum + expenseAmount(t), 0)
 
   // Helper function to calculate budget info for a category
   const calculateBudgetInfo = (categoryName: string, spent: number) => {
@@ -325,31 +272,31 @@ function processCategoriesData(
   // Calculate totals by category type
   const custosFixosTotal = filteredTransactions
     .filter(t => {
-      const category = t.destination || 'Sem Categoria'
+      const category = t.destination || UNCATEGORIZED
       return isCustoFixoCategory(category)
     })
-    .reduce((sum, t) => sum + t.amount, 0)
+    .reduce((sum, t) => sum + expenseAmount(t), 0)
 
   const gastosComprometidosTotal = filteredTransactions
     .filter(t => {
-      const category = t.destination || 'Sem Categoria'
+      const category = t.destination || UNCATEGORIZED
       return isGastoComprometidoCategory(category)
     })
-    .reduce((sum, t) => sum + t.amount, 0)
+    .reduce((sum, t) => sum + expenseAmount(t), 0)
 
   const variableCostsTotal = filteredTransactions
     .filter(t => {
-      const category = t.destination || 'Sem Categoria'
+      const category = t.destination || UNCATEGORIZED
       return !isCustoFixoCategory(category) && !isGastoComprometidoCategory(category)
     })
-    .reduce((sum, t) => sum + t.amount, 0)
+    .reduce((sum, t) => sum + expenseAmount(t), 0)
 
   // Count categories by type
   const custosFixosCategoriesSet = new Set<string>()
   const gastosComprometidosCategoriesSet = new Set<string>()
 
   filteredTransactions.forEach(t => {
-    const category = t.destination || 'Sem Categoria'
+    const category = t.destination || UNCATEGORIZED
     if (isCustoFixoCategory(category)) {
       custosFixosCategoriesSet.add(category)
     }

@@ -116,6 +116,11 @@ export function generateMonthlyInstallments(
       date: dateISO,
       description: `${description} ${String(i).padStart(2, '0')}/${String(total).padStart(2, '0')}`,
       amount: firstInstallment.amount,
+      // Only the first installment is a row that actually exists in the sheet;
+      // the rest are a projected schedule. Screens that report what already
+      // happened need to be able to tell the two apart — without this flag a
+      // month with nothing synced still shows a spending total.
+      projected: i > 1,
     })
   }
 
