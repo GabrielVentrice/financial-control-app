@@ -1,4 +1,5 @@
 import { syncTransactionsFromSheets, recordSyncError } from '../../utils/syncTransactions'
+import { isDatabaseConfigured } from '../../database'
 
 /**
  * GET /api/cron/sync
@@ -15,6 +16,14 @@ export default defineEventHandler(async (event) => {
     if (authHeader !== `Bearer ${secret}`) {
       throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     }
+  }
+
+  if (!isDatabaseConfigured()) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Database not configured',
+      data: 'DATABASE_URL não está definida neste ambiente, então não há Postgres para sincronizar.',
+    })
   }
 
   try {

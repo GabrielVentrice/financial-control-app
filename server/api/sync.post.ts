@@ -1,4 +1,5 @@
 import { syncTransactionsFromSheets, recordSyncError } from '../utils/syncTransactions'
+import { isDatabaseConfigured } from '../database'
 
 /**
  * POST /api/sync
@@ -7,6 +8,16 @@ import { syncTransactionsFromSheets, recordSyncError } from '../utils/syncTransa
  * The scheduled daily sync runs via GET /api/cron/sync (Vercel cron).
  */
 export default defineEventHandler(async () => {
+  // Fail loudly and specifically. Without this the missing variable surfaced as
+  // a bare 500 from a module that threw on import.
+  if (!isDatabaseConfigured()) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Database not configured',
+      data: 'DATABASE_URL não está definida neste ambiente, então não há Postgres para sincronizar.',
+    })
+  }
+
   try {
     console.log('[Sync] Manual sync triggered')
     const result = await syncTransactionsFromSheets()

@@ -67,6 +67,9 @@ export const useSync = () => {
     return days === 1 ? 'há 1 dia' : `há ${days} dias`
   })
 
+  /** False when DATABASE_URL is absent: there is no Postgres to sync into. */
+  const isConfigured = computed(() => status.value?.configured !== false)
+
   /** Stale after 48h — the cron is daily, so a two-day gap means it isn't running. */
   const isStale = computed(() => {
     const iso = status.value?.lastSyncAt
@@ -80,6 +83,7 @@ export const useSync = () => {
     status,
     lastSyncLabel,
     isStale,
+    isConfigured,
     syncNow,
     refreshStatus,
   }
