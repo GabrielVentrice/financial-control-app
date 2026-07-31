@@ -123,6 +123,10 @@
                 {{ creditCardInvoice.count === 1 ? 'lançamento' : 'lançamentos' }}
                 · vence em {{ dueLabel }}
               </p>
+              <p v-if="creditCardInvoice.installments > 0" class="text-meta text-text-3">
+                inclui <span class="maskable num">{{ formatCurrency(creditCardInvoice.installments) }}</span>
+                de parcelas
+              </p>
             </div>
 
             <div class="h-px bg-[color:var(--border)]"></div>
@@ -299,12 +303,20 @@ const isMonthEmpty = computed(() =>
 )
 const projectedOnlyTotal = computed(() => (isMonthEmpty.value ? monthlyStats.value.expenses : 0))
 
-/** How much of the month's "saídas" is a forecast rather than money already spent. */
-const projectedShare = computed(() =>
-  filteredTransactions.value
-    .filter(t => monthKeyOf(t.date) === selectedMonth.value && t.projected && isRealExpense(t))
+/**
+ * How much of the month's "saídas" has not been charged yet.
+ *
+ * This is a question about the DATE, not about how the row was produced. It used
+ * to test the `projected` flag, which only says "this row was synthesized by the
+ * installment expansion" — so on the 31st it still claimed the whole month's
+ * installments were "a vencer" when every one of them had already been billed.
+ */
+const projectedShare = computed(() => {
+  const today = new Date().toISOString().slice(0, 10)
+  return filteredTransactions.value
+    .filter(t => monthKeyOf(t.date) === selectedMonth.value && t.date > today && isRealExpense(t))
     .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-)
+})
 
 /**
  * "R$ 1.163" — thin space after the currency so the serif doesn't crowd, and an

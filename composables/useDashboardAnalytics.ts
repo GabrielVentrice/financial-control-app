@@ -411,67 +411,93 @@ export const useDashboardAnalytics = () => {
     }
   }
 
-  // Credit card invoice (fatura) for a billing cycle that closes on the last day
-  // of the month: a purchase belongs to the invoice of month(date + 1 day).
-  // So a purchase on 31/05 belongs to June's invoice, paid in July.
+  /**
+   * Credit-card invoice for the cycle that is currently open.
+   *
+   * The cycle is described by a closing day and a due day. The previous model
+   * assumed "closes on the last day of the month", which was wrong twice over:
+   * the card actually bills on the 8th (seven consecutive
+   * `PAGAMENTO DEBITO AUTOMATICO` rows land on the 8th/9th), and on the 31st the
+   * +1-day shift rolled the whole card over to *next* month's invoice — so the
+   * dashboard showed an almost-empty August bill on the last day of July.
+   *
+   * Installments due in the cycle ARE part of the bill — that is what a credit
+   * card charges — so projected rows count toward the total. For the July 2026
+   * cycle that is R$ 1.434,92 of recorded purchases plus R$ 1.825,72 of
+   * installments; leaving the installments out understated the invoice by more
+   * than half. `installments` is returned separately so the screen can show the
+   * split.
+   *
+   * NOTE: the total is only as complete as the sheet. Even with installments
+   * included it lands short of the invoice actually paid (R$ 846 for July 2026,
+   * R$ 1.6k–2.9k in earlier months), because card purchases are missing from
+   * the source. Treat this as "o que está lançado", not as the bank's number.
+   */
   interface CreditCardInvoice {
     total: number
+    installments: number
     items: Transaction[]
     count: number
     cardOrigin: string
-    closingMonth: number // 0-11
-    closingYear: number
+    closingDate: string // YYYY-MM-DD, last day included in this invoice
     dueMonth: number // 0-11
     dueYear: number
   }
 
+  const INVOICE_CLOSING_DAY = 1
+  const INVOICE_DUE_DAY = 8
+
   const getCreditCardInvoice = (
     transactions: Transaction[],
-    options?: { cardOrigin?: string; closingDay?: number | 'last'; referenceDate?: Date }
+    options?: {
+      cardOrigin?: string
+      closingDay?: number
+      dueDay?: number
+      referenceDate?: Date
+    }
   ): CreditCardInvoice => {
     const cardOrigin = options?.cardOrigin ?? 'Credit Card Gabriel'
-    const closingDay = options?.closingDay ?? 'last'
-    const referenceDate = options?.referenceDate ?? new Date()
+    const closingDay = options?.closingDay ?? INVOICE_CLOSING_DAY
+    const dueDay = options?.dueDay ?? INVOICE_DUE_DAY
+    const today = options?.referenceDate ?? new Date()
 
-    const invoiceMonthOf = (d: Date): { year: number; month: number } => {
-      if (closingDay === 'last') {
-        // Closing on the last day: the last day's purchases roll into next month.
-        const shifted = new Date(d)
-        shifted.setDate(shifted.getDate() + 1)
-        return { year: shifted.getFullYear(), month: shifted.getMonth() }
-      }
-      let month = d.getMonth()
-      let year = d.getFullYear()
-      if (d.getDate() > closingDay) {
-        month += 1
-        if (month > 11) { month = 0; year += 1 }
-      }
-      return { year, month }
+    // The open cycle is the one whose closing date is still ahead of us.
+    let closeYear = today.getFullYear()
+    let closeMonth = today.getMonth()
+    if (today.getDate() > closingDay) {
+      closeMonth += 1
+      if (closeMonth > 11) { closeMonth = 0; closeYear += 1 }
     }
 
-    const currentInvoice = invoiceMonthOf(referenceDate)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const closingDate = `${closeYear}-${pad(closeMonth + 1)}-${pad(closingDay)}`
+    const openedAfter = new Date(closeYear, closeMonth - 1, closingDay)
+    const openingDate = `${openedAfter.getFullYear()}-${pad(openedAfter.getMonth() + 1)}-${pad(openedAfter.getDate())}`
 
     const items = transactions
       .filter(t => (t.origin || '') === cardOrigin)
       .filter(t => !isExcludedDescription(t) && !isExcludedCategory(t))
-      .filter(t => {
-        const im = invoiceMonthOf(parseLocalDate(t.date))
-        return im.year === currentInvoice.year && im.month === currentInvoice.month
-      })
+      .filter(t => t.date > openingDate && t.date <= closingDate)
       .sort((a, b) => (a.date < b.date ? 1 : -1))
 
     // Net total (purchases positive, refunds/estornos negative).
     const total = items.reduce((sum, t) => sum + t.amount, 0)
+    const installments = items
+      .filter(t => t.projected)
+      .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+
+    // Due in the same month the cycle closes, on the due day.
+    const dueDate = new Date(closeYear, closeMonth, dueDay)
 
     return {
       total,
+      installments,
       items,
       count: items.length,
       cardOrigin,
-      closingMonth: currentInvoice.month,
-      closingYear: currentInvoice.year,
-      dueMonth: (currentInvoice.month + 1) % 12,
-      dueYear: currentInvoice.month === 11 ? currentInvoice.year + 1 : currentInvoice.year,
+      closingDate,
+      dueMonth: dueDate.getMonth(),
+      dueYear: dueDate.getFullYear(),
     }
   }
 
