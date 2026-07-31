@@ -1,11 +1,67 @@
 /* Global foundations */
 body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+/* Focus is never removed — it is the one outline in the system. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Every monetary value and date is tabular. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Privacy mode: blur the numbers, keep the layout and the labels. */
+.is-private .maskable {
+  filter: blur(7px);
+}
+
+/* ── Entry cascade ───────────────────────────────────────────────────────────
+   Runs once on mount and teaches the reading order of the screen. Only opacity
+   and transform are animated. Delays and durations are multiplied by
+   --motion-scale so the whole cascade can be sped up, slowed down or switched
+   off from one place. */
+@keyframes omRise  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes omGrowY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes omGrowX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.om-rise,
+.om-grow-y,
+.om-grow-x {
+  animation-fill-mode: both;
+  animation-timing-function: var(--ease);
+  animation-duration: calc(var(--om-d, 560ms) * var(--motion-scale));
+  animation-delay: calc(var(--om-delay, 0ms) * var(--motion-scale));
+}
+
+.om-rise   { animation-name: omRise; }
+.om-grow-y { animation-name: omGrowY; transform-origin: bottom; }
+.om-grow-x { animation-name: omGrowX; transform-origin: left; }
+
+/* Motion switched off: skip straight to the final state. */
+.om-off .om-rise,
+.om-off .om-grow-y,
+.om-off .om-grow-x {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: 1ms !important;
+  }
 }
 
 /* Scrollbar styling */
@@ -16,9 +72,9 @@ html {
   background: transparent;
 }
 .overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #D1D5DB;
+  background: var(--rule-strong);
   border-radius: 4px;
 }
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: #9CA3AF;
+  background: var(--text-4);
 }
