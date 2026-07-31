@@ -692,15 +692,12 @@ const loadData = async () => {
   clearMessages()
 
   try {
-    // First, refresh both caches (transactions and budgets)
-    const [transactionCacheResponse, budgetCacheResponse] = await Promise.all([
-      $fetch<CacheRefreshResponse>('/api/cache/refresh', { method: 'POST' }),
+    // Transactions live in Postgres (synced from the sheet); budgets still come
+    // from the sheet via their own cache. Refresh each through its own path.
+    const [, budgetCacheResponse] = await Promise.all([
+      $fetch('/api/sync', { method: 'POST' }),
       $fetch<CacheRefreshResponse>('/api/budgets/cache/refresh', { method: 'POST' })
     ])
-
-    if (transactionCacheResponse.success) {
-      console.log('Transaction cache atualizado:', transactionCacheResponse.message)
-    }
 
     if (budgetCacheResponse.success) {
       console.log('Budget cache atualizado:', budgetCacheResponse.message)

@@ -1,5 +1,4 @@
 import type { Transaction, TransactionQueryParams } from '~/types/transaction'
-import type { CacheRefreshResponse } from '~/types/cache'
 
 /**
  * Composable for fetching and managing transactions using SSR
@@ -62,49 +61,6 @@ export const useTransactions = (initialParams?: MaybeRef<TransactionQueryParams>
   const loading = computed(() => status.value === 'pending')
   const error = computed(() => fetchError.value?.message || null)
 
-  // Refreshing state for cache refresh
-  const refreshing = useState<boolean>('cache-refreshing', () => false)
-
-  /**
-   * Refreshes cache by forcing a fetch from Google Sheets
-   * Then refreshes the client data automatically
-   */
-  const refreshCache = async (): Promise<CacheRefreshResponse> => {
-    refreshing.value = true
-
-    try {
-      const response = await $fetch<CacheRefreshResponse>('/api/cache/refresh', {
-        method: 'POST'
-      })
-
-      if (response.success) {
-        // Refresh the transactions data after cache update
-        await refreshData()
-      }
-
-      return response
-    } catch (e: any) {
-      console.error('Erro ao atualizar cache:', e)
-
-      return {
-        success: false,
-        metadata: {
-          lastUpdate: new Date().toISOString(),
-          status: 'error',
-          transactionCount: 0,
-          expiresAt: new Date().toISOString(),
-          spreadsheetId: '',
-          version: 1
-        },
-        transactionCount: 0,
-        message: e.message || 'Erro ao atualizar cache',
-        error: e.message || 'Erro ao atualizar cache'
-      }
-    } finally {
-      refreshing.value = false
-    }
-  }
-
   /**
    * Helper: Get total amount from a list of transactions
    * This is a client-side calculation on already-filtered data
@@ -159,9 +115,7 @@ export const useTransactions = (initialParams?: MaybeRef<TransactionQueryParams>
     transactions: computed(() => transactions.value || []),
     loading,
     error,
-    refreshing: readonly(refreshing),
     refresh: refreshData,
-    refreshCache,
     fetchTransactions, // Backward compatibility
     execute,
     getTransactionsByDateRange,

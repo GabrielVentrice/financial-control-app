@@ -56,14 +56,12 @@ export default defineNuxtConfig({
     },
     openAPI: {route: '/api/docs'},
 
-    // Vercel: daily cron to sync Postgres from Google Sheets (09:00 UTC = 06:00 BRT)
-    // and a higher function timeout so the batched sync has room to finish.
+    // Vercel: higher function timeout so the batched sync has room to finish.
+    // The daily cron itself is declared in vercel.json — declaring it here (via
+    // the Build Output config) does not register the job with the platform, so
+    // the sync silently never ran. Keep it in vercel.json, where it also shows
+    // up under Project → Settings → Cron Jobs.
     vercel: {
-      config: {
-        crons: [
-          { path: '/api/cron/sync', schedule: '0 9 * * *' }
-        ]
-      },
       functions: {
         maxDuration: 60
       }
