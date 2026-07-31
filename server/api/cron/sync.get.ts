@@ -5,15 +5,32 @@ import { isDatabaseConfigured } from '../../database'
  * GET /api/cron/sync
  *
  * Scheduled daily sync from Google Sheets to PostgreSQL, invoked by the Vercel
- * cron job (see vercel.json). Vercel sends the cron secret as
- * `Authorization: Bearer <CRON_SECRET>`; when CRON_SECRET is set we require it
- * so the endpoint can't be triggered by arbitrary callers.
+ * cron job (see vercel.json). Vercel sends the secret as
+ * `Authorization: Bearer <CRON_SECRET>`.
+ *
+ * The check fails CLOSED. It used to be wrapped in `if (secret)`, which meant a
+ * missing — or, as happened in production, empty — CRON_SECRET disabled
+ * authentication altogether and left a full Sheets read plus a 4000-row upsert
+ * exposed to anyone who knew the path. An endpoint this expensive has to deny by
+ * default; a deployment without the secret should break loudly, not open up.
+ *
+ * Localhost is exempt so `npm run dev` doesn't need the variable.
  */
 export default defineEventHandler(async (event) => {
   const secret = process.env.CRON_SECRET
-  if (secret) {
-    const authHeader = getHeader(event, 'authorization')
-    if (authHeader !== `Bearer ${secret}`) {
+  const isLocal = process.env.NODE_ENV === 'development'
+
+  if (!isLocal) {
+    if (!secret) {
+      console.error('[Cron] CRON_SECRET is not set — refusing to run unauthenticated')
+      throw createError({
+        statusCode: 503,
+        statusMessage: 'Cron secret not configured',
+        data: 'CRON_SECRET não está definida neste ambiente, então o endpoint não pode ser autenticado.',
+      })
+    }
+
+    if (getHeader(event, 'authorization') !== `Bearer ${secret}`) {
       throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     }
   }
