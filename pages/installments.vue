@@ -1,327 +1,258 @@
 <template>
   <Sidemenu>
-    <div class="bg-background-page min-h-screen">
-      <main class="max-w-[1180px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
-        <LoadingState v-if="loading" message="Carregando parcelas..." />
-        <ErrorState v-else-if="error" :message="error" />
-
-        <template v-else>
-          <!-- 1. Header -->
-          <header class="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
-            <div class="min-w-0">
-              <p class="text-xs font-medium text-text-muted uppercase tracking-wider">Parcelas Ativas</p>
-              <h1 class="text-2xl font-semibold text-text-primary tracking-tight mt-0.5">O que já está comprometido</h1>
-            </div>
-
-            <div class="sm:ml-auto flex items-start gap-3">
-              <MonthSelector v-model="selectedMonth" />
-              <SyncButton />
-            </div>
-          </header>
-
-          <!-- Empty state -->
-          <EmptyState
-            v-if="activeSeries.length === 0"
-            icon="📅"
-            title="Nenhuma parcela ativa"
-            description="Você não tem parcelas ou financiamentos em aberto neste mês. Sua renda está livre de compromissos parcelados. 🎉"
-          />
-
-          <div v-else class="space-y-6">
-            <!-- 2. Hero band -->
-            <section class="grid grid-cols-1 md:grid-cols-[1.3fr_0.9fr] gap-4">
-              <!-- Comprometido este mês -->
-              <div class="bg-background-card border border-border-subtle rounded-xl px-6 py-6">
-                <p class="text-[13px] font-normal text-text-muted">Comprometido este mês</p>
-                <p class="text-kpi-xl text-negative leading-tight mt-2">{{ formatCurrency(committedThisMonth) }}</p>
-                <p class="text-[13px] mt-2 flex items-center gap-1.5">
-                  <span v-if="referenceIncome > 0" class="text-text-secondary">
-                    {{ committedPct }}% da sua renda
-                  </span>
-                  <span v-else class="text-text-secondary">renda do mês indisponível</span>
-                  <template v-if="referenceIncome > 0">
-                    <span class="text-text-muted">·</span>
-                    <span :class="['inline-flex items-center gap-1 font-medium', overLimit ? 'text-warning' : 'text-positive']">
-                      <span class="w-1.5 h-1.5 rounded-full" :class="overLimit ? 'bg-warning' : 'bg-positive'" aria-hidden="true"></span>
-                      {{ overLimit ? 'acima do saudável' : 'dentro do saudável' }}
-                    </span>
-                  </template>
-                </p>
-                <p class="text-[12px] text-text-muted mt-3">limite saudável: 30% da renda</p>
-              </div>
-
-              <!-- Saldo devedor total -->
-              <div class="bg-background-card border border-red-200 rounded-xl px-6 py-6 flex flex-col">
-                <p class="text-[13px] font-normal text-text-muted">Saldo devedor total</p>
-                <p class="text-kpi-lg text-negative leading-tight mt-2 whitespace-nowrap">{{ formatCurrency(totalDebt) }}</p>
-                <p class="text-[13px] text-text-secondary mt-1">soma de todas as parcelas a vencer</p>
-                <p class="text-[13px] text-text-muted mt-auto pt-4">
-                  quita em <span class="font-medium text-text-secondary">{{ endLabel }}</span>
-                </p>
-              </div>
-            </section>
-
-            <!-- 3. KPIs -->
-            <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div class="bg-background-card border border-border-subtle rounded-xl">
-                <LightStatCard
-                  label="Parcelas ativas"
-                  :value="activeSeries.length"
-                  format="number"
-                  value-color="neutral"
-                  size="lg"
-                  :secondary-stat="{ value: '', label: `${activeSeries.length} série(s) em aberto` }"
-                />
-              </div>
-
-              <div class="bg-background-card border border-border-subtle rounded-xl">
-                <LightStatCard
-                  label="Próximo alívio"
-                  :value="nextReliefValue"
-                  format="text"
-                  :value-color="nextRelief ? 'positive' : 'default'"
-                  size="lg"
-                  :secondary-stat="{ value: '', label: nextRelief ? 'quando a próxima encerra' : 'nenhuma encerra em 12 meses' }"
-                />
-              </div>
-
-              <div class="bg-background-card border border-border-subtle rounded-xl">
-                <LightStatCard
-                  label="Término previsto"
-                  :value="endLabel"
-                  format="text"
-                  value-color="neutral"
-                  size="lg"
-                  :secondary-stat="{ value: '', label: 'última parcela a vencer' }"
-                />
-              </div>
-            </section>
-
-            <!-- 4. Commitment chart -->
-            <section>
-              <InstallmentsCommitmentChart
-                :months="projection"
-                :y-max="chartYMax"
-                :limit="healthyLimit"
-                :limit-label="limitLabel"
-                :legend="legend"
-              />
-            </section>
-
-            <!-- 5. Insight -->
-            <section v-if="reliefInsight">
-              <div class="bg-background-card border border-border-subtle rounded-xl p-5 flex items-start gap-3">
-                <span class="w-2 h-2 rounded-full flex-shrink-0 mt-1.5 bg-emerald-500" aria-hidden="true"></span>
-                <div class="min-w-0">
-                  <p class="text-[15px] font-semibold text-text-primary">{{ reliefInsight.title }}</p>
-                  <p class="text-[13px] text-text-secondary mt-0.5">{{ reliefInsight.message }}</p>
-                </div>
-              </div>
-            </section>
-
-            <!-- 6. List -->
-            <section class="bg-background-card border border-border-subtle rounded-xl p-5">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                <h2 class="text-xs font-medium text-text-muted uppercase tracking-wider">Suas parcelas</h2>
-                <div class="flex items-center gap-1.5" role="group" aria-label="Ordenar parcelas">
-                  <button
-                    v-for="opt in sortOptions"
-                    :key="opt.value"
-                    type="button"
-                    @click="sortBy = opt.value"
-                    :aria-pressed="sortBy === opt.value"
-                    class="px-3.5 h-11 rounded-full text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                    :class="sortBy === opt.value ? 'bg-background-section text-text-primary border border-border-base' : 'text-text-muted hover:bg-background-section/60 border border-transparent'"
-                  >
-                    {{ opt.label }}
-                  </button>
-                </div>
-              </div>
-
-              <ul class="divide-y divide-border-subtle">
-                <li v-for="series in sortedSeries" :key="series.key">
-                  <button
-                    type="button"
-                    @click="openDetail(series)"
-                    class="w-full flex flex-wrap items-center gap-x-4 gap-y-3 py-4 text-left rounded-lg hover:bg-background-section/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary px-2 -mx-2"
-                  >
-                    <span class="w-2.5 h-2.5 rounded-sm flex-shrink-0 order-1" :style="{ backgroundColor: series.color }" aria-hidden="true"></span>
-
-                    <div class="min-w-0 flex-1 order-2">
-                      <p class="text-[15px] font-medium text-text-primary truncate">{{ series.name }}</p>
-                      <p class="text-[13px] text-text-muted truncate">{{ series.category }}</p>
-                    </div>
-
-                    <!-- Progress: inline on desktop, full-width row on mobile -->
-                    <div class="basis-full order-5 sm:basis-44 sm:flex-none sm:order-3">
-                      <div class="h-1.5 bg-background-hover rounded-full overflow-hidden">
-                        <div
-                          class="h-full rounded-full transition-all duration-500"
-                          :style="{ width: `${series.pctPaid}%`, backgroundColor: series.color }"
-                        ></div>
-                      </div>
-                      <p class="text-[12px] text-text-muted mt-1">
-                        {{ series.paid }}/{{ series.total }} pagas · {{ series.remaining }} restantes
-                      </p>
-                    </div>
-
-                    <div class="text-right order-3 ml-auto sm:ml-0 sm:order-4">
-                      <p class="text-[15px] font-semibold text-negative whitespace-nowrap">{{ formatCurrency(series.amount) }}/mês</p>
-                      <p class="text-[12px] text-text-muted whitespace-nowrap">faltam {{ formatCurrency(series.toPay) }}</p>
-                    </div>
-
-                    <span class="text-text-muted/60 flex-shrink-0 order-4 sm:order-5" aria-hidden="true">›</span>
-                  </button>
-                </li>
-              </ul>
-            </section>
-          </div>
-        </template>
-      </main>
-    </div>
-
-    <!-- Detail modal -->
-    <div
-      v-if="selectedParcela"
-      class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="`Detalhe da parcela ${selectedParcela.name}`"
-      @keydown.esc="closeDetail"
-    >
-      <div class="absolute inset-0 bg-black/40" @click="closeDetail"></div>
-      <div class="relative bg-background-card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-border-base shadow-xl p-6">
-        <div class="flex items-start justify-between gap-4 mb-4">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-3 h-3 rounded-sm flex-shrink-0" :style="{ backgroundColor: selectedParcela.color }" aria-hidden="true"></span>
-            <div class="min-w-0">
-              <h2 class="text-[17px] font-semibold text-text-primary truncate">{{ selectedParcela.name }}</h2>
-              <p class="text-[13px] text-text-muted">{{ selectedParcela.category }} · {{ selectedParcela.origin }}</p>
-            </div>
-          </div>
-          <button
-            ref="closeBtn"
-            type="button"
-            @click="closeDetail"
-            aria-label="Fechar"
-            class="p-1.5 rounded-lg text-text-muted hover:bg-background-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-
-        <div class="h-1.5 bg-background-hover rounded-full overflow-hidden mb-1">
-          <div class="h-full rounded-full" :style="{ width: `${selectedParcela.pctPaid}%`, backgroundColor: selectedParcela.color }"></div>
-        </div>
-        <p class="text-[12px] text-text-muted mb-5">{{ selectedParcela.paid }} de {{ selectedParcela.total }} pagas · {{ selectedParcela.remaining }} restantes</p>
-
-        <dl class="grid grid-cols-2 gap-x-4 gap-y-4">
-          <div>
-            <dt class="text-[12px] text-text-muted">Valor por mês</dt>
-            <dd class="text-[15px] font-semibold text-negative">{{ formatCurrency(selectedParcela.amount) }}</dd>
-          </div>
-          <div>
-            <dt class="text-[12px] text-text-muted">Falta pagar</dt>
-            <dd class="text-[15px] font-semibold text-negative">{{ formatCurrency(selectedParcela.toPay) }}</dd>
-          </div>
-          <div>
-            <dt class="text-[12px] text-text-muted">Primeira parcela</dt>
-            <dd class="text-[15px] text-text-primary">{{ monthYear(selectedParcela.firstMonth) }}</dd>
-          </div>
-          <div>
-            <dt class="text-[12px] text-text-muted">Última parcela</dt>
-            <dd class="text-[15px] text-text-primary">{{ monthYear(selectedParcela.lastMonth) }}</dd>
-          </div>
-        </dl>
+    <main class="min-h-screen max-w-app px-30 pt-26 pb-34 max-lg:px-5 flex flex-col gap-26">
+      <div class="flex flex-wrap items-center justify-end gap-3">
+        <MonthSelector v-model="selectedMonth" />
+        <SyncButton />
       </div>
-    </div>
+
+      <ErrorState v-if="error" :message="error" />
+
+      <EmptyState
+        v-else-if="!loading && activeSeries.length === 0"
+        icon="—"
+        title="Nenhuma parcela ativa"
+        description="Você não tem parcelas ou financiamentos em aberto neste mês."
+      />
+
+      <template v-else>
+        <!-- ═══ HERO ═══ -->
+        <section class="grid grid-cols-[1.35fr_1fr] max-xl:grid-cols-2 max-lg:grid-cols-1 gap-30 max-lg:gap-18 pb-26 border-b border-[color:var(--border)]">
+          <div class="flex flex-col gap-[10px]">
+            <p class="om-rise text-label uppercase text-text-3" :style="om(40, 520)">
+              Comprometido em {{ selectedMonthLong }}
+            </p>
+
+            <div class="flex items-baseline gap-[14px] flex-wrap">
+              <span
+                v-if="loading"
+                class="block w-[300px] h-[74px] rounded-control bg-rule"
+                aria-hidden="true"
+              ></span>
+              <span
+                v-else
+                class="om-rise maskable font-display text-hero max-xl:text-[64px] max-lg:text-[52px] text-ink num"
+                :style="om(90, 760)"
+              >R$ {{ formatNumber(committedThisMonth) }}</span>
+
+              <!-- Chip positivo: a cor segue o julgamento, não a direção. Comprometer
+                   20% quando o teto é 30% é boa notícia. -->
+              <span
+                v-if="!loading && referenceIncome > 0"
+                class="om-rise inline-flex items-center px-2.5 py-1 rounded-control text-[12.5px] font-bold"
+                :class="overLimit ? 'bg-neg-wash text-neg-text' : 'bg-accent-wash text-pos-text'"
+                :style="om(320, 520)"
+              >{{ committedPct }}% da renda</span>
+            </div>
+
+            <div class="om-rise flex flex-wrap gap-22 mt-1 text-body text-text-2" :style="om(240, 560)">
+              <span><b class="font-semibold text-ink num">{{ activeSeries.length }}</b> parcelas ativas</span>
+              <span class="text-rule-strong" aria-hidden="true">/</span>
+              <span>devendo <b class="maskable font-semibold text-ink num">{{ formatCurrency(totalDebt) }}</b></span>
+              <span class="text-rule-strong" aria-hidden="true">/</span>
+              <span>quita em <b class="font-semibold text-ink">{{ endLabel }}</b></span>
+            </div>
+
+            <!-- Barra de folga: escalada pelo teto, o vazio à direita é a informação -->
+            <div class="mt-3">
+              <CeilingBar
+                v-if="referenceIncome > 0"
+                :value="committedThisMonth"
+                :ceiling="healthyLimit"
+                :used-pct="committedPct"
+                :delay="400"
+              >
+                <template #default>
+                  a barra vai até o limite saudável de
+                  <b class="font-semibold text-ink">30% da renda</b>
+                  (<span class="maskable num">{{ formatCurrency(healthyLimit) }}</span>) —
+                  você está usando {{ committedPct }}%
+                </template>
+              </CeilingBar>
+              <p v-else class="text-meta text-text-3">renda do mês indisponível para calcular o limite</p>
+            </div>
+          </div>
+
+          <!-- Próximo alívio + o que muda -->
+          <div class="flex flex-col gap-[14px] pl-30 border-l border-[color:var(--border)] max-lg:pl-0 max-lg:border-l-0 max-lg:pt-18 max-lg:border-t">
+            <div v-if="nextRelief" class="om-rise flex flex-col gap-1.5" :style="om(300, 620)">
+              <p class="text-label uppercase text-text-3">Próximo alívio</p>
+              <div class="flex items-baseline justify-between gap-2.5">
+                <span class="maskable font-display text-hero-2 text-pos-text num">
+                  − {{ formatCurrency(nextRelief.freed) }}
+                </span>
+                <span class="text-body-sm font-semibold text-text-2 whitespace-nowrap">
+                  em {{ monthName(nextRelief.monthKey).toLowerCase() }}
+                </span>
+              </div>
+              <p class="maskable text-body-sm text-text-2 [text-wrap:pretty]">
+                {{ nextRelief.names }} encerra{{ nextRelief.count > 1 ? 'm' : '' }} —
+                a mensalidade cai para {{ formatCurrency(nextRelief.after) }}
+              </p>
+            </div>
+
+            <div class="h-px bg-[color:var(--border)]"></div>
+
+            <div v-if="whatChanges.length" class="om-rise flex flex-col gap-3" :style="om(420, 620)">
+              <p class="text-label uppercase text-text-3">O que muda daqui pra frente</p>
+              <div v-for="item in whatChanges" :key="item.title" class="flex items-start gap-[10px]">
+                <span
+                  class="w-[7px] h-[7px] mt-1.5 flex-none rounded-full"
+                  :class="item.tone === 'accent' ? 'bg-accent' : 'bg-ink'"
+                  aria-hidden="true"
+                ></span>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-[14.5px] font-semibold text-ink">{{ item.title }}</span>
+                  <span class="maskable text-body-sm text-text-2 [text-wrap:pretty]">{{ item.detail }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══ PROJEÇÃO ═══ -->
+        <InstallmentsProjectionChart :months="projection" :ceiling="healthyLimit" />
+
+        <!-- ═══ TABELA ═══ -->
+        <section class="flex flex-col gap-[14px]">
+          <div class="om-rise flex flex-wrap items-baseline justify-between gap-3" :style="om(540, 560)">
+            <div class="flex items-baseline gap-3">
+              <h2 class="font-display text-section text-ink">Suas {{ activeSeries.length }} parcelas</h2>
+              <span class="maskable text-meta text-text-3">
+                {{ formatCurrency(totalDebt) }} a pagar até {{ endLabel }}
+              </span>
+            </div>
+            <SortTabs v-model="sortBy" :options="sortOptions" aria-label="Ordenar parcelas" />
+          </div>
+
+          <div>
+            <div
+              class="grid grid-cols-[250px_1fr_108px_116px_116px_18px] max-xl:grid-cols-[190px_1fr_96px_104px_104px_18px] max-lg:hidden gap-18 items-center pb-2 pr-1 border-b border-rule-strong text-[10px] font-bold tracking-[0.14em] uppercase text-text-3"
+            >
+              <span>Compra</span>
+              <span>Progresso</span>
+              <span>Termina em</span>
+              <span class="text-right">Por mês</span>
+              <span class="text-right">Falta pagar</span>
+              <span></span>
+            </div>
+
+            <div
+              v-for="(s, i) in sortedSeries"
+              :key="s.key"
+              class="om-rise grid grid-cols-[250px_1fr_108px_116px_116px_18px] max-xl:grid-cols-[190px_1fr_96px_104px_104px_18px] max-lg:grid-cols-[1fr_auto] gap-18 max-lg:gap-2 items-center py-[11px] pr-1 border-b border-rule hover:bg-surface-2 transition-colors duration-[120ms] ease-ease"
+              :style="om(620 + i * 40, 560)"
+            >
+              <!-- 1. Compra -->
+              <div class="min-w-0">
+                <p class="text-item text-ink truncate">{{ s.name }}</p>
+                <p class="text-micro text-text-3 mt-0.5 truncate">{{ s.category }}</p>
+              </div>
+
+              <!-- 2. Progresso: mesma cor em todas — é fração, não magnitude -->
+              <div class="max-lg:hidden">
+                <div class="h-1.5 rounded-full bg-rule overflow-hidden">
+                  <div
+                    class="om-grow-x h-full rounded-full bg-ink-2"
+                    :style="{ width: `${s.pctPaid}%`, ...om(680 + i * 40, 760) }"
+                  ></div>
+                </div>
+                <p class="text-micro text-text-3 mt-1">{{ s.paid }} de {{ s.total }} pagas</p>
+              </div>
+
+              <!-- 3. Termina em -->
+              <div class="max-lg:hidden">
+                <p
+                  class="text-body-sm font-semibold"
+                  :class="s.remaining <= 2 ? 'text-pos-text' : 'text-ink'"
+                >{{ monthYear(s.lastMonth) }}</p>
+                <p class="text-[11.5px] text-text-4">
+                  {{ s.remaining === 1 ? 'última parcela' : `${s.remaining} restantes` }}
+                </p>
+              </div>
+
+              <!-- 4. Por mês -->
+              <span class="maskable text-value text-ink num text-right whitespace-nowrap">
+                {{ formatCurrency(s.amount) }}/mês
+              </span>
+
+              <!-- 5. Falta pagar -->
+              <span class="maskable text-body-sm text-text-2 num text-right whitespace-nowrap max-lg:hidden">
+                faltam {{ formatCurrency(s.toPay) }}
+              </span>
+
+              <span class="text-body-sm text-text-4 max-lg:hidden" aria-hidden="true">›</span>
+            </div>
+          </div>
+        </section>
+      </template>
+    </main>
   </Sidemenu>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, nextTick } from 'vue'
-
+import { computed, ref } from 'vue'
 import {
   monthKeyOf,
   currentMonthKey,
   addMonthsToKey,
-  monthKeyToIdx as monthToIdx,
-  idxToMonthKey as idxToKey,
+  monthKeyToIdx,
+  idxToMonthKey,
   monthIndexOfKey,
 } from '~/shared/dates'
 import { isIncome, isExcludedCategory } from '~/shared/expenseRules'
-import { inkScaleStacked } from '~/shared/inkScale'
 
-// The server already expands installments into their monthly schedule
-// (/api/transactions runs processInstallments), so this page only needs the
-// parsing helpers.
+// The server already expands installments into their monthly schedule.
 const { transactions, loading, error } = useTransactions()
-
 const { selectedPerson } = usePersonFilter()
 const { parseInstallment, isInstallmentTransaction } = useInstallments()
-const { formatCurrency, formatMonthName } = useFormatters()
-
-const shortMonth = (key: string) => formatMonthName(monthIndexOfKey(key), true)
-const monthYear = (key: string) => {
-  if (!key) return '—'
-  const [y] = key.split('-')
-  return `${formatMonthName(monthIndexOfKey(key), true)}/${y}`
-}
+const { formatCurrency, formatNumber, formatMonthName } = useFormatters()
+const { om } = useEntryMotion()
 
 const selectedMonth = ref(currentMonthKey())
 const selectedMonthLong = computed(() => formatMonthName(monthIndexOfKey(selectedMonth.value)))
+const monthName = (key: string) => formatMonthName(monthIndexOfKey(key))
+const monthYear = (key: string) =>
+  key ? `${formatMonthName(monthIndexOfKey(key), true).toLowerCase()}/${key.split('-')[0]}` : '—'
 
-// --- Person-filtered transactions ---
-const personTransactions = computed(() => {
-  if (selectedPerson.value === 'Ambos') return transactions.value
-  return transactions.value.filter(t => t.person === selectedPerson.value)
-})
+const personTransactions = computed(() =>
+  selectedPerson.value === 'Ambos'
+    ? transactions.value
+    : transactions.value.filter(t => t.person === selectedPerson.value)
+)
 
 const installmentTransactions = computed(() =>
   personTransactions.value.filter(t => isInstallmentTransaction(t))
 )
 
-// --- Category label from destination ---
 const categoryOf = (destination: string): string => {
   const d = (destination || '').trim()
   if (!d || /installments\s*\/\s*financing/i.test(d)) return 'Parcelamento'
   return d
 }
 
-// Same colour identifies a parcela in the chart and in the list. The system
-// forbids a hue per series, so the stacked bands run down an ink ramp instead —
-// see shared/inkScale.ts.
-const colorFor = (index: number, count: number): string => inkScaleStacked(index, count)
-
 interface Series {
   key: string
   name: string
   category: string
-  origin: string
   amount: number
   total: number
   paid: number
   remaining: number
   pctPaid: number
   toPay: number
-  color: string
   startIdx: number
-  firstMonth: string
   lastMonth: string
 }
 
-// Build raw series grouped by installment identity, relative to selectedMonth.
-//
-// Paid/remaining are derived by DATE ARITHMETIC from the installment number,
-// not by counting how many distinct months the data carries. The source sheet
-// often clusters every installment row on a single date (it isn't one row per
-// month), so counting months wildly under-counts "paid" and keeps finished
-// series looking active. Instead we anchor on the lowest-numbered installment
-// (its number + month), back out the month installment #1 was due, then count
-// elapsed months up to the reference month.
+/**
+ * paid/remaining come from DATE ARITHMETIC on the installment number, never from
+ * counting how many months the data carries — the sheet often clusters every
+ * installment row on one date, which would make finished series look active.
+ */
 const rawSeries = computed<Series[]>(() => {
   const map = new Map<string, {
-    key: string; name: string; category: string; origin: string; total: number
+    key: string; name: string; category: string; total: number
     rows: { cur: number; monthIdx: number; amount: number }[]
   }>()
 
@@ -334,29 +265,23 @@ const rawSeries = computed<Series[]>(() => {
         key,
         name: info.description || t.description,
         category: categoryOf(t.destination),
-        origin: t.origin,
         total: info.total,
-        rows: []
+        rows: [],
       })
     }
     map.get(key)!.rows.push({
       cur: info.current,
-      monthIdx: monthToIdx(monthKeyOf(t.date)),
-      amount: Math.abs(t.amount)
+      monthIdx: monthKeyToIdx(monthKeyOf(t.date)),
+      amount: Math.abs(t.amount),
     })
   })
 
-  const refIdx = monthToIdx(selectedMonth.value)
+  const refIdx = monthKeyToIdx(selectedMonth.value)
 
   return Array.from(map.values()).map(s => {
-    // Anchor on the lowest-numbered installment present and derive the month
-    // installment #1 was due (startIdx). Its value is the monthly amount.
     const anchor = s.rows.reduce((a, b) => (b.cur < a.cur ? b : a))
     const startIdx = anchor.monthIdx - (anchor.cur - 1)
     const amount = anchor.amount
-
-    // Elapsed installments before the reference month = paid; the reference
-    // month's own installment still counts as "a vencer".
     const paid = Math.max(0, Math.min(refIdx - startIdx, s.total))
     const remaining = s.total - paid
 
@@ -364,41 +289,30 @@ const rawSeries = computed<Series[]>(() => {
       key: s.key,
       name: s.name,
       category: s.category,
-      origin: s.origin,
       amount,
       total: s.total,
       paid,
       remaining,
       pctPaid: Math.round((paid / s.total) * 100),
       toPay: remaining * amount,
-      color: '',
       startIdx,
-      firstMonth: idxToKey(startIdx),
-      lastMonth: idxToKey(startIdx + s.total - 1)
+      lastMonth: idxToMonthKey(startIdx + s.total - 1),
     }
   })
 })
 
-// Active series (still have payments left), with stable color assignment.
-const activeSeries = computed<Series[]>(() => {
-  const active = rawSeries.value.filter(s => s.remaining > 0)
-  const ordered = [...active].sort((a, b) => (a.key < b.key ? -1 : 1))
-  ordered.forEach((s, i) => { s.color = colorFor(i, ordered.length) })
-  return active
-})
+const activeSeries = computed(() => rawSeries.value.filter(s => s.remaining > 0))
 
-// --- Reference month income (with fallback to a recent month) ---
-const monthIncome = (monthKey: string): number => {
-  return personTransactions.value
+// --- Renda de referência e limite ---
+const monthIncome = (monthKey: string): number =>
+  personTransactions.value
     .filter(t => monthKeyOf(t.date) === monthKey)
     .filter(t => isIncome(t) && !isExcludedCategory(t))
     .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-}
 
 const referenceIncome = computed(() => {
   const direct = monthIncome(selectedMonth.value)
   if (direct > 0) return direct
-  // Fall back to the most recent month with income within the last 6 months.
   for (let i = 1; i <= 6; i++) {
     const v = monthIncome(addMonthsToKey(selectedMonth.value, -i))
     if (v > 0) return v
@@ -406,137 +320,123 @@ const referenceIncome = computed(() => {
   return 0
 })
 
-// --- Derived metrics ---
-// A series bills in a given month only if that month is within its schedule
-// [startIdx, startIdx + total). committedThisMonth = projection[0].
-const committedThisMonth = computed(() =>
-  projection.value[0]?.total ?? 0
-)
+const healthyLimit = computed(() => referenceIncome.value * 0.3)
 
+// --- Projeção: uma barra por mês, valor único ---
+const projection = computed(() => {
+  const refIdx = monthKeyToIdx(selectedMonth.value)
+  return Array.from({ length: 12 }, (_, i) => {
+    const dueIdx = refIdx + i
+    const key = idxToMonthKey(dueIdx)
+    const value = activeSeries.value
+      .filter(s => dueIdx >= s.startIdx && dueIdx < s.startIdx + s.total)
+      .reduce((sum, s) => sum + s.amount, 0)
+    return { key, label: formatMonthName(monthIndexOfKey(key), true), value }
+  })
+})
+
+const committedThisMonth = computed(() => projection.value[0]?.value ?? 0)
 const committedPct = computed(() =>
   referenceIncome.value > 0 ? Math.round((committedThisMonth.value / referenceIncome.value) * 100) : 0
 )
-
-const healthyLimit = computed(() => referenceIncome.value * 0.3)
 const overLimit = computed(() => referenceIncome.value > 0 && committedThisMonth.value > healthyLimit.value)
+const totalDebt = computed(() => activeSeries.value.reduce((sum, s) => sum + s.toPay, 0))
 
-const limitLabel = computed(() => {
-  if (healthyLimit.value <= 0) return ''
-  return `limite saudável · ${formatCurrency(healthyLimit.value, { compact: true })} (30%)`
-})
-
-const totalDebt = computed(() =>
-  activeSeries.value.reduce((sum, s) => sum + s.toPay, 0)
-)
-
-// 12-month projection from the reference month. A series contributes to the
-// month at offset i only if that month falls within its schedule.
-const projection = computed(() => {
-  const refIdx = monthToIdx(selectedMonth.value)
-  const months = []
-  for (let i = 0; i < 12; i++) {
-    const dueIdx = refIdx + i
-    const key = idxToKey(dueIdx)
-    const segments = activeSeries.value
-      .filter(s => dueIdx >= s.startIdx && dueIdx < s.startIdx + s.total)
-      .map(s => ({ key: s.key, name: s.name, color: s.color, value: s.amount }))
-    const total = segments.reduce((sum, seg) => sum + seg.value, 0)
-    months.push({
-      key,
-      label: shortMonth(key),
-      total,
-      isCurrent: i === 0,
-      isFuture: i > 0,
-      segments
-    })
-  }
-  return months
-})
-
-const chartYMax = computed(() => {
-  const maxBar = Math.max(0, ...projection.value.map(m => m.total))
-  const ceiling = Math.max(maxBar, healthyLimit.value)
-  return ceiling > 0 ? ceiling * 1.15 : 1
-})
-
-const legend = computed(() =>
-  activeSeries.value.map(s => ({ key: s.key, name: s.name, color: s.color }))
-)
-
-// Término previsto = last month any active parcela still has a payment.
 const endLabel = computed(() => {
   if (!activeSeries.value.length) return '—'
-  const maxLastIdx = Math.max(...activeSeries.value.map(s => s.startIdx + s.total - 1))
-  return monthYear(idxToKey(maxLastIdx))
+  return monthYear(idxToMonthKey(Math.max(...activeSeries.value.map(s => s.startIdx + s.total - 1))))
 })
 
-// Próximo alívio = first future month where a parcela ends and frees up money.
-// A series' last payment is at startIdx + total - 1; it frees the month after.
+/** First month a series ends and frees money up. */
 const nextRelief = computed(() => {
   if (!activeSeries.value.length) return null
-  const refIdx = monthToIdx(selectedMonth.value)
-  const frees = activeSeries.value.map(s => s.startIdx + s.total - refIdx) // offset where it frees up
-  const candidates = frees.filter(o => o >= 1 && o <= 12)
-  if (!candidates.length) return null
-  const reliefOffset = Math.min(...candidates)
-  const freed = activeSeries.value
-    .filter(s => s.startIdx + s.total - refIdx === reliefOffset)
-    .reduce((sum, s) => sum + s.amount, 0)
-  return { monthKey: idxToKey(refIdx + reliefOffset), freed }
-})
+  const refIdx = monthKeyToIdx(selectedMonth.value)
+  const offsets = activeSeries.value.map(s => s.startIdx + s.total - refIdx).filter(o => o >= 1 && o <= 12)
+  if (!offsets.length) return null
 
-const nextReliefValue = computed(() =>
-  nextRelief.value
-    ? `${shortMonth(nextRelief.value.monthKey)} · −${formatCurrency(nextRelief.value.freed)}`
-    : '—'
-)
+  const reliefOffset = Math.min(...offsets)
+  const ending = activeSeries.value.filter(s => s.startIdx + s.total - refIdx === reliefOffset)
+  const freed = ending.reduce((sum, s) => sum + s.amount, 0)
 
-// Insight: how much frees up over the projection horizon.
-const reliefInsight = computed(() => {
-  if (!nextRelief.value) return null
-  const refIdx = monthToIdx(selectedMonth.value)
-  // Series whose last payment lands within the next 12 months.
-  const endingWithin = activeSeries.value.filter(s => s.startIdx + s.total - 1 - refIdx <= 11)
-  if (!endingWithin.length) return null
-  const freedTotal = endingWithin.reduce((sum, s) => sum + s.amount, 0)
-  const lastEndKey = idxToKey(Math.max(...endingWithin.map(s => s.startIdx + s.total - 1)))
   return {
-    title: `A partir de ${shortMonth(nextRelief.value.monthKey)} sobra mais no bolso`,
-    message: `${endingWithin.length} parcela(s) encerram até ${monthYear(lastEndKey)}, liberando ${formatCurrency(freedTotal)}/mês.`
+    monthKey: idxToMonthKey(refIdx + reliefOffset),
+    freed,
+    count: ending.length,
+    names: ending.map(s => s.name).join(', '),
+    after: committedThisMonth.value - freed,
   }
 })
 
-// --- Sorting ---
-type SortKey = 'valor' | 'termina' | 'aPagar'
-const sortBy = ref<SortKey>('valor')
-const sortOptions: { value: SortKey; label: string }[] = [
-  { value: 'valor', label: 'Maior parcela' },
-  { value: 'termina', label: 'Termina antes' },
-  { value: 'aPagar', label: 'A pagar' }
+/** Two conclusions: when the monthly cost drops, and how concentrated it is. */
+const whatChanges = computed(() => {
+  const items: { tone: 'accent' | 'ink'; title: string; detail: string }[] = []
+  if (!activeSeries.value.length) return items
+
+  // The month the monthly cost PLUNGES: the biggest step down from the month
+  // before, measured relatively.
+  //
+  // Two things this deliberately does not do. It doesn't use the cumulative drop
+  // from today, which always elects the month everything reaches zero. And it
+  // ignores the tail where almost nothing is left — "em maio você não deve mais
+  // nada" is the trivial endpoint of any amortisation. The useful signal is the
+  // last big step while there is still a commitment to talk about, so months
+  // landing under a tenth of today's value are out of the running.
+  const floor = committedThisMonth.value * 0.1
+  const plunge = projection.value
+    .map((m, i) => ({
+      ...m,
+      i,
+      fall: i > 0 && projection.value[i - 1].value > 0
+        ? (projection.value[i - 1].value - m.value) / projection.value[i - 1].value
+        : 0,
+    }))
+    .filter(m => m.i > 0 && m.fall > 0.2 && m.value >= floor)
+    .sort((a, b) => b.fall - a.fall)[0]
+
+  if (plunge) {
+    const plungeIdx = monthKeyToIdx(plunge.key)
+    const ending = activeSeries.value.filter(s => s.startIdx + s.total <= plungeIdx).length
+    const previousKey = projection.value[plunge.i - 1].key
+    items.push({
+      tone: 'accent',
+      title: `Em ${monthName(plunge.key).toLowerCase()} sobra ${formatCurrency(committedThisMonth.value - plunge.value)} por mês`,
+      detail: `${ending} parcela${ending === 1 ? '' : 's'} encerra${ending === 1 ? '' : 'm'} até ${monthName(previousKey).toLowerCase()} e o comprometimento cai de ${formatCurrency(committedThisMonth.value)} para ${formatCurrency(plunge.value)}.`,
+    })
+  }
+
+  const topTwo = [...activeSeries.value].sort((a, b) => b.amount - a.amount).slice(0, 2)
+  if (topTwo.length === 2 && committedThisMonth.value > 0) {
+    const sum = topTwo.reduce((s, x) => s + x.amount, 0)
+    const pct = Math.round((sum / committedThisMonth.value) * 100)
+    if (pct >= 30) {
+      items.push({
+        tone: 'ink',
+        title: `Duas compras respondem por ${pct}%`,
+        detail: `${topTwo.map(s => s.name).join(' e ')} somam ${formatCurrency(sum)} dos ${formatCurrency(committedThisMonth.value)} do mês.`,
+      })
+    }
+  }
+
+  return items.slice(0, 2)
+})
+
+// --- Ordenação ---
+const sortBy = ref('valor')
+const sortOptions = [
+  { value: 'valor', label: 'maior parcela' },
+  { value: 'termina', label: 'termina antes' },
+  { value: 'falta', label: 'falta mais' },
 ]
 
 const sortedSeries = computed(() => {
   const list = [...activeSeries.value]
   switch (sortBy.value) {
     case 'termina':
-      return list.sort((a, b) => a.remaining - b.remaining)
-    case 'aPagar':
+      return list.sort((a, b) => a.remaining - b.remaining || b.amount - a.amount)
+    case 'falta':
       return list.sort((a, b) => b.toPay - a.toPay)
-    case 'valor':
     default:
       return list.sort((a, b) => b.amount - a.amount)
   }
 })
-
-// --- Detail modal ---
-const selectedParcela = ref<Series | null>(null)
-const closeBtn = ref<HTMLButtonElement | null>(null)
-const openDetail = async (series: Series) => {
-  selectedParcela.value = series
-  await nextTick()
-  closeBtn.value?.focus()
-}
-const closeDetail = () => { selectedParcela.value = null }
-
-useModalDismiss(computed(() => selectedParcela.value !== null), closeDetail)
 </script>
