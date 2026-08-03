@@ -94,6 +94,44 @@ financial-control-app/
 - **Categories (`/categories`)**: Spending analysis by category (Destination), monthly filtering
 - **Installments (`/installments`)** — "Parcelas Ativas": how much income is committed to installments and when it eases. Hero cards (committed this month / total debt), KPIs (active count, next relief, end date), a 12-month commitment projection (stacked bar per parcela that shrinks as series end, with a 30%-of-income healthy-limit line), relief insight, and a sortable list with progress + drill-down modal
 - **Fixed Costs (`/fixed-costs`)**: Historical analysis of fixed costs over the last 6 months with chart visualization and category breakdown
+- **Debt (`/debt`)** — "Quitar Dívida": tracks paying off the cheque especial. Live balance, the interest it has actually cost, a month-by-month payoff projection, and a derived action plan. A band on the dashboard links to it.
+
+### 3b. Debt Payoff Feature ("Quitar Dívida")
+
+Answers: how much do I owe, what is it costing me, and when does it end?
+
+**The balance is derived, not typed in.** An overdraft balance is a bank *state*, not a
+transaction, so it can never be read out of the ledger. The user anchors it once
+(`anchorBalance` + `anchorDate` in the `debt_plans` table) and from then on:
+
+```
+saldo hoje = âncora − (entradas − saídas na conta depois da data da âncora)
+```
+
+so every sync moves the number without re-typing it. Re-anchor via `POST /api/debt` whenever
+the app and the bank disagree — never by editing history.
+
+**Capacity is measured relative to today.** Today's surplus is whatever it is; what changes is
+the installment load rolling off. So capacity in a future month is *today's surplus + the
+installments that will have ended by then + any committed cut* (`capacityForMonth` in
+[shared/debt.ts](shared/debt.ts)). This keeps the projection anchored to observed behaviour
+instead of an aspirational budget.
+
+**Gotchas:**
+- The recurring surplus is the **median** month over the last 6 closed months, never the mean.
+  Averaging folded a one-off tax refund into the monthly surplus and reported ~R$1.265/mês of
+  room that did not exist — the plan then promised a payoff date funded by a windfall. The
+  median also absorbs the mirror artefact where a salary paid on the 30th leaves the next month
+  looking like it earned nothing.
+- The current month is excluded from that window: it is half-lived (salary landed, card bill and
+  boletos have not), so it always reads as a surplus that evaporates by the 15th.
+- The relief card and the projection must use the **same** notion of freed money (cumulative vs.
+  today, not the biggest single month-over-month step), or the headline number contradicts the
+  chart under it.
+- Installment roll-off is derived by the same date-arithmetic-on-the-installment-number rule as
+  the installments page (see below). Do not switch it to counting months.
+- The duplicated card-payment row (`pagamento debito automatico`) is excluded from account
+  movement; counting both sides would double every month's outflow.
 
 ### 4. Installments Feature ("Parcelas Ativas")
 The installments page answers: how much of my income is committed to installments,

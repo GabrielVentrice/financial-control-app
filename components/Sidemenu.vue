@@ -142,6 +142,7 @@ const navGroups = [
       { label: 'Templates de Orçamento', path: '/budget-templates' },
       { label: 'Custos Fixos', path: '/fixed-costs' },
       { label: 'Parcelas', path: '/installments' },
+      { label: 'Quitar Dívida', path: '/debt' },
     ]
   }
 ]

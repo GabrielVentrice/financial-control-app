@@ -148,6 +148,36 @@
           </div>
         </section>
 
+        <!-- ═══ DÍVIDA ═══
+             Uma faixa, não um card na grade: uma dívida de cheque especial não
+             é mais uma métrica do mês, é a coisa que precisa sumir. Fica logo
+             abaixo do saldo porque é o contexto que explica o saldo. -->
+        <NuxtLink
+          v-if="debt && debt.currentBalance > 0"
+          to="/debt"
+          class="om-rise flex items-center justify-between gap-18 max-sm:flex-col max-sm:items-start px-4 py-3.5 rounded-control border border-[color:var(--border)] bg-warn-wash hover:bg-surface-2 transition-colors duration-[120ms] ease-ease"
+          :style="om(500, 560)"
+        >
+          <div class="flex items-baseline gap-3 flex-wrap min-w-0">
+            <span class="text-label uppercase text-text-3">{{ debt.plan.name }}</span>
+            <span class="maskable font-display text-hero-2 text-ink num">
+              {{ formatCurrency(debt.currentBalance, { decimals: true }) }}
+            </span>
+          </div>
+          <div class="flex items-baseline gap-18 flex-wrap text-body text-text-2">
+            <span v-if="debt.projection.payoffMonth">
+              quita em <b class="font-semibold text-pos-text">{{ debtPayoffLabel }}</b>
+            </span>
+            <span v-else class="text-neg-text font-semibold">no ritmo atual não zera</span>
+            <span class="text-rule-strong" aria-hidden="true">/</span>
+            <span>
+              <b class="maskable font-semibold text-ink num">{{ formatCurrency(debt.costOfInaction) }}</b>
+              de juros se ficar parada
+            </span>
+            <span class="text-body-sm font-semibold text-accent whitespace-nowrap">ver plano →</span>
+          </div>
+        </NuxtLink>
+
         <!-- ═══ FLUXO DE CAIXA ═══ -->
         <DashboardCashFlowChart :series="cashFlow.series" :axis-top="cashFlow.axisTop" />
 
@@ -278,6 +308,14 @@ const {
   getMonthSignal,
   getCreditCardInvoice,
 } = useDashboardAnalytics()
+
+// A dívida não depende do mês selecionado: ela é um estado de hoje, e a faixa
+// no topo diz o que ela custa se ninguém mexer.
+const { snapshot: debt } = useDebtPlan()
+const debtPayoffLabel = computed(() => {
+  const key = debt.value?.projection.payoffMonth
+  return key ? `${formatMonthName(monthIndexOfKey(key), true).toLowerCase()}/${key.split('-')[0]}` : '—'
+})
 
 const selectedMonth = ref(currentMonthKey())
 const selectedMonthLong = computed(() => formatMonthName(monthIndexOfKey(selectedMonth.value)))
