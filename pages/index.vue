@@ -396,10 +396,15 @@ const spendBar = computed(() => {
   }
 })
 
-const invoiceCardOrigin = computed(() =>
-  selectedPerson.value === 'Juliana' ? 'Credit Card Juliana' : 'Credit Card Gabriel'
+// "Ambos" bills every card, matching what the invoice rule says: whatever was
+// charged to a credit card is on the invoice.
+const invoiceCardOrigin = computed(() => {
+  if (selectedPerson.value === 'Ambos') return 'Credit Card'
+  return `Credit Card ${selectedPerson.value}`
+})
+const invoiceOwner = computed(() =>
+  selectedPerson.value === 'Ambos' ? 'todos' : selectedPerson.value
 )
-const invoiceOwner = computed(() => (selectedPerson.value === 'Juliana' ? 'Juliana' : 'Gabriel'))
 const creditCardInvoice = computed(() =>
   getCreditCardInvoice(transactions.value, { cardOrigin: invoiceCardOrigin.value })
 )

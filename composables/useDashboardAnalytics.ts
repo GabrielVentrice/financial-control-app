@@ -4,6 +4,7 @@ import {
   isRealExpense,
   isExcludedCategory,
   isExcludedDescription,
+  isCreditCard,
   categoryNameOf,
   expenseAmount,
 } from '~/shared/expenseRules'
@@ -461,6 +462,12 @@ export const useDashboardAnalytics = () => {
   const getCreditCardInvoice = (
     transactions: Transaction[],
     options?: {
+      /**
+       * Which cards to bill, matched as a case-insensitive substring of the
+       * origin. The default — every origin that names a credit card — is the
+       * rule: what was charged to a card is on that card's invoice. Narrow it
+       * to one owner ("Credit Card Gabriel") for a single card.
+       */
       cardOrigin?: string
       /** Day the invoice closes; 'last' (default) means the last day of the month. */
       closingDay?: number | 'last'
@@ -468,7 +475,8 @@ export const useDashboardAnalytics = () => {
       referenceDate?: Date
     }
   ): CreditCardInvoice => {
-    const cardOrigin = options?.cardOrigin ?? 'Credit Card Gabriel'
+    const cardOrigin = options?.cardOrigin ?? 'Credit Card'
+    const cardMatch = cardOrigin.trim().toLowerCase()
     const closingDay = options?.closingDay ?? 'last'
     const dueDay = options?.dueDay ?? INVOICE_DUE_DAY
     const today = options?.referenceDate ?? new Date()
@@ -497,8 +505,13 @@ export const useDashboardAnalytics = () => {
     const prevYear = closeMonth === 0 ? closeYear - 1 : closeYear
     const openingDate = `${prevYear}-${pad(prevMonth + 1)}-${pad(closeDayIn(prevYear, prevMonth))}`
 
+    // Every card charge counts, not only the one origin spelled exactly right:
+    // matching `origin === 'Credit Card Gabriel'` dropped anything the sheet
+    // wrote differently, and with the filter on "Ambos" it hid the other card
+    // entirely. `isCreditCard` keeps a loose `cardOrigin` from dragging bank
+    // rows onto the bill.
     const items = transactions
-      .filter(t => (t.origin || '') === cardOrigin)
+      .filter(t => isCreditCard(t.origin) && (t.origin || '').toLowerCase().includes(cardMatch))
       .filter(t => !isExcludedDescription(t) && !isExcludedCategory(t))
       .filter(t => t.date > openingDate && t.date <= closingDate)
       .sort((a, b) => (a.date < b.date ? 1 : -1))

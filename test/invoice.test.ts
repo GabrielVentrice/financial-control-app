@@ -71,9 +71,35 @@ describe('credit card invoice cycle', () => {
     expect(inv.installments).toBe(999)
   })
 
-  it('only counts the requested card', () => {
+  it('narrows to one card when an owner is given', () => {
     const both = [...rows, tx('2026-07-10', 5000, { origin: 'Credit Card Juliana' })]
+    const inv = getCreditCardInvoice(both, {
+      cardOrigin: 'Credit Card Gabriel',
+      referenceDate: new Date(2026, 6, 31),
+    })
+    expect(inv.total).toBe(200 + 400)
+  })
+
+  it('bills every credit-card origin by default', () => {
+    // The rule: what was charged to a card is on the card's invoice. Matching
+    // one exact origin string dropped every other card from the bill.
+    const both = [
+      ...rows,
+      tx('2026-07-10', 5000, { origin: 'Credit Card Juliana' }),
+      tx('2026-07-11', 30, { origin: 'CREDIT CARD NUBANK' }),
+    ]
     const inv = getCreditCardInvoice(both, { referenceDate: new Date(2026, 6, 31) })
+    expect(inv.total).toBe(200 + 400 + 5000 + 30)
+  })
+
+  it('never drags account rows onto the bill', () => {
+    // A loose `cardOrigin` must not turn the invoice into "everything Gabriel
+    // spent": debit purchases are already paid, they are not on a bill.
+    const withAccount = [...rows, tx('2026-07-10', 5000, { origin: 'Bank Account Gabriel' })]
+    const inv = getCreditCardInvoice(withAccount, {
+      cardOrigin: 'Gabriel',
+      referenceDate: new Date(2026, 6, 31),
+    })
     expect(inv.total).toBe(200 + 400)
   })
 })

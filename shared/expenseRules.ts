@@ -29,6 +29,17 @@ export function isAccountOrCard(value: string | null | undefined): boolean {
   return ACCOUNT_MARKERS.some(marker => v.includes(marker))
 }
 
+/**
+ * True when the field names a credit card.
+ *
+ * Anything charged to a card belongs on that card's invoice, whichever card it
+ * is — so the invoice matches on this marker rather than on one exact origin
+ * string, which silently dropped every card the sheet spells differently.
+ */
+export function isCreditCard(value: string | null | undefined): boolean {
+  return norm(value).includes('credit card')
+}
+
 /** Money landing in one of your accounts. */
 export function isIncome(t: Transaction): boolean {
   return norm(t.destination).includes('bank account')
