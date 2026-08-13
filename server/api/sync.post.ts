@@ -1,4 +1,4 @@
-import { syncTransactionsFromSheets, recordSyncError } from '../utils/syncTransactions'
+import { syncTransactionsFromBkper, recordSyncError } from '../utils/syncTransactions'
 import { isDatabaseConfigured } from '../database'
 
 /**
@@ -20,7 +20,7 @@ export default defineEventHandler(async () => {
 
   try {
     console.log('[Sync] Manual sync triggered')
-    const result = await syncTransactionsFromSheets()
+    const result = await syncTransactionsFromBkper()
 
     return {
       success: true,

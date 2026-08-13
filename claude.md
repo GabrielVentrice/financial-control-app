@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-This is a **Nuxt 3** financial control application that integrates with Google Sheets to provide comprehensive transaction management, analytics, and filtering capabilities. The app reads financial transaction data from a Google Sheets spreadsheet and provides a web interface for visualization, filtering, and analysis.
+This is a **Nuxt 3** financial control application built on top of a **Bkper** ledger. The app
+reads transactions from the Bkper REST API, mirrors them into Postgres, and provides a web
+interface for visualization, filtering, and analysis.
 
 **Key capabilities:**
 - Real-time transaction viewing and filtering
@@ -19,7 +21,8 @@ This is a **Nuxt 3** financial control application that integrates with Google S
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS (light design system; tokens in [tailwind.config.js](tailwind.config.js))
 - **Database**: PostgreSQL (Neon serverless, HTTP driver) via Drizzle ORM — primary read source
-- **Source of truth**: Google Sheets, synced into Postgres (see "Data Layer & Sync")
+- **Source of truth**: **Bkper** (REST API v5), synced into Postgres (see "Data Layer & Sync").
+  Google Sheets is still used, but only by the budget screens.
 - **Charts**: Chart.js with vue-chartjs (plus a custom CSS/flex stacked-bar chart for installments)
 - **Deployment**: Vercel (Nitro `vercel` preset, serverless functions + cron)
 - **Runtime**: Node.js 18+
@@ -56,12 +59,12 @@ financial-control-app/
 │   └── budget-templates.vue       # Budget templates (imperative fetch)
 ├── server/
 │   ├── api/
-│   │   ├── transactions.get.ts    # Main endpoint (DB read or Sheets+cache fallback)
-│   │   ├── sync.post.ts           # Manual Sheets → Postgres sync
+│   │   ├── transactions.get.ts    # Main endpoint (DB read or Bkper+cache fallback)
+│   │   ├── sync.post.ts           # Manual Bkper → Postgres sync
 │   │   └── cron/sync.get.ts       # Daily cron sync (Vercel, CRON_SECRET guarded)
 │   ├── database/                  # Drizzle schema + Neon client
 │   └── utils/
-│       ├── googleSheets.ts        # Google Sheets data fetching
+│       ├── bkper.ts               # Bkper REST client (OAuth + pagination + mapping)
 │       ├── personIdentifier.ts    # Person identification logic
 │       ├── installmentProcessor.ts # Re-exports shared/installments
 │       ├── syncTransactions.ts    # Batched upsert util (shared by sync + cron)
@@ -74,11 +77,25 @@ financial-control-app/
 
 ## Key Features
 
-### 1. Google Sheets Integration
-- Reads transaction data from a Google Sheets spreadsheet
-- Uses Service Account authentication (server-side only)
-- Expected sheet structure:
-  - Transaction Id, Date, Origin, Destination, Description, Amount, Recorded at, Remote Id
+### 1. Bkper Integration
+
+Transactions come from the Bkper ledger ([server/utils/bkper.ts](server/utils/bkper.ts)),
+book "1 - Personal finances - Gabriel + Juliana". The app used to read the Google Sheet that
+Bkper's own bot writes into; that mirror silently lagged and dropped rows (10 transactions from
+Sep/2025, ~R$ 4,3k, existed in the ledger and never reached the sheet).
+
+- **Auth**: Bkper takes a Google OAuth2 access token and has **no service-account path** — the
+  token must identify a *user* with access to the book. So the server keeps the refresh token
+  from `bkper auth login` (device flow, stored at `~/.config/bkper/.bkper-credentials.json`)
+  and mints access tokens from it. Tokens are cached in module scope for the hour they last.
+- **Mapping**: Bkper is double entry — `creditAccount` is the app's `origin`, `debitAccount` is
+  its `destination`, and both come back as **ids only**, so account names need the extra
+  `/accounts` call. Bkper's `id` is exactly what the sheet called "Transaction Id", so the
+  Postgres upsert key did not change in the migration.
+- **Gotchas**: the pagination cursor travels as an **HTTP header**, not a query param — passing
+  it as a query param is ignored and every page comes back identical. About half the book is
+  uncategorized drafts carrying only one side of the entry; those rows are kept with an empty
+  origin/destination, never dropped.
 
 ### 2. Person-Based Filtering (Server-Side)
 - Global filter for Juliana/Gabriel/Both
@@ -219,14 +236,14 @@ The fixed costs page provides historical analysis of recurring expenses:
 ## Important Files
 
 ### Configuration
-- [nuxt.config.ts](nuxt.config.ts): Nuxt app configuration, runtime config for Google credentials, OpenAPI settings
+- [nuxt.config.ts](nuxt.config.ts): Nuxt app configuration, runtime config for Bkper/Google credentials, OpenAPI settings
 - [tailwind.config.js](tailwind.config.js): Custom theme colors (primary blue palette)
-- `.env`: Environment variables (NUXT_PUBLIC_GOOGLE_SPREADSHEET_ID, NUXT_GOOGLE_CLIENT_EMAIL, NUXT_GOOGLE_PRIVATE_KEY)
+- `.env`: Environment variables (NUXT_BKPER_*, DATABASE_URL, and the NUXT_GOOGLE_* pair used by the budget screens)
 - `/_openapi.json`: **OpenAPI 3.1 specification** - Auto-generated API documentation for AI agents and tools
 
 ### Server-Side Logic (NEW Architecture)
 - [server/api/transactions.get.ts](server/api/transactions.get.ts): Main API endpoint with query parameter support and processing orchestration
-- [server/utils/googleSheets.ts](server/utils/googleSheets.ts): Google Sheets API integration and data fetching
+- [server/utils/bkper.ts](server/utils/bkper.ts): **Bkper REST client** — OAuth token refresh, cursor pagination, ledger → Transaction mapping
 - [server/utils/personIdentifier.ts](server/utils/personIdentifier.ts): **Person identification patterns** and enrichment logic
 - [server/utils/installmentProcessor.ts](server/utils/installmentProcessor.ts): **Installment parsing, grouping, and expansion** across months
 - [server/utils/transactionFilters.ts](server/utils/transactionFilters.ts): **All filtering logic** (person, date, search, etc.)
@@ -258,15 +275,22 @@ npm run preview      # Preview production build
 
 ### Environment Setup
 1. Create Google Cloud project
-2. Enable Google Sheets API
+2. Enable Google Sheets API (only needed for the budget screens)
 3. Create Service Account and download JSON key
 4. Share target Google Sheets with service account email
 5. Configure `.env` with credentials and spreadsheet ID
-6. Set `DATABASE_URL` (Neon Postgres). Without it, the app falls back to Sheets + on-disk cache.
-7. Set `CRON_SECRET` (in Vercel env vars) so the daily cron endpoint is protected in production.
+6. Authenticate against Bkper: `npm i -g bkper && bkper auth login`, then copy the
+   `refresh_token` from `~/.config/bkper/.bkper-credentials.json` into `NUXT_BKPER_REFRESH_TOKEN`
+   (with the CLI's own OAuth client in `NUXT_BKPER_CLIENT_ID`/`NUXT_BKPER_CLIENT_SECRET`), and
+   the book id in `NUXT_BKPER_BOOK_ID` (`GET https://api.bkper.app/v5/books` lists them).
+7. Set `DATABASE_URL` (Neon Postgres). Without it, the app reads Bkper directly + on-disk cache.
+8. Set `CRON_SECRET` (in Vercel env vars) so the daily cron endpoint is protected in production.
 
-**Key env vars:** `NUXT_PUBLIC_GOOGLE_SPREADSHEET_ID`, `NUXT_GOOGLE_CLIENT_EMAIL`,
-`NUXT_GOOGLE_PRIVATE_KEY`, `DATABASE_URL`, `CRON_SECRET`.
+**Key env vars:** `NUXT_BKPER_BOOK_ID`, `NUXT_BKPER_REFRESH_TOKEN`, `NUXT_BKPER_CLIENT_ID`,
+`NUXT_BKPER_CLIENT_SECRET`, `DATABASE_URL`, `CRON_SECRET`, plus
+`NUXT_PUBLIC_GOOGLE_SPREADSHEET_ID` / `NUXT_GOOGLE_CLIENT_EMAIL` / `NUXT_GOOGLE_PRIVATE_KEY`
+for the budget screens. **All of them must also exist in the Vercel project** — a deploy without
+`NUXT_BKPER_*` fails every sync.
 
 ## Customization Points
 
@@ -301,10 +325,11 @@ After modifying patterns, **restart the dev server** for changes to take effect.
 ### Theme Colors
 Edit [tailwind.config.js](tailwind.config.js) to change the primary color scheme (currently blue).
 
-### Google Sheets Structure
-The system expects specific column names starting at A1. If your sheet has different columns, update:
-- [server/api/transactions.get.ts](server/api/transactions.get.ts): Data parsing logic
-- [types/transaction.ts](types/transaction.ts): Transaction interface
+### Ledger Structure
+Account names in Bkper are what every screen filters on ("Credit Card Gabriel", "Food"). Renaming
+an account there changes `origin`/`destination` here — check
+[server/utils/personIdentifier.ts](server/utils/personIdentifier.ts) and
+[shared/expenseRules.ts](shared/expenseRules.ts) before renaming.
 
 ## API Documentation
 
@@ -441,14 +466,14 @@ The application uses a **server-first architecture** where all heavy processing 
 **Data Flow (`/api/transactions`):**
 1. Client requests `/api/transactions` with optional query parameters.
 2. Server reads transactions from **PostgreSQL** when `DATABASE_URL` is set (the normal path);
-   otherwise it falls back to Google Sheets + on-disk cache.
+   otherwise it falls back to the Bkper API + on-disk cache.
 3. Server enriches with person identification ([personIdentifier.ts](server/utils/personIdentifier.ts))
-   when reading from Sheets (DB rows already carry `person` from the sync).
+   when reading from Bkper (DB rows already carry `person` from the sync).
 4. Server processes/expands installments ([installmentProcessor.ts](server/utils/installmentProcessor.ts) → [shared/installments.ts](shared/installments.ts)).
 5. Server applies filters (person, date, search, etc.) ([transactionFilters.ts](server/utils/transactionFilters.ts)).
 6. Server returns processed data to the client.
 
-See **"Data Layer & Sync"** below for how Postgres stays in sync with the sheet.
+See **"Data Layer & Sync"** below for how Postgres stays in sync with the ledger.
 
 **Benefits:**
 - ✅ **Better Performance**: Reduced client-side processing, lower bandwidth usage
@@ -462,7 +487,7 @@ See **"Data Layer & Sync"** below for how Postgres stays in sync with the sheet.
 - **Server-Side Processing**: All data transformation, filtering, and enrichment happens on the server
 - **Composables**: Reusable logic for UI state and server communication
 - **Component-Based Navigation**: Each page includes the Sidemenu component for navigation (no layout wrapper)
-- **Server API Routes**: Secure Google Sheets access with query parameter support (credentials never exposed to client)
+- **Server API Routes**: Ledger credentials stay server-side; the client only ever sees filtered data
 - **Utility Functions**: Modular server utilities for each processing step (fetch, identify, process, filter)
 - **Tailwind Utility Classes**: All styling via Tailwind
 - **TypeScript**: Full type safety with Transaction interface and typed composables
@@ -504,23 +529,27 @@ await fetchTransactions({
 3. Add or remove category names (matching is case-insensitive and uses `includes()`)
 4. Save and refresh the page
 
-### Modifying Google Sheets Integration
-1. Update [server/api/transactions.get.ts](server/api/transactions.get.ts) for data fetching
+### Modifying the Bkper Integration
+1. Update [server/utils/bkper.ts](server/utils/bkper.ts) for fetching/mapping
 2. Update [types/transaction.ts](types/transaction.ts) for type changes
-3. Update parsing logic if column structure changes
+3. Cover the mapping in [test/bkper.test.ts](test/bkper.test.ts)
 
 ## Security Notes
 
 - Google credentials stored server-side only (never exposed to client)
 - Environment variables used for sensitive data
 - `.env` file is git-ignored
-- Service Account has read-only access to specific spreadsheet
+- Service Account has read-only access to specific spreadsheet (budgets only)
+- The Bkper refresh token grants full access to the ledger — it belongs in env vars, never in the repo
 
 ## Data Layer & Sync
 
 - **Read path**: `/api/transactions` reads from **PostgreSQL** (Neon) when `DATABASE_URL` is set.
   The schema (`transactions`, `budgets`, `sync_metadata`) lives in [server/database/schema.ts](server/database/schema.ts).
-- **Source of truth** is still the **Google Sheet**. Postgres is a synced mirror.
+- **Source of truth** is the **Bkper book**. Postgres is a synced mirror; without `DATABASE_URL`
+  the app reads Bkper directly (behind the on-disk cache).
+- A full book read is ~4,1k transactions over ~22 cursor pages, about 7s; the whole sync
+  (fetch + 9 upsert batches) runs in ~10s, inside the 60s serverless budget.
 - **Sync** is implemented once in [server/utils/syncTransactions.ts](server/utils/syncTransactions.ts)
   as a batched bulk upsert (`INSERT … ON CONFLICT DO UPDATE`, ~500 rows/batch) — fast enough to
   finish inside the serverless timeout. Two entry points reuse it:
@@ -533,7 +562,7 @@ await fetchTransactions({
     After deploying, confirm the job is listed under Project → Settings → Cron Jobs.
 - `GET /api/sync` returns the last sync attempt; the UI turns it into the "dados de há X" label and
   warns when it's older than 48h.
-- **Gotcha**: Postgres can lag the sheet (sync is daily, not live). If dashboard numbers look
+- **Gotcha**: Postgres can lag the ledger (sync is daily, not live). If dashboard numbers look
   stale/wrong, run the sync **before** debugging code — the "Atualizar" button on any page does it.
 
 ## Conventions & Gotchas
@@ -568,10 +597,11 @@ await fetchTransactions({
 
 ## Known Limitations
 
-- Read-only access to Google Sheets (no write operations); sheet is the source of truth.
-- Single spreadsheet support
+- Read-only access to Bkper (no write operations); the ledger is the source of truth.
+- Single book support
+- Budgets and budget templates still live in Google Sheets, not in Bkper.
 - No user authentication
-- Postgres sync is **daily (cron), not real-time** — data can lag the sheet until the next sync.
+- Postgres sync is **daily (cron), not real-time** — data can lag the ledger until the next sync.
 - `budget.vue` / `budget-templates.vue` still use an imperative `loading` ref (not the cached
   `useAsyncData` pattern), so they show a loading state on navigation.
 
@@ -588,13 +618,14 @@ See [README.md](README.md) for detailed list of potential improvements including
 ## Troubleshooting
 
 ### Transactions not loading
-- Check `.env` file has correct credentials
-- Verify spreadsheet is shared with service account email
-- Confirm Google Sheets API is enabled in Google Cloud Console
+- Check `.env` has the `NUXT_BKPER_*` values (a 500 saying "Bkper is not configured" lists what is missing)
+- A 401 saying the refresh token was refused means `bkper auth login` has to be re-run and
+  `NUXT_BKPER_REFRESH_TOKEN` updated (in `.env` **and** in Vercel)
+- Confirm the book is still shared with the Google account that authenticated
 - Check server logs for detailed errors
 
 ### Person filter not working
-- Verify Origin column values in Google Sheets
+- Verify the account names in the Bkper book
 - Check patterns in [server/utils/personIdentifier.ts](server/utils/personIdentifier.ts) (server-side)
 - Patterns are case-insensitive and use substring matching
 - **IMPORTANT:** Restart dev server after changing patterns
@@ -667,4 +698,5 @@ await fetchTransactions({ person: 'Gabriel' })
 - [Nuxt 3 Documentation](https://nuxt.com/docs)
 - [Nitro OpenAPI Documentation](https://nitro.unjs.io/guide/openapi)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [Bkper REST API](https://bkper.com/docs/api/rest)
 - [Google Sheets API Documentation](https://developers.google.com/sheets/api)

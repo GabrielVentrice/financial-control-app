@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { db, transactions, syncMetadata } from '../database'
-import { fetchTransactionsFromGoogleSheets } from './googleSheets'
+import { fetchTransactionsFromBkper } from './bkper'
 import { enrichTransactionsWithPerson } from './personIdentifier'
 import { normalizeSheetDate } from '~/shared/dates'
 
@@ -15,21 +15,25 @@ export interface SyncResult {
 const BATCH_SIZE = 500
 
 /**
- * Synchronizes transactions from Google Sheets into PostgreSQL.
+ * Synchronizes transactions from the Bkper ledger into PostgreSQL.
  *
  * Uses a batched bulk upsert (INSERT ... ON CONFLICT DO UPDATE) instead of a
  * per-row SELECT + INSERT/UPDATE. This collapses thousands of sequential Neon
  * HTTP round-trips into a handful of statements, so the whole sync completes
  * well within a serverless function's timeout (required for the Vercel cron).
  *
+ * The upsert key is unchanged across the move off Google Sheets: the sheet's
+ * "Transaction Id" was always Bkper's transaction id, so the rows already in
+ * Postgres match on the way in instead of duplicating.
+ *
  * Shared by POST /api/sync (manual) and GET /api/cron/sync (scheduled).
  */
-export async function syncTransactionsFromSheets(): Promise<SyncResult> {
+export async function syncTransactionsFromBkper(): Promise<SyncResult> {
   const startTime = Date.now()
 
-  console.log('[Sync] Fetching transactions from Google Sheets...')
-  const sheetsTransactions = await fetchTransactionsFromGoogleSheets()
-  const enriched = enrichTransactionsWithPerson(sheetsTransactions)
+  console.log('[Sync] Fetching transactions from Bkper...')
+  const ledgerTransactions = await fetchTransactionsFromBkper()
+  const enriched = enrichTransactionsWithPerson(ledgerTransactions)
   console.log(`[Sync] Fetched ${enriched.length} transactions`)
 
   const rows = enriched

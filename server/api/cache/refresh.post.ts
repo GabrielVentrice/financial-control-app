@@ -1,10 +1,10 @@
 /**
  * POST /api/cache/refresh
- * Forces cache refresh by fetching fresh data from Google Sheets
+ * Forces cache refresh by fetching fresh data from the Bkper ledger
  */
 
 import type { CacheRefreshResponse } from '~/types/cache'
-import { fetchTransactionsFromGoogleSheets } from '~/server/utils/googleSheets'
+import { fetchTransactionsFromBkper } from '~/server/utils/bkper'
 import { writeCache, updateCacheMetadata } from '~/server/utils/cacheManager'
 
 export default defineEventHandler(async (event): Promise<CacheRefreshResponse> => {
@@ -15,8 +15,8 @@ export default defineEventHandler(async (event): Promise<CacheRefreshResponse> =
   try {
     console.log('[Cache Refresh] Starting manual cache refresh...')
 
-    // Fetch fresh data from Google Sheets
-    const transactions = await fetchTransactionsFromGoogleSheets()
+    // Fetch fresh data from Bkper
+    const transactions = await fetchTransactionsFromBkper()
 
     if (!transactions || transactions.length === 0) {
       return {
@@ -30,7 +30,7 @@ export default defineEventHandler(async (event): Promise<CacheRefreshResponse> =
           version: 1
         },
         transactionCount: 0,
-        message: 'Nenhuma transação encontrada no Google Sheets.',
+        message: 'Nenhuma transação encontrada no Bkper.',
         error: 'No transactions found'
       }
     }

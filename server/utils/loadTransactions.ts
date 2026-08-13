@@ -1,6 +1,6 @@
 import { and, eq, gte, lte, ilike, desc } from 'drizzle-orm'
 import type { Transaction, TransactionQueryParams } from '~/types/transaction'
-import { fetchTransactionsFromGoogleSheets } from './googleSheets'
+import { fetchTransactionsFromBkper } from './bkper'
 import { enrichTransactionsWithPerson } from './personIdentifier'
 import { processInstallments } from './installmentProcessor'
 import { applyFilters } from './transactionFilters'
@@ -48,13 +48,13 @@ export async function loadTransactions(
   const db = await getDb()
   let transactions = db
     ? await fetchFromDatabase(db, fetchQuery)
-    : enrichTransactionsWithPerson(await fetchFromGoogleSheetsWithCache())
+    : enrichTransactionsWithPerson(await fetchFromBkperWithCache())
 
   if (shouldProcessInstallments) {
     transactions = processInstallments(transactions)
   }
 
-  // The Sheets path fetches everything, so it always needs the full filter pass.
+  // The Bkper path fetches the whole book, so it always needs the full filter pass.
   // The DB path already applied everything except a deferred date window.
   if (!db) {
     transactions = applyFilters(transactions, query)
@@ -103,22 +103,27 @@ async function fetchFromDatabase(
   }))
 }
 
-/** Legacy path for when DATABASE_URL isn't set. */
-async function fetchFromGoogleSheetsWithCache(): Promise<Transaction[]> {
+/**
+ * Fallback path for when DATABASE_URL isn't set: read the ledger itself.
+ *
+ * Reading the whole book is a handful of paginated round-trips, so the cache in
+ * front of it matters more here than it did for the sheet.
+ */
+async function fetchFromBkperWithCache(): Promise<Transaction[]> {
   const config = useRuntimeConfig()
   const cacheConfig = config.cache
-  const spreadsheetId = config.public.googleSpreadsheetId
+  const bookId = config.bkper?.bookId || ''
 
   if (!cacheConfig.enabled) {
-    return fetchTransactionsFromGoogleSheets()
+    return fetchTransactionsFromBkper()
   }
 
   if ((await cacheExists()) && (await isCacheValid())) {
     return readCache()
   }
 
-  const transactions = await fetchTransactionsFromGoogleSheets()
+  const transactions = await fetchTransactionsFromBkper()
   await writeCache(transactions)
-  await updateCacheMetadata(transactions.length, 'fresh', spreadsheetId, cacheConfig.ttlMinutes)
+  await updateCacheMetadata(transactions.length, 'fresh', bookId, cacheConfig.ttlMinutes)
   return transactions
 }

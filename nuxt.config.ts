@@ -9,6 +9,17 @@ export default defineNuxtConfig({
     googlePrivateKey: '',
     googleDriveCacheFolderId: '',
 
+    // Bkper: the ledger the transactions come from. `refreshToken` is what the
+    // `bkper auth login` device flow stores; clientId/clientSecret are the CLI's
+    // own OAuth client, which minted it.
+    bkper: {
+      bookId: '',
+      refreshToken: '',
+      clientId: '',
+      clientSecret: '',
+      apiKey: '',
+    },
+
     // Cache configuration (server-side only)
     cache: {
       enabled: true,
