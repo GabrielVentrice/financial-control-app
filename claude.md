@@ -3,8 +3,8 @@
 ## Project Overview
 
 This is a **Nuxt 3** financial control application built on top of a **Bkper** ledger. The app
-reads transactions from the Bkper REST API, mirrors them into Postgres, and provides a web
-interface for visualization, filtering, and analysis.
+reads transactions straight from the Bkper REST API into an in-memory server snapshot (no
+database mirror) and provides a web interface for visualization, filtering, and analysis.
 
 **Key capabilities:**
 - Real-time transaction viewing and filtering
@@ -20,11 +20,13 @@ interface for visualization, filtering, and analysis.
 - **Framework**: Nuxt 3 (Vue 3)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS (light design system; tokens in [tailwind.config.js](tailwind.config.js))
-- **Database**: PostgreSQL (Neon serverless, HTTP driver) via Drizzle ORM — primary read source
-- **Source of truth**: **Bkper** (REST API v5), synced into Postgres (see "Data Layer & Sync").
-  Google Sheets is still used, but only by the budget screens.
+- **Source of truth & primary read source**: **Bkper** (REST API v5), read into an in-memory
+  server snapshot with a 60min TTL (see "Data Layer & Cache"). Google Sheets is still used,
+  but only by the budget screens (also behind the same TTL cache).
+- **Database**: PostgreSQL (Neon serverless, HTTP driver) via Drizzle ORM — holds ONLY
+  `debt_plans` (the cheque-especial anchor, app state that does not exist in the ledger)
 - **Charts**: Chart.js with vue-chartjs (plus a custom CSS/flex stacked-bar chart for installments)
-- **Deployment**: Vercel (Nitro `vercel` preset, serverless functions + cron)
+- **Deployment**: Vercel (Nitro `vercel` preset, serverless functions)
 - **Runtime**: Node.js 18+
 
 ## Project Structure
@@ -43,34 +45,47 @@ financial-control-app/
 │   │   └── CommitmentChart.vue    # Custom CSS/flex stacked-bar projection chart
 │   └── dashboard/                 # Dashboard-specific chart/list components
 ├── composables/
-│   ├── usePersonFilter.ts         # Global person filter UI state (default: Gabriel)
-│   ├── useTransactions.ts         # Transaction fetching (useAsyncData + getCachedData)
+│   ├── usePersonFilter.ts         # Global person filter UI state (useState, default: Gabriel)
+│   ├── useTransactions.ts         # The shared dataset (useAsyncData + getCachedData, fixed key)
 │   ├── useInstallments.ts         # Re-exports shared/installments (parse/expand)
 │   ├── useDashboardAnalytics.ts   # Dashboard analytics, invoice, insights
-│   ├── useFormatters.ts           # Currency/date/month formatting helpers
-│   └── useCacheStatus.ts          # Cache metadata status
+│   ├── useSync.ts                 # Snapshot freshness label + "Atualizar" action
+│   └── useFormatters.ts           # Currency/date/month formatting helpers
 ├── pages/
 │   ├── index.vue                  # Dashboard ("Coluna Refinada" layout)
 │   ├── transactions.vue           # Full transaction list with filters
 │   ├── categories.vue             # Category spending (shared useTransactions)
 │   ├── installments.vue           # "Parcelas Ativas": commitment + 12-month projection
 │   ├── fixed-costs.vue            # Fixed costs historical analysis (6 months)
-│   ├── budget.vue                 # Monthly budgets (imperative fetch)
-│   └── budget-templates.vue       # Budget templates (imperative fetch)
+│   ├── debt.vue                   # "Quitar Dívida": payoff plan over the raw snapshot
+│   ├── budget.vue                 # Monthly budgets (Sheets-backed)
+│   └── budget-templates.vue       # Budget templates (Sheets-backed)
 ├── server/
 │   ├── api/
-│   │   ├── transactions.get.ts    # Main endpoint (DB read or Bkper+cache fallback)
-│   │   ├── sync.post.ts           # Manual Bkper → Postgres sync
-│   │   └── cron/sync.get.ts       # Daily cron sync (Vercel, CRON_SECRET guarded)
-│   ├── database/                  # Drizzle schema + Neon client
+│   │   ├── transactions.get.ts    # Main endpoint (in-memory Bkper snapshot)
+│   │   ├── categories.get.ts      # Category aggregation + cached budgets
+│   │   ├── sync.get.ts            # Snapshot age ("dados de há X")
+│   │   ├── sync.post.ts           # Force-refresh snapshot + invalidate budget caches
+│   │   ├── debt.get.ts/.post.ts   # Debt plan (debt_plans CRUD + JS analytics)
+│   │   └── budgets*, budget-templates* # Sheets-backed budget endpoints (cached)
+│   ├── database/                  # Drizzle schema + Neon client (debt_plans only)
 │   └── utils/
 │       ├── bkper.ts               # Bkper REST client (OAuth + pagination + mapping)
+│       ├── memoCache.ts           # createTtlCache: in-instance TTL cache w/ dedup + stale fallback
+│       ├── bookSnapshot.ts        # The whole-book snapshot every read consumes
+│       ├── budgetsCache.ts        # Sheets budgets/templates behind the same TTL cache
+│       ├── loadTransactions.ts    # snapshot → installments → filters (single read path)
 │       ├── personIdentifier.ts    # Person identification logic
 │       ├── installmentProcessor.ts # Re-exports shared/installments
-│       ├── syncTransactions.ts    # Batched upsert util (shared by sync + cron)
+│       ├── debtPlan.ts            # Debt snapshot assembly (math in shared/debtAnalytics)
 │       └── transactionFilters.ts  # Server-side filtering logic
-├── shared/
-│   └── installments.ts            # Framework-agnostic installment logic (server + client)
+├── shared/                        # Framework-agnostic logic (server + client)
+│   ├── installments.ts            # Installment identity/parse/expansion
+│   ├── expenseRules.ts            # One definition of income/expense/transfer/exclusions
+│   ├── debtAnalytics.ts           # Debt math over the raw ledger (movement, interest, cashflow)
+│   ├── categoryClassification.ts  # Fixed/committed category lists (server + fixed-costs page)
+│   ├── categoryIcons.ts           # Category → emoji (budget screens)
+│   └── dates.ts                   # Timezone-safe month bucketing
 └── types/
     └── transaction.ts             # TypeScript type definitions and interfaces
 ```
@@ -90,8 +105,8 @@ Sep/2025, ~R$ 4,3k, existed in the ledger and never reached the sheet).
   and mints access tokens from it. Tokens are cached in module scope for the hour they last.
 - **Mapping**: Bkper is double entry — `creditAccount` is the app's `origin`, `debitAccount` is
   its `destination`, and both come back as **ids only**, so account names need the extra
-  `/accounts` call. Bkper's `id` is exactly what the sheet called "Transaction Id", so the
-  Postgres upsert key did not change in the migration.
+  `/accounts` call. Bkper's `id` is exactly what the old sheet called "Transaction Id", so
+  `transactionId` stayed stable across every migration of the data layer.
 - **Gotchas**: the pagination cursor travels as an **HTTP header**, not a query param — passing
   it as a query param is ignored and every page comes back identical. About half the book is
   uncategorized drafts carrying only one side of the entry; those rows are kept with an empty
@@ -292,14 +307,13 @@ npm run preview      # Preview production build
    `refresh_token` from `~/.config/bkper/.bkper-credentials.json` into `NUXT_BKPER_REFRESH_TOKEN`
    (with the CLI's own OAuth client in `NUXT_BKPER_CLIENT_ID`/`NUXT_BKPER_CLIENT_SECRET`), and
    the book id in `NUXT_BKPER_BOOK_ID` (`GET https://api.bkper.app/v5/books` lists them).
-7. Set `DATABASE_URL` (Neon Postgres). Without it, the app reads Bkper directly + on-disk cache.
-8. Set `CRON_SECRET` (in Vercel env vars) so the daily cron endpoint is protected in production.
+7. Set `DATABASE_URL` (Neon Postgres) — only needed by the debt screen (`debt_plans` table).
 
 **Key env vars:** `NUXT_BKPER_BOOK_ID`, `NUXT_BKPER_REFRESH_TOKEN`, `NUXT_BKPER_CLIENT_ID`,
-`NUXT_BKPER_CLIENT_SECRET`, `DATABASE_URL`, `CRON_SECRET`, plus
+`NUXT_BKPER_CLIENT_SECRET`, `DATABASE_URL`, plus
 `NUXT_PUBLIC_GOOGLE_SPREADSHEET_ID` / `NUXT_GOOGLE_CLIENT_EMAIL` / `NUXT_GOOGLE_PRIVATE_KEY`
 for the budget screens. **All of them must also exist in the Vercel project** — a deploy without
-`NUXT_BKPER_*` fails every sync.
+`NUXT_BKPER_*` fails every transaction read.
 
 ## Customization Points
 
@@ -474,15 +488,14 @@ The application uses a **server-first architecture** where all heavy processing 
 
 **Data Flow (`/api/transactions`):**
 1. Client requests `/api/transactions` with optional query parameters.
-2. Server reads transactions from **PostgreSQL** when `DATABASE_URL` is set (the normal path);
-   otherwise it falls back to the Bkper API + on-disk cache.
-3. Server enriches with person identification ([personIdentifier.ts](server/utils/personIdentifier.ts))
-   when reading from Bkper (DB rows already carry `person` from the sync).
-4. Server processes/expands installments ([installmentProcessor.ts](server/utils/installmentProcessor.ts) → [shared/installments.ts](shared/installments.ts)).
-5. Server applies filters (person, date, search, etc.) ([transactionFilters.ts](server/utils/transactionFilters.ts)).
-6. Server returns processed data to the client.
+2. Server reads the in-memory **Bkper snapshot** ([bookSnapshot.ts](server/utils/bookSnapshot.ts)) —
+   already person-enriched ([personIdentifier.ts](server/utils/personIdentifier.ts)) and sorted;
+   a cold instance fetches the whole book once (~7s), warm reads are memory.
+3. Server processes/expands installments ([installmentProcessor.ts](server/utils/installmentProcessor.ts) → [shared/installments.ts](shared/installments.ts)).
+4. Server applies filters (person, date, search, etc.) ([transactionFilters.ts](server/utils/transactionFilters.ts)).
+5. Server returns processed data to the client.
 
-See **"Data Layer & Sync"** below for how Postgres stays in sync with the ledger.
+See **"Data Layer & Cache"** below for the cache/TTL details.
 
 **Benefits:**
 - ✅ **Better Performance**: Reduced client-side processing, lower bandwidth usage
@@ -551,28 +564,33 @@ await fetchTransactions({
 - Service Account has read-only access to specific spreadsheet (budgets only)
 - The Bkper refresh token grants full access to the ledger — it belongs in env vars, never in the repo
 
-## Data Layer & Sync
+## Data Layer & Cache
 
-- **Read path**: `/api/transactions` reads from **PostgreSQL** (Neon) when `DATABASE_URL` is set.
-  The schema (`transactions`, `budgets`, `sync_metadata`) lives in [server/database/schema.ts](server/database/schema.ts).
-- **Source of truth** is the **Bkper book**. Postgres is a synced mirror; without `DATABASE_URL`
-  the app reads Bkper directly (behind the on-disk cache).
-- A full book read is ~4,1k transactions over ~22 cursor pages, about 7s; the whole sync
-  (fetch + 9 upsert batches) runs in ~10s, inside the 60s serverless budget.
-- **Sync** is implemented once in [server/utils/syncTransactions.ts](server/utils/syncTransactions.ts)
-  as a batched bulk upsert (`INSERT … ON CONFLICT DO UPDATE`, ~500 rows/batch) — fast enough to
-  finish inside the serverless timeout. Two entry points reuse it:
-  - `POST /api/sync` — manual sync.
-  - `GET /api/cron/sync` — **daily Vercel cron at `0 9 * * *` (09:00 UTC = 06:00 BRT)**, declared in
-    **[vercel.json](vercel.json)** (function `maxDuration: 60` stays in `nuxt.config.ts`). Guarded by
-    `CRON_SECRET` (must be set as a Vercel env var; Vercel sends it as `Authorization: Bearer …`).
-    It was previously declared under `nitro.vercel.config.crons`, which writes the Build Output
-    config but **does not register the job with the platform** — the sync silently never ran.
-    After deploying, confirm the job is listed under Project → Settings → Cron Jobs.
-- `GET /api/sync` returns the last sync attempt; the UI turns it into the "dados de há X" label and
-  warns when it's older than 48h.
-- **Gotcha**: Postgres can lag the ledger (sync is daily, not live). If dashboard numbers look
-  stale/wrong, run the sync **before** debugging code — the "Atualizar" button on any page does it.
+- **One source, one snapshot.** Every transaction read goes through
+  [server/utils/bookSnapshot.ts](server/utils/bookSnapshot.ts): the whole Bkper book (~4,1k rows
+  over ~22 cursor pages, ~7s) is fetched, person-enriched and sorted once, then held in instance
+  memory behind [server/utils/memoCache.ts](server/utils/memoCache.ts) (`createTtlCache`,
+  TTL 60min from `runtimeConfig.cache.ttlMinutes`). There is no Postgres mirror, no CSV cache,
+  no cron. Warm reads are milliseconds; a cold instance pays the ~7s fetch once.
+- **Pipeline**: [server/utils/loadTransactions.ts](server/utils/loadTransactions.ts) =
+  `getBookSnapshot()` → `processInstallments()` → `applyFilters()`. `/api/transactions`,
+  `/api/categories` and `apply-template` all go through it; `/api/debt` reads the RAW snapshot
+  (no installment expansion — projected rows must never count as account movement).
+- **Budgets/templates** (Google Sheets) sit behind the same `createTtlCache` in
+  [server/utils/budgetsCache.ts](server/utils/budgetsCache.ts); the POST endpoints invalidate
+  after writing to the Sheet.
+- `GET /api/sync` reports the snapshot's age (the "dados de há X" label — warns when refreshes
+  seem to be failing). `POST /api/sync` (the "Atualizar" button) forces a fresh Bkper read and
+  invalidates the budget caches; the client then calls `refreshNuxtData()`.
+- **Failure mode**: a background refresh that fails serves the previous (stale) snapshot and
+  logs; an explicit refresh (the button) propagates the error so the user sees it.
+- **Multi-instance caveat (Vercel)**: each serverless instance holds its own snapshot, so the
+  "dados de há X" label can differ between requests and "Atualizar" only renews the instance
+  that served it. Fine for a personal app; the TTL bounds the drift at 60min.
+- **Postgres (Neon)** holds only `debt_plans` ([server/database/schema.ts](server/database/schema.ts)).
+  The old `transactions`/`budgets`/`sync_metadata` tables may still exist in the database until
+  `npm run db:push` is run against the slimmed schema — leaving them for a few days after the
+  migration is the free rollback.
 
 ## Conventions & Gotchas
 
@@ -610,9 +628,8 @@ await fetchTransactions({
 - Single book support
 - Budgets and budget templates still live in Google Sheets, not in Bkper.
 - No user authentication
-- Postgres sync is **daily (cron), not real-time** — data can lag the ledger until the next sync.
-- `budget.vue` / `budget-templates.vue` still use an imperative `loading` ref (not the cached
-  `useAsyncData` pattern), so they show a loading state on navigation.
+- Data freshness is bounded by the snapshot TTL (60min) — the "Atualizar" button forces a
+  fresh read when needed.
 
 ## Future Enhancement Ideas
 

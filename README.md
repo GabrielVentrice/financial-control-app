@@ -1,211 +1,56 @@
 # Controle Financeiro
 
-Sistema de controle financeiro integrado com Google Sheets, desenvolvido com Nuxt 3.
+App de controle financeiro pessoal sobre um livro **Bkper**, desenvolvido com Nuxt 3.
 
-## Características
-
-- Leitura de transações financeiras do Google Sheets
-- Interface web responsiva para visualização de transações
-- Busca e filtros de transações
-- Cálculo automático de totais
-- Integração segura com Google Drive/Sheets API
-
-## Estrutura da Planilha
-
-A planilha do Google Sheets deve seguir o seguinte formato (começando em A1):
-
-| Transaction Id | Date | Origin | Destination | Description | Amount | Recorded at | Remote Id |
-|----------------|------|--------|-------------|-------------|---------|-------------|-----------|
-| 65723800-c055-4304-897d-958af23a5d35 | 10/26/2025 | Bank Account Gabriel | | PIX QRS MARA SANTOS26/10 | 18 | 10/27/2025 | pluggy_9aec9035-98db-4736-aa29-cd25cfe311d8 |
-
-## Pré-requisitos
-
-- Node.js 18+
-- npm ou yarn
-- Conta Google Cloud com API do Google Sheets habilitada
-- Service Account configurada no Google Cloud
-
-## Configuração do Google Cloud
-
-### 1. Criar Projeto no Google Cloud
-
-1. Acesse o [Google Cloud Console](https://console.cloud.google.com/)
-2. Crie um novo projeto ou selecione um existente
-3. Anote o ID do projeto
-
-### 2. Habilitar Google Sheets API
-
-1. No menu lateral, vá em **APIs & Services** > **Library**
-2. Busque por "Google Sheets API"
-3. Clique em **Enable**
-
-### 3. Criar Service Account
-
-1. Vá em **APIs & Services** > **Credentials**
-2. Clique em **Create Credentials** > **Service Account**
-3. Preencha os detalhes da service account
-4. Clique em **Create and Continue**
-5. Adicione o papel de **Editor** (opcional, mas recomendado)
-6. Clique em **Done**
-
-### 4. Gerar Chave da Service Account
-
-1. Na lista de Service Accounts, clique na que você criou
-2. Vá na aba **Keys**
-3. Clique em **Add Key** > **Create new key**
-4. Escolha o formato **JSON**
-5. Clique em **Create** - o arquivo JSON será baixado
-
-### 5. Compartilhar Planilha com Service Account
-
-1. Abra a planilha do Google Sheets que deseja usar
-2. Clique em **Compartilhar**
-3. Adicione o email da service account (encontrado no JSON baixado ou no console)
-4. Dê permissão de **Visualizador** ou **Editor**
-5. Copie o ID da planilha da URL (a parte entre `/d/` e `/edit`)
-
-## Instalação
-
-1. Clone o repositório ou extraia os arquivos
-
-2. Instale as dependências:
-```bash
-npm install
-```
-
-3. Adicione o googleapis ao projeto:
-```bash
-npm install googleapis
-```
-
-4. Configure as variáveis de ambiente:
-
-Copie o arquivo `.env.example` para `.env`:
-```bash
-cp .env.example .env
-```
-
-Edite o arquivo `.env` e adicione suas credenciais:
-
-```env
-# ID da sua planilha (da URL)
-NUXT_PUBLIC_GOOGLE_SPREADSHEET_ID=1abc123def456...
-
-# Email da service account (do arquivo JSON)
-NUXT_GOOGLE_CLIENT_EMAIL=your-service-account@your-project.iam.gserviceaccount.com
-
-# Chave privada da service account (do arquivo JSON, mantenha as quebras de linha)
-NUXT_GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nSUA_CHAVE_AQUI\n-----END PRIVATE KEY-----\n"
-```
-
-**Importante:** A chave privada deve incluir `\n` para quebras de linha e estar entre aspas.
-
-## Desenvolvimento
-
-Inicie o servidor de desenvolvimento:
-
-```bash
-npm run dev
-```
-
-O aplicativo estará disponível em `http://localhost:3000`
-
-## Build para Produção
-
-```bash
-npm run build
-```
-
-Para visualizar a build de produção localmente:
-
-```bash
-npm run preview
-```
-
-## Estrutura do Projeto
+## Arquitetura de dados
 
 ```
-financial-control-app/
-├── .env.example              # Exemplo de variáveis de ambiente
-├── app.vue                   # Componente raiz
-├── nuxt.config.ts            # Configuração do Nuxt
-├── package.json              # Dependências do projeto
-├── tsconfig.json             # Configuração TypeScript
-├── composables/              # Composables Vue
-│   └── useTransactions.ts    # Lógica de transações
-├── pages/                    # Páginas da aplicação
-│   └── index.vue             # Página principal
-├── server/                   # API do servidor
-│   └── api/
-│       └── transactions.get.ts  # Endpoint para buscar transações
-└── types/                    # Definições TypeScript
-    └── transaction.ts        # Tipos de transações
+Bkper API ──► snapshot em memória no servidor (TTL 60min, botão "Atualizar" força refresh)
+                    ├─► /api/transactions, /api/categories  (parcelas expandidas + filtros)
+                    └─► /api/debt                           (snapshot cru + analytics em JS)
+
+Google Sheets ──► /api/budgets, /api/budget-templates       (só orçamentos, mesmo cache TTL)
+Postgres (Neon) ──► tabela debt_plans                       (âncora do cheque especial)
 ```
+
+- **Fonte da verdade das transações é o Bkper** (REST API v5). O servidor lê o livro inteiro
+  (~4k transações, ~7s), enriquece com a pessoa (Gabriel/Juliana), ordena e mantém em memória
+  de instância por 60 minutos. Não há espelho em banco nem cache em disco.
+- **Orçamentos** continuam no Google Sheets (abas `Budgets_v2` e `Budget_Templates`), atrás do
+  mesmo cache com TTL; salvar invalida o cache.
+- **Postgres** guarda apenas o plano de quitação da dívida (`debt_plans`).
 
 ## Funcionalidades
 
-### Página Principal
-- Visualização de todas as transações
-- Busca por descrição
-- Cálculo automático do total
-- Contador de transações
-- Botão para atualizar dados
+- Dashboard com análises, alertas e fatura do cartão por ciclo
+- Lista completa de transações com filtros (pessoa, data, busca)
+- Gastos por categoria, custos fixos (6 meses) e parcelas ativas com projeção de 12 meses
+- Plano de quitação do cheque especial com projeção mês a mês
+- Orçamentos mensais e templates percentuais por pessoa
 
-### API
-- `GET /api/transactions` - Busca todas as transações da planilha
+## Setup
 
-### Composable useTransactions
-Funções disponíveis:
-- `fetchTransactions()` - Busca transações da API
-- `getTransactionsByDateRange(start, end)` - Filtra por período
-- `getTotalAmount(transactions?)` - Calcula total
-- `getTransactionsByOrigin(origin)` - Filtra por origem
-- `getTransactionsByDescription(term)` - Busca na descrição
+1. **Bkper**: `npm i -g bkper && bkper auth login`, copie o `refresh_token` de
+   `~/.config/bkper/.bkper-credentials.json` para `NUXT_BKPER_REFRESH_TOKEN` (com
+   `NUXT_BKPER_CLIENT_ID`/`NUXT_BKPER_CLIENT_SECRET` do próprio CLI) e o id do book em
+   `NUXT_BKPER_BOOK_ID` (`GET https://api.bkper.app/v5/books` lista os seus).
+2. **Google Sheets** (só para os orçamentos): service account com a Sheets API habilitada,
+   planilha compartilhada com o e-mail da service account, credenciais em
+   `NUXT_GOOGLE_CLIENT_EMAIL`/`NUXT_GOOGLE_PRIVATE_KEY` e o id em
+   `NUXT_PUBLIC_GOOGLE_SPREADSHEET_ID`.
+3. **Neon Postgres** (só para a tela de dívida): `DATABASE_URL`; `npm run db:push` cria a tabela.
+4. Copie `.env.example` para `.env` e preencha. **Todas as vars também precisam existir no
+   projeto Vercel.**
 
-## Próximos Passos
+```bash
+npm install
+npm run dev        # localhost:3000
+npm test           # vitest, roda 2x (a 2a sob TZ=Pacific/Midway)
+npm run build      # produção (preset vercel)
+```
 
-Possíveis melhorias para o projeto:
+## Documentação da API
 
-1. **Adicionar novas funcionalidades:**
-   - Filtros por data
-   - Filtros por origem/destino
-   - Gráficos e estatísticas
-   - Export de dados (CSV, PDF)
-   - Dashboard com métricas
+OpenAPI gerado pelo Nitro em `/api/docs` (Swagger UI em `/_swagger`, Scalar em `/_scalar`).
 
-2. **Melhorar a interface:**
-   - Adicionar framework CSS (Tailwind, Vuetify, etc.)
-   - Paginação da tabela
-   - Ordenação de colunas
-   - Modo escuro
-
-3. **Funcionalidades avançadas:**
-   - Edição de transações (escrita no Sheets)
-   - Múltiplas planilhas/contas
-   - Categorização automática
-   - Alertas e notificações
-   - Autenticação de usuários
-
-4. **Performance:**
-   - Cache de dados
-   - Lazy loading
-   - Server-side rendering
-
-## Segurança
-
-- As credenciais do Google são armazenadas apenas no servidor (nunca expostas ao cliente)
-- Use variáveis de ambiente para configurações sensíveis
-- Nunca commite o arquivo `.env` no Git
-- Em produção, use secrets management adequado
-
-## Suporte
-
-Para problemas ou dúvidas:
-1. Verifique se as credenciais estão corretas
-2. Confirme que a planilha está compartilhada com a service account
-3. Verifique se a Google Sheets API está habilitada
-4. Revise os logs do servidor para erros detalhados
-
-## Licença
-
-Este projeto é fornecido como está, para fins educacionais e de desenvolvimento.
+Contexto completo de arquitetura, convenções e gotchas em [claude.md](claude.md).
