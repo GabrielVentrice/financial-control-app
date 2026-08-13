@@ -1,5 +1,6 @@
 import type { BudgetTemplateInput, BudgetTemplate } from '~/types/budgetTemplate'
-import { saveBudgetTemplatesToGoogleSheets, fetchBudgetTemplatesFromGoogleSheets } from '../utils/budgetTemplateSheets'
+import { saveBudgetTemplatesToGoogleSheets } from '../utils/budgetTemplateSheets'
+import { getBudgetTemplatesCached, invalidateBudgetTemplates } from '../utils/budgetsCache'
 
 /**
  * Save or update budget templates
@@ -123,7 +124,7 @@ export default defineEventHandler(async (event): Promise<BudgetTemplate[]> => {
     }
 
     // Fetch existing templates to validate percentage sums
-    const existingTemplates = await fetchBudgetTemplatesFromGoogleSheets()
+    const existingTemplates = await getBudgetTemplatesCached()
 
     // Create a map of existing templates (exclude ones being updated)
     const existingTemplatesMap = new Map<string, BudgetTemplate>()
@@ -186,6 +187,7 @@ export default defineEventHandler(async (event): Promise<BudgetTemplate[]> => {
 
     // Save to Google Sheets
     const savedTemplates = await saveBudgetTemplatesToGoogleSheets(templatesToSave)
+    invalidateBudgetTemplates()
 
     console.log(`[API] Successfully saved ${savedTemplates.length} templates`)
 

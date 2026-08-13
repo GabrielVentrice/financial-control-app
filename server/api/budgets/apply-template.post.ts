@@ -1,8 +1,11 @@
 import type { ApplyTemplateRequest, ApplyTemplateResponse } from '~/types/budgetTemplate'
 import type { BudgetInput } from '~/types/transaction'
-import { fetchBudgetTemplatesFromGoogleSheets } from '~/server/utils/budgetTemplateSheets'
-import { fetchBudgetsFromGoogleSheets, saveBudgetsToGoogleSheets } from '~/server/utils/budgetSheets'
-import { writeBudgetCache, updateBudgetCacheMetadata } from '~/server/utils/budgetCacheManager'
+import { saveBudgetsToGoogleSheets } from '~/server/utils/budgetSheets'
+import {
+  getBudgetsCached,
+  getBudgetTemplatesCached,
+  invalidateBudgets,
+} from '~/server/utils/budgetsCache'
 import { loadTransactions } from '~/server/utils/loadTransactions'
 import { isIncome } from '~/shared/expenseRules'
 import { daysInMonthKey } from '~/shared/dates'
@@ -112,7 +115,7 @@ export default defineEventHandler(async (event): Promise<ApplyTemplateResponse> 
     // STEP 2: Fetch active templates for the person
     console.log(`[API] Step 2: Fetching active templates for ${person}...`)
 
-    const allTemplates = await fetchBudgetTemplatesFromGoogleSheets()
+    const allTemplates = await getBudgetTemplatesCached()
     const activeTemplates = allTemplates.filter(t => t.person === person && t.active)
 
     console.log(`[API] Found ${activeTemplates.length} active templates for ${person}`)
@@ -130,7 +133,7 @@ export default defineEventHandler(async (event): Promise<ApplyTemplateResponse> 
     // STEP 3: Fetch existing budgets for this month/year/person
     console.log(`[API] Step 3: Fetching existing budgets for ${person} in ${month}/${year}...`)
 
-    const allBudgets = await fetchBudgetsFromGoogleSheets()
+    const allBudgets = await getBudgetsCached()
     const existingBudgets = allBudgets.filter(
       b => b.person === person && b.month === month && b.year === year
     )
@@ -181,21 +184,9 @@ export default defineEventHandler(async (event): Promise<ApplyTemplateResponse> 
 
       const savedBudgets = await saveBudgetsToGoogleSheets(budgetsToCreate)
       budgetsCreated = savedBudgets.length
+      invalidateBudgets()
 
       console.log(`[API] Successfully created ${budgetsCreated} budgets`)
-
-      // STEP 5.1: Refresh budget cache after saving
-      console.log(`[API] Step 5.1: Refreshing budget cache...`)
-      const config = useRuntimeConfig()
-      const allBudgetsRefresh = await fetchBudgetsFromGoogleSheets()
-      await writeBudgetCache(allBudgetsRefresh)
-      await updateBudgetCacheMetadata(
-        allBudgetsRefresh.length,
-        'fresh',
-        config.public.googleSpreadsheetId,
-        config.cache.ttlMinutes
-      )
-      console.log(`[API] Budget cache refreshed with ${allBudgetsRefresh.length} budgets`)
     } else {
       console.log(`[API] Step 5: No new budgets to create (all categories already have budgets)`)
     }

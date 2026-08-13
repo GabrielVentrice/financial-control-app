@@ -1,5 +1,6 @@
 import type { BudgetInput, Budget } from '~/types/transaction'
 import { saveBudgetsToGoogleSheets } from '../utils/budgetSheets'
+import { invalidateBudgets } from '../utils/budgetsCache'
 
 /**
  * Save or update budget configurations
@@ -111,6 +112,7 @@ export default defineEventHandler(async (event): Promise<Budget[]> => {
 
     // Save to Google Sheets
     const savedBudgets = await saveBudgetsToGoogleSheets(budgetsToSave)
+    invalidateBudgets()
 
     console.log(`[API] Successfully saved ${savedBudgets.length} budgets`)
 

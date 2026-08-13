@@ -4,10 +4,10 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   runtimeConfig: {
-    // Private keys (server-side only)
+    // Private keys (server-side only) — the Google pair only feeds the budget
+    // screens (Sheets); transactions come from Bkper.
     googleClientEmail: '',
     googlePrivateKey: '',
-    googleDriveCacheFolderId: '',
 
     // Bkper: the ledger the transactions come from. `refreshToken` is what the
     // `bkper auth login` device flow stores; clientId/clientSecret are the CLI's
@@ -20,11 +20,9 @@ export default defineNuxtConfig({
       apiKey: '',
     },
 
-    // Cache configuration (server-side only)
+    // TTL of the in-memory caches (Bkper snapshot, Sheets budgets/templates).
     cache: {
-      enabled: true,
       ttlMinutes: 60,
-      autoRefresh: false
     },
 
     // Public keys (client-side accessible)
@@ -69,11 +67,8 @@ export default defineNuxtConfig({
     },
     openAPI: {route: '/api/docs'},
 
-    // Vercel: higher function timeout so the batched sync has room to finish.
-    // The daily cron itself is declared in vercel.json — declaring it here (via
-    // the Build Output config) does not register the job with the platform, so
-    // the sync silently never ran. Keep it in vercel.json, where it also shows
-    // up under Project → Settings → Cron Jobs.
+    // Vercel: higher function timeout so a cold instance has room to read the
+    // whole Bkper book (~7s) plus whatever request triggered it.
     vercel: {
       functions: {
         maxDuration: 60

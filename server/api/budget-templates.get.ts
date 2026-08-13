@@ -1,12 +1,5 @@
 import type { BudgetTemplate, BudgetTemplateQueryParams, BudgetTemplatesResponse } from '~/types/budgetTemplate'
-import { fetchBudgetTemplatesFromGoogleSheets } from '../utils/budgetTemplateSheets'
-import {
-  isBudgetTemplateCacheValid,
-  readBudgetTemplateCache,
-  writeBudgetTemplateCache,
-  updateBudgetTemplateCacheMetadata,
-  budgetTemplateCacheExists
-} from '../utils/budgetTemplateCacheManager'
+import { getBudgetTemplatesCached } from '../utils/budgetsCache'
 
 /**
  * Get budget templates
@@ -43,63 +36,10 @@ import {
  */
 export default defineEventHandler(async (event): Promise<BudgetTemplatesResponse> => {
   try {
-    // Get runtime config
-    const config = useRuntimeConfig(event)
-    const cacheConfig = config.cache
-    const spreadsheetId = config.public.googleSpreadsheetId
-
     // Parse query parameters
     const query = getQuery(event) as BudgetTemplateQueryParams
 
-    console.log('[API] Fetching budget templates with params:', query)
-
-    let templates: BudgetTemplate[] = []
-
-    // STEP 1: Check cache (if enabled)
-    if (cacheConfig.enabled) {
-      const exists = await budgetTemplateCacheExists()
-      const isValid = await isBudgetTemplateCacheValid()
-
-      if (exists && isValid) {
-        // Read from cache
-        console.log('[API] Budget template cache is valid, reading from cache')
-        templates = await readBudgetTemplateCache()
-        console.log('[API] Read templates from cache:', templates.length)
-      } else if (exists && !isValid) {
-        // Cache expired, fetch fresh data
-        console.log('[API] Budget template cache expired, fetching fresh data from Google Sheets')
-        templates = await fetchBudgetTemplatesFromGoogleSheets()
-
-        // Update cache
-        await writeBudgetTemplateCache(templates)
-        await updateBudgetTemplateCacheMetadata(
-          templates.length,
-          'fresh',
-          spreadsheetId,
-          cacheConfig.ttlMinutes
-        )
-        console.log('[API] Updated budget template cache with fresh data:', templates.length)
-      } else {
-        // Cache doesn't exist, create it
-        console.log('[API] Budget template cache missing, creating initial cache')
-        templates = await fetchBudgetTemplatesFromGoogleSheets()
-
-        // Create cache
-        await writeBudgetTemplateCache(templates)
-        await updateBudgetTemplateCacheMetadata(
-          templates.length,
-          'fresh',
-          spreadsheetId,
-          cacheConfig.ttlMinutes
-        )
-        console.log('[API] Created budget template cache with data:', templates.length)
-      }
-    } else {
-      // Cache disabled, fetch directly
-      console.log('[API] Budget template cache disabled, fetching from Google Sheets')
-      templates = await fetchBudgetTemplatesFromGoogleSheets()
-      console.log('[API] Fetched templates from Google Sheets:', templates.length)
-    }
+    let templates: BudgetTemplate[] = await getBudgetTemplatesCached()
 
     // Apply filters
     if (query.person) {

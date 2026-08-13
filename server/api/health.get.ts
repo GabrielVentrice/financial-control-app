@@ -1,57 +1,31 @@
+import { getBookSnapshotMeta } from '../utils/bookSnapshot'
+
 /**
- * Health Check Endpoint
+ * GET /api/health
  *
- * Returns basic health status and environment information.
- * Useful for monitoring and verifying deployment status.
- *
- * @returns Health check response with timestamp and status
+ * Post-deploy smoke check: is each data source configured, and does this
+ * instance already hold a book snapshot?
  */
-export default defineEventHandler((event) => {
+export default defineEventHandler(() => {
   const config = useRuntimeConfig()
-  const baseUrl = getRequestURL(event).origin
+  const { fetchedAt } = getBookSnapshotMeta()
 
   return {
-    ok: true,
+    status: 'ok',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    version: '1.0.0',
-
-    // Check if critical env vars are configured (without exposing values)
-    config: {
-      hasGoogleSpreadsheetId: !!config.public.googleSpreadsheetId,
-      hasGoogleClientEmail: !!config.googleClientEmail,
-      hasGooglePrivateKey: !!config.googlePrivateKey,
+    sources: {
+      bkper: Boolean(
+        config.bkper?.bookId &&
+        config.bkper?.refreshToken &&
+        config.bkper?.clientId &&
+        config.bkper?.clientSecret
+      ),
+      googleSheets: Boolean(config.googleClientEmail && config.googlePrivateKey),
+      database: Boolean(process.env.DATABASE_URL),
     },
-
-    // API Documentation links
-    documentation: {
-      html: `${baseUrl}/api/docs`,
-      json: `${baseUrl}/api/docs/json`,
-      description: "Comprehensive API documentation with examples and parameter details"
+    snapshot: {
+      loaded: fetchedAt !== null,
+      fetchedAt: fetchedAt ? new Date(fetchedAt).toISOString() : null,
     },
-
-    // Available endpoints
-    endpoints: [
-      {
-        path: '/api/transactions',
-        method: 'GET',
-        description: 'Fetch financial transactions with advanced filtering'
-      },
-      {
-        path: '/api/health',
-        method: 'GET', 
-        description: 'Health check and system status'
-      },
-      {
-        path: '/api/docs',
-        method: 'GET',
-        description: 'HTML API documentation'
-      },
-      {
-        path: '/api/docs/json',
-        method: 'GET',
-        description: 'JSON API documentation'
-      }
-    ]
   }
 })

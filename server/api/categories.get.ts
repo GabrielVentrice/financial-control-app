@@ -1,7 +1,7 @@
 import type { Transaction, CategoriesQueryParams, CategoriesResponse, CategoryData, CategoryTotals, Budget } from '~/types/transaction'
 import { loadTransactions } from '../utils/loadTransactions'
 import { validateQueryParams } from '../utils/transactionFilters'
-import { fetchBudgetsFromGoogleSheets } from '../utils/budgetSheets'
+import { getBudgetsCached } from '../utils/budgetsCache'
 import { isSpendingCategory, expenseAmount, UNCATEGORIZED } from '~/shared/expenseRules'
 
 /**
@@ -73,14 +73,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // STEP 1-4: same read path as /api/transactions (Postgres, person
+    // STEP 1-4: same read path as /api/transactions (Bkper snapshot, person
     // enrichment, installment expansion, filters).
     const transactions = await loadTransactions(query)
 
-    // STEP 5: Fetch budgets for the filtered period
+    // STEP 5: Fetch budgets for the filtered period. Cached — this endpoint
+    // used to pay a Sheets round-trip on every request.
     let budgets: Budget[] = []
     try {
-      budgets = await fetchBudgetsFromGoogleSheets()
+      budgets = await getBudgetsCached()
 
       // If date filters are present, filter budgets to match the period.
       // The month comes from the "YYYY-MM" slice — building a Date out of the
