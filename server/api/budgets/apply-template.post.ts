@@ -3,6 +3,9 @@ import type { BudgetInput } from '~/types/transaction'
 import { fetchBudgetTemplatesFromGoogleSheets } from '~/server/utils/budgetTemplateSheets'
 import { fetchBudgetsFromGoogleSheets, saveBudgetsToGoogleSheets } from '~/server/utils/budgetSheets'
 import { writeBudgetCache, updateBudgetCacheMetadata } from '~/server/utils/budgetCacheManager'
+import { loadTransactions } from '~/server/utils/loadTransactions'
+import { isIncome } from '~/shared/expenseRules'
+import { daysInMonthKey } from '~/shared/dates'
 
 /**
  * Apply budget template for a specific month/year
@@ -75,20 +78,18 @@ export default defineEventHandler(async (event): Promise<ApplyTemplateResponse> 
     // STEP 1: Fetch transactions to detect income
     console.log(`[API] Step 1: Fetching transactions for ${person} in ${month}/${year}...`)
 
-    // Call the transactions API with filters
-    const transactionsUrl = `/api/transactions?person=${person}&startDate=${year}-${String(month).padStart(2, '0')}-01&endDate=${year}-${String(month).padStart(2, '0')}-31`
-
-    // Internal API call - returns array directly
-    const transactionsResponse = await $fetch(transactionsUrl)
-    const transactions = Array.isArray(transactionsResponse) ? transactionsResponse : (transactionsResponse.transactions || [])
+    // The previous version did an internal HTTP $fetch with a hardcoded day-31
+    // end date, which produced an invalid date in February/April.
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`
+    const transactions = await loadTransactions({
+      person,
+      startDate: `${monthKey}-01`,
+      endDate: `${monthKey}-${String(daysInMonthKey(monthKey)).padStart(2, '0')}`,
+    })
 
     console.log(`[API] Fetched ${transactions.length} transactions for ${person}`)
 
-    // Filter transactions for income (destination = Bank Account)
-    const incomeTransactions = transactions.filter((t: any) => {
-      const destination = (t.destination || '').toLowerCase()
-      return destination.includes('bank account')
-    })
+    const incomeTransactions = transactions.filter(isIncome)
 
     console.log(`[API] Found ${incomeTransactions.length} income transactions`)
 

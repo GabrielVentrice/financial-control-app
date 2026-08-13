@@ -1,41 +1,29 @@
-import { syncTransactionsFromBkper, recordSyncError } from '../utils/syncTransactions'
-import { isDatabaseConfigured } from '../database'
+import { getBookSnapshot } from '../utils/bookSnapshot'
 
 /**
  * POST /api/sync
  *
- * Manually synchronizes transactions from Google Sheets to PostgreSQL.
- * The scheduled daily sync runs via GET /api/cron/sync (Vercel cron).
+ * The "Atualizar" button: force a fresh read of the Bkper book, bypassing the
+ * TTL. The route name survives from the Postgres-mirror era so the composables
+ * and every screen keep working unchanged — semantically it is now a cache
+ * refresh, not a database sync.
  */
 export default defineEventHandler(async () => {
-  // Fail loudly and specifically. Without this the missing variable surfaced as
-  // a bare 500 from a module that threw on import.
-  if (!isDatabaseConfigured()) {
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'Database not configured',
-      data: 'DATABASE_URL não está definida neste ambiente, então não há Postgres para sincronizar.',
-    })
-  }
+  const started = Date.now()
 
   try {
-    console.log('[Sync] Manual sync triggered')
-    const result = await syncTransactionsFromBkper()
+    const { transactions } = await getBookSnapshot({ forceRefresh: true })
 
     return {
       success: true,
-      message: 'Sync completed successfully',
+      message: 'Snapshot atualizado a partir do Bkper',
       stats: {
-        total: result.total,
-        upserted: result.upserted,
-        batches: result.batches,
-        durationMs: result.durationMs,
+        total: transactions.length,
+        durationMs: Date.now() - started,
       },
     }
   } catch (error: any) {
-    console.error('[Sync] Sync failed:', error)
-    await recordSyncError(error.message)
-
+    console.error('[Sync] Refresh from Bkper failed:', error)
     throw createError({
       statusCode: 500,
       statusMessage: 'Sync failed',
