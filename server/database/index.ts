@@ -15,16 +15,12 @@ import * as schema from './schema'
  */
 let client: ReturnType<typeof drizzle> | null = null
 
-export function isDatabaseConfigured(): boolean {
-  return Boolean(process.env.DATABASE_URL)
-}
-
 export function getDb() {
   if (!process.env.DATABASE_URL) {
     throw createError({
       statusCode: 503,
       statusMessage: 'Database not configured',
-      data: 'DATABASE_URL não está definida neste ambiente. Sem ela o app lê direto da planilha e a sincronização com o Postgres não acontece.',
+      data: 'DATABASE_URL não está definida neste ambiente. O plano de dívida (debt_plans) mora no Postgres; sem ela a tela de dívida não funciona.',
     })
   }
 
@@ -34,14 +30,6 @@ export function getDb() {
 
   return client
 }
-
-/**
- * Back-compat for `import { db } from '../database'`: forwards property access
- * to the lazily-built client, so existing call sites keep working unchanged.
- */
-export const db = new Proxy({} as ReturnType<typeof drizzle>, {
-  get: (_target, prop) => Reflect.get(getDb() as object, prop),
-})
 
 // Re-export schema for convenience
 export * from './schema'

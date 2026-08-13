@@ -1,42 +1,14 @@
-import { pgTable, serial, varchar, date, decimal, timestamp, text, index } from 'drizzle-orm/pg-core'
+import { pgTable, serial, varchar, date, decimal, timestamp } from 'drizzle-orm/pg-core'
 
 /**
- * Transactions table - stores all financial transactions
- * This mirrors the data structure from Google Sheets
+ * The only table left. Transactions are read straight from the Bkper API into
+ * an in-memory snapshot (server/utils/bookSnapshot.ts) — the Postgres mirror
+ * of the book, its sync metadata and the never-used budgets table are gone.
+ *
+ * NOTE: the old `transactions`, `budgets` and `sync_metadata` tables may still
+ * exist in the database until `npm run db:push` is run against this slimmed
+ * schema; leaving them there for a few days is the free rollback.
  */
-export const transactions = pgTable('transactions', {
-  id: serial('id').primaryKey(),
-  transactionId: varchar('transaction_id', { length: 100 }).unique().notNull(),
-  date: date('date').notNull(),
-  origin: varchar('origin', { length: 255 }),
-  destination: varchar('destination', { length: 255 }),
-  description: text('description'),
-  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
-  person: varchar('person', { length: 50 }),
-  recordedAt: timestamp('recorded_at'),
-  remoteId: varchar('remote_id', { length: 100 }),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  dateIdx: index('transactions_date_idx').on(table.date),
-  personIdx: index('transactions_person_idx').on(table.person),
-  destinationIdx: index('transactions_destination_idx').on(table.destination),
-}))
-
-/**
- * Budgets table - stores monthly budgets per category
- */
-export const budgets = pgTable('budgets', {
-  id: serial('id').primaryKey(),
-  category: varchar('category', { length: 100 }).notNull(),
-  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
-  month: varchar('month', { length: 7 }).notNull(), // YYYY-MM format
-  person: varchar('person', { length: 50 }),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  categoryMonthIdx: index('budgets_category_month_idx').on(table.category, table.month),
-}))
 
 /**
  * Debt payoff plans — currently the cheque especial.
@@ -44,7 +16,7 @@ export const budgets = pgTable('budgets', {
  * An overdraft balance is a bank *state*, not a transaction, so it can never be
  * read out of the ledger. What lives here is the anchor: the balance the user
  * confirmed on a given day. Everything after that day is derived from the
- * account's own movements, so each sync moves the number without anyone
+ * account's own movements, so each refresh moves the number without anyone
  * re-typing it. Re-anchor whenever the bank and the app disagree.
  */
 export const debtPlans = pgTable('debt_plans', {
@@ -67,23 +39,5 @@ export const debtPlans = pgTable('debt_plans', {
   updatedAt: timestamp('updated_at').defaultNow(),
 })
 
-/**
- * Sync metadata table - tracks last sync from Google Sheets
- */
-export const syncMetadata = pgTable('sync_metadata', {
-  id: serial('id').primaryKey(),
-  lastSyncAt: timestamp('last_sync_at').notNull(),
-  transactionCount: serial('transaction_count').notNull(),
-  status: varchar('status', { length: 20 }).notNull(), // 'success' | 'error'
-  errorMessage: text('error_message'),
-  createdAt: timestamp('created_at').defaultNow(),
-})
-
-// Type exports for use in application code
-export type Transaction = typeof transactions.$inferSelect
-export type NewTransaction = typeof transactions.$inferInsert
-export type Budget = typeof budgets.$inferSelect
-export type NewBudget = typeof budgets.$inferInsert
 export type DebtPlan = typeof debtPlans.$inferSelect
 export type NewDebtPlan = typeof debtPlans.$inferInsert
-export type SyncMetadata = typeof syncMetadata.$inferSelect
