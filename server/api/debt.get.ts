@@ -1,4 +1,5 @@
 import { buildDebtSnapshot, readPlan, type DebtSnapshot } from '../utils/debtPlan'
+import { getBookSnapshot } from '../utils/bookSnapshot'
 
 /**
  * Current state of the debt payoff plan.
@@ -25,7 +26,8 @@ export default defineEventHandler(async (event): Promise<DebtSnapshot | null> =>
   try {
     const plan = await readPlan()
     if (!plan) return null
-    return await buildDebtSnapshot(plan)
+    const { transactions } = await getBookSnapshot()
+    return buildDebtSnapshot(plan, transactions)
   } catch (error: any) {
     if (error.statusCode) throw error
     console.error('[API] Error building debt snapshot:', error)

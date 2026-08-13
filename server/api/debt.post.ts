@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { getDb, debtPlans } from '../database'
 import { buildDebtSnapshot, readPlan, DEFAULT_PLAN, type DebtSnapshot } from '../utils/debtPlan'
+import { getBookSnapshot } from '../utils/bookSnapshot'
 
 interface DebtPlanInput {
   name?: string
@@ -90,7 +91,8 @@ export default defineEventHandler(async (event): Promise<DebtSnapshot> => {
         person: body.person ?? null,
       })
       .returning()
-    return await buildDebtSnapshot(created)
+    const { transactions } = await getBookSnapshot()
+    return buildDebtSnapshot(created, transactions)
   }
 
   const patch: Record<string, unknown> = { updatedAt: new Date() }
@@ -115,5 +117,6 @@ export default defineEventHandler(async (event): Promise<DebtSnapshot> => {
     .where(eq(debtPlans.id, existing.id))
     .returning()
 
-  return await buildDebtSnapshot(updated)
+  const { transactions } = await getBookSnapshot()
+  return buildDebtSnapshot(updated, transactions)
 })
