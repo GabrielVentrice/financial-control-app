@@ -172,6 +172,7 @@ import {
   monthIndexOfKey,
 } from '~/shared/dates'
 import { isRealExpense, categoryNameOf, expenseAmount } from '~/shared/expenseRules'
+import { isGastoComprometidoCategory, GASTOS_COMPROMETIDOS_CATEGORIES } from '~/shared/categoryClassification'
 
 // The server already expands installments across months (/api/transactions),
 // so this page consumes the schedule as-is.
@@ -179,23 +180,11 @@ const { transactions, loading, error } = useTransactions()
 const { selectedPerson } = usePersonFilter()
 const { formatCurrency, formatMonthName } = useFormatters()
 
-// ===== CONFIGURAÇÃO: Categorias de Custos Fixos =====
-const FIXED_COST_CATEGORIES = [
-  'Installments/Financing',
-  'Rent',
-  'Financing',
-  'Subscriptions/Softwares',
-  'Utilities',
-  'Business & Taxes',
-  'Investments',
-  'Insurance',
-  'Medical'
-]
-
-const isFixedCostCategory = (categoryName: string): boolean => {
-  const lowerCaseName = categoryName.toLowerCase()
-  return FIXED_COST_CATEGORIES.some(fixed => lowerCaseName.includes(fixed.toLowerCase()))
-}
+// Shared with /api/categories — the page used to carry its own copy of this
+// list (without Cleaning Services), so the two screens disagreed about what
+// "fixed" meant.
+const FIXED_COST_CATEGORIES = GASTOS_COMPROMETIDOS_CATEGORIES
+const isFixedCostCategory = isGastoComprometidoCategory
 
 const selectedMonth = ref(currentMonthKey())
 const selectedMonthLong = computed(() => formatMonthName(monthIndexOfKey(selectedMonth.value)))

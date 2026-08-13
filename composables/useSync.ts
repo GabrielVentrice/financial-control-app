@@ -1,19 +1,16 @@
 export interface SyncStatus {
-  configured: boolean
   lastSyncAt: string | null
   status: 'success' | 'error' | null
   transactionCount: number
-  errorMessage?: string | null
 }
 
 /**
- * Sheets → Postgres sync, from the UI.
+ * Freshness of the server's in-memory Bkper snapshot, from the UI.
  *
- * The app reads from Postgres, which mirrors the sheet and only catches up on
- * the daily cron. `POST /api/sync` is what actually pulls fresh rows in — the
- * old "Atualizar" button hit `/api/cache/refresh`, which rewrites an on-disk CSV
- * cache that nothing reads when DATABASE_URL is set (and which fails outright on
- * a read-only serverless filesystem). It looked like a refresh and did nothing.
+ * `GET /api/sync` reports when the instance last read the book; `POST` forces
+ * a fresh read (and invalidates the budget caches), then refreshNuxtData()
+ * makes every screen re-fetch the new numbers. The route name survives from
+ * the Postgres-mirror era — the semantics are now purely cache freshness.
  */
 export const useSync = () => {
   const syncing = useState<boolean>('sync-running', () => false)
@@ -32,8 +29,8 @@ export const useSync = () => {
   )
 
   /**
-   * Pulls the sheet into Postgres, then invalidates every cached payload so the
-   * pages re-read the fresh rows.
+   * Forces a fresh read of the book, then invalidates every cached payload so
+   * the pages re-read the fresh rows.
    */
   const syncNow = async (): Promise<boolean> => {
     syncing.value = true
@@ -67,14 +64,15 @@ export const useSync = () => {
     return days === 1 ? 'há 1 dia' : `há ${days} dias`
   })
 
-  /** False when DATABASE_URL is absent: there is no Postgres to sync into. */
-  const isConfigured = computed(() => status.value?.configured !== false)
-
-  /** Stale after 48h — the cron is daily, so a two-day gap means it isn't running. */
+  /**
+   * The snapshot refreshes itself on a 60min TTL, so anything much older than
+   * that means refreshes are failing (Bkper down, refresh token revoked) and
+   * the instance is serving its stale fallback.
+   */
   const isStale = computed(() => {
     const iso = status.value?.lastSyncAt
     if (!iso) return false
-    return Date.now() - new Date(iso).getTime() > 48 * 60 * 60 * 1000
+    return Date.now() - new Date(iso).getTime() > 2 * 60 * 60 * 1000
   })
 
   return {
@@ -83,7 +81,6 @@ export const useSync = () => {
     status,
     lastSyncLabel,
     isStale,
-    isConfigured,
     syncNow,
     refreshStatus,
   }

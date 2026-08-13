@@ -4,14 +4,14 @@
       <!-- Header -->
       <PageHeader title="Orcamento" :subtitle="formattedMonth">
         <template #actions>
-          <BaseButton size="sm" variant="secondary" @click="loadData" :loading="loading || refreshing">
-            {{ refreshing ? 'Atualizando Cache...' : 'Atualizar' }}
+          <BaseButton size="sm" variant="secondary" @click="syncNow()" :loading="syncing">
+            {{ syncing ? 'Atualizando...' : 'Atualizar' }}
           </BaseButton>
           <BaseButton
             size="sm"
             variant="secondary"
             @click="showApplyTemplateModal = true"
-            :disabled="loading || saving"
+            :disabled="pending || saving"
           >
             Aplicar Orçamento Padrão
           </BaseButton>
@@ -20,7 +20,7 @@
             variant="secondary"
             @click="copyFromPreviousMonth"
             :loading="copying"
-            :disabled="loading || saving"
+            :disabled="pending || saving"
           >
             {{ copying ? 'Copiando...' : 'Copiar Mês Anterior' }}
           </BaseButton>
@@ -67,7 +67,7 @@
       <!-- Content -->
       <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
         <!-- Loading State -->
-        <LoadingState v-if="loading" message="Carregando orçamentos..." />
+        <LoadingState v-if="pending" message="Carregando orçamentos..." />
 
         <!-- Content -->
         <template v-else>
@@ -75,24 +75,27 @@
           <section>
             <div class="flex gap-2 border-b border-gray-200">
               <button
-                @click="selectedPerson = 'Juliana'"
+                @click="selectPerson('Juliana')"
                 class="px-6 py-3 text-sm font-medium transition-colors border-b-2"
-                :class="selectedPerson === 'Juliana'
+                :class="!showingPersonFallback && budgetPerson === 'Juliana'
                   ? 'text-blue-600 border-blue-600'
                   : 'text-gray-500 border-transparent hover:text-gray-700'"
               >
                 Juliana
               </button>
               <button
-                @click="selectedPerson = 'Gabriel'"
+                @click="selectPerson('Gabriel')"
                 class="px-6 py-3 text-sm font-medium transition-colors border-b-2"
-                :class="selectedPerson === 'Gabriel'
+                :class="!showingPersonFallback && budgetPerson === 'Gabriel'
                   ? 'text-blue-600 border-blue-600'
                   : 'text-gray-500 border-transparent hover:text-gray-700'"
               >
                 Gabriel
               </button>
             </div>
+            <p v-if="showingPersonFallback" class="mt-2 text-xs text-gray-400">
+              Filtro global em "Ambos" — mostrando {{ budgetPerson }}, o orçamento é por pessoa.
+            </p>
           </section>
 
           <!-- Summary Cards in one row - Sticky -->
@@ -145,7 +148,7 @@
             <div class="mb-6 flex items-center justify-between">
               <div>
                 <h2 class="text-lg font-normal text-gray-700">Orçamentos por Categoria</h2>
-                <p class="text-sm text-gray-400 mt-1">Configure os orçamentos mensais para {{ selectedPerson }}</p>
+                <p class="text-sm text-gray-400 mt-1">Configure os orçamentos mensais para {{ budgetPerson }}</p>
               </div>
               <input
                 v-model="searchQuery"
@@ -186,13 +189,13 @@
                   <div class="relative">
                     <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">R$</span>
                     <input
-                      v-model.number="budgetInputs[category]"
+                      :value="budgetInputs[category]"
                       type="number"
                       step="0.01"
                       min="0"
                       placeholder="0,00"
                       class="w-full pl-10 pr-3 py-3 text-base bg-white text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 transition-all"
-                      @input="markAsChanged"
+                      @input="onBudgetInput(category, $event)"
                     />
                   </div>
                 </div>
@@ -207,7 +210,7 @@
                   <div class="flex items-center justify-between">
                     <span class="text-xs text-gray-600">{{ getMonthLabel(0) }}</span>
                     <span class="text-sm font-semibold text-gray-900">
-                      {{ formatCurrencyCompact(getCategorySpending(category, 0)) }}
+                      {{ formatCurrency(getCategorySpending(category, 0)) }}
                     </span>
                   </div>
 
@@ -215,7 +218,7 @@
                   <div class="flex items-center justify-between">
                     <span class="text-xs text-gray-500">{{ getMonthLabel(-1) }}</span>
                     <span class="text-sm font-medium text-gray-600">
-                      {{ formatCurrencyCompact(getCategorySpending(category, -1)) }}
+                      {{ formatCurrency(getCategorySpending(category, -1)) }}
                     </span>
                   </div>
 
@@ -223,7 +226,7 @@
                   <div class="flex items-center justify-between">
                     <span class="text-xs text-gray-400">{{ getMonthLabel(-2) }}</span>
                     <span class="text-sm font-normal text-gray-500">
-                      {{ formatCurrencyCompact(getCategorySpending(category, -2)) }}
+                      {{ formatCurrency(getCategorySpending(category, -2)) }}
                     </span>
                   </div>
 
@@ -231,7 +234,7 @@
                   <div class="flex items-center justify-between pt-2 border-t border-gray-100">
                     <span class="text-xs text-gray-600 font-medium">Média 3 meses</span>
                     <span class="text-sm font-semibold text-blue-600">
-                      {{ formatCurrencyCompact(getCategoryAverageSpending(category)) }}
+                      {{ formatCurrency(getCategoryAverageSpending(category)) }}
                     </span>
                   </div>
                 </div>
@@ -267,7 +270,7 @@
           <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-2xl">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-semibold text-gray-900">
-                Aplicar Orçamento Padrão - {{ selectedPerson }} - {{ formattedMonth }}
+                Aplicar Orçamento Padrão - {{ budgetPerson }} - {{ formattedMonth }}
               </h3>
               <button
                 @click="showApplyTemplateModal = false"
@@ -382,18 +385,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import type { BudgetsResponse, CategoriesResponse, BudgetInput, CategoryData } from '~/types/transaction'
-import type { CacheRefreshResponse } from '~/types/cache'
+import type { BudgetsResponse, CategoriesResponse, BudgetInput } from '~/types/transaction'
 import type { ApplyTemplateResponse } from '~/types/budgetTemplate'
+import { currentMonthKey, addMonthsToKey, daysInMonthKey, monthIndexOfKey } from '~/shared/dates'
+import { isSpendingCategory, UNCATEGORIZED } from '~/shared/expenseRules'
+import { getCategoryIcon } from '~/shared/categoryIcons'
 
 // Composables
-const { fetchCacheStatus } = useCacheStatus()
 const { applyTemplate } = useBudgetTemplates()
+const { syncNow, syncing } = useSync()
+const { formatCurrency, formatMonthName } = useFormatters()
+const { selectedPerson: globalPerson, setPersonFilter } = usePersonFilter()
 
 // State
-const loading = ref(false)
-const refreshing = ref(false)
 const saving = ref(false)
 const copying = ref(false)
 const errorMessage = ref<string | null>(null)
@@ -401,8 +405,23 @@ const successMessage = ref<string | null>(null)
 const showSuccessAlert = ref(false)
 const showErrorAlert = ref(false)
 const searchQuery = ref('')
-const hasChanges = ref(false)
-const selectedPerson = ref<'Juliana' | 'Gabriel'>('Gabriel')
+
+/**
+ * Values the user typed, layered over the saved budgets. Derived state instead
+ * of a copy filled by a watcher: watchers do not run during SSR, so a copy
+ * renders empty on the server and only fills after hydration. `null` is an
+ * emptied field — without it, clearing an input to retype it would immediately
+ * write the saved amount back into it.
+ */
+const budgetEdits = ref<Record<string, number | null>>({})
+const hasChanges = computed(() => Object.keys(budgetEdits.value).length > 0)
+
+// A budget belongs to one person, so "Ambos" has no meaning here: fall back to
+// Gabriel and tell the user which side they are looking at.
+const budgetPerson = computed<'Juliana' | 'Gabriel'>(() =>
+  globalPerson.value === 'Ambos' ? 'Gabriel' : globalPerson.value
+)
+const showingPersonFallback = computed(() => globalPerson.value === 'Ambos')
 
 // Apply Template Modal State
 const showApplyTemplateModal = ref(false)
@@ -410,49 +429,101 @@ const applyingTemplate = ref(false)
 const templatePreview = ref<ApplyTemplateResponse | null>(null)
 const templateError = ref<string | null>(null)
 
-// Get current month in YYYY-MM format
-const getCurrentMonth = () => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  return `${year}-${month}`
-}
+const selectedMonth = ref(currentMonthKey())
 
-const selectedMonth = ref(getCurrentMonth())
+const monthNumber = computed(() => Number(selectedMonth.value.split('-')[1]))
+const yearNumber = computed(() => Number(selectedMonth.value.split('-')[0]))
 
-// Data
-const availableCategories = ref<string[]>([])
-const budgetInputs = ref<Record<string, number>>({})
-
-// Historical data for current month, -1 month, -2 months
-const historicalData = ref<{
-  current: CategoriesResponse | null
-  previous: CategoriesResponse | null
-  twoMonthsBack: CategoriesResponse | null
-}>({
-  current: null,
-  previous: null,
-  twoMonthsBack: null
+const monthRange = (key: string) => ({
+  startDate: `${key}-01`,
+  endDate: `${key}-${String(daysInMonthKey(key)).padStart(2, '0')}`,
 })
 
-// Excluded categories
-const EXCLUDED_CATEGORIES = [
-  'Sem Categoria',
-  'Credit Account Juliana',
-  'Credit Account Gabriel',
-  'Bank Account Juliana',
-  'Bank Account Gabriel',
-  'Credit Card Juliana',
-  'Credit Card Gabriel',
-  'Adjustment'
-]
+// Data — every payload is reused across client-side navigation via
+// getCachedData; `watch` still forces a refetch when the month/person changes.
+const { data: categoriesData, status: categoriesStatus } = useAsyncData<CategoriesResponse | null>(
+  'budget-categories',
+  () => $fetch<CategoriesResponse>('/api/categories'),
+  {
+    default: () => null,
+    getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key],
+  }
+)
+
+const {
+  data: budgetsData,
+  status: budgetsStatus,
+  refresh: refreshBudgets,
+} = useAsyncData<BudgetsResponse | null>(
+  'budget-budgets',
+  () => $fetch<BudgetsResponse>('/api/budgets', {
+    query: { month: monthNumber.value, year: yearNumber.value },
+  }),
+  {
+    default: () => null,
+    watch: [selectedMonth],
+    getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key],
+  }
+)
+
+/** Reference month and the two before it, in the order the payload comes back. */
+const HISTORY_OFFSETS = [0, -1, -2]
+
+// The three history windows are one payload: they always move together, and a
+// single key keeps the page from flickering through three loading states.
+const { data: historyData, status: historyStatus } = useAsyncData<CategoriesResponse[]>(
+  'budget-history',
+  () => Promise.all(HISTORY_OFFSETS.map(offset => {
+    const { startDate, endDate } = monthRange(addMonthsToKey(selectedMonth.value, offset))
+    return $fetch<CategoriesResponse>('/api/categories', {
+      query: { person: budgetPerson.value, startDate, endDate },
+    })
+  })),
+  {
+    default: () => [],
+    watch: [selectedMonth, budgetPerson],
+    getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key],
+  }
+)
+
+const pending = computed(() =>
+  categoriesStatus.value === 'pending' ||
+  budgetsStatus.value === 'pending' ||
+  historyStatus.value === 'pending'
+)
+
+const availableCategories = computed(() =>
+  (categoriesData.value?.categories || [])
+    .map(cat => cat.name)
+    .filter(name =>
+      isSpendingCategory(name) && name.toLowerCase() !== UNCATEGORIZED.toLowerCase()
+    )
+    .sort()
+)
+
+const budgetInputs = computed<Record<string, number | null>>(() => {
+  const inputs: Record<string, number | null> = {}
+
+  for (const category of availableCategories.value) {
+    if (category in budgetEdits.value) {
+      inputs[category] = budgetEdits.value[category]
+      continue
+    }
+
+    const saved = (budgetsData.value?.budgets || []).find(
+      b => b.category === category && b.person === budgetPerson.value
+    )
+
+    inputs[category] = saved?.amount ?? 0
+  }
+
+  return inputs
+})
 
 // Computed
-const formattedMonth = computed(() => {
-  const [year, month] = selectedMonth.value.split('-')
-  const date = new Date(parseInt(year), parseInt(month) - 1)
-  return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
-})
+const formattedMonth = computed(() =>
+  `${formatMonthName(monthIndexOfKey(selectedMonth.value))} de ${yearNumber.value}`
+)
 
 const filteredCategories = computed(() => {
   if (!searchQuery.value) {
@@ -470,11 +541,7 @@ const currentPersonTotalBudget = computed(() => {
 })
 
 const currentPersonTotalSpent = computed(() => {
-  if (!historicalData.value.current) return 0
-
-  return historicalData.value.current.categories.reduce((sum, cat) => {
-    return sum + cat.total
-  }, 0)
+  return (historyData.value[0]?.categories || []).reduce((sum, cat) => sum + cat.total, 0)
 })
 
 const currentPersonCategoriesWithBudget = computed(() => {
@@ -483,28 +550,16 @@ const currentPersonCategoriesWithBudget = computed(() => {
 
 // Methods
 const getMonthLabel = (offset: number): string => {
-  const [year, month] = selectedMonth.value.split('-')
-  const date = new Date(parseInt(year), parseInt(month) - 1)
-  date.setMonth(date.getMonth() + offset)
+  const key = addMonthsToKey(selectedMonth.value, offset)
+  const name = formatMonthName(monthIndexOfKey(key), true)
 
-  if (offset === 0) {
-    return date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') + ' (atual)'
-  }
+  if (offset === 0) return `${name} (atual)`
 
-  return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')
+  return `${name}/${key.slice(2, 4)}`
 }
 
 const getCategorySpending = (category: string, monthOffset: number): number => {
-  let data: CategoriesResponse | null = null
-
-  if (monthOffset === 0) {
-    data = historicalData.value.current
-  } else if (monthOffset === -1) {
-    data = historicalData.value.previous
-  } else if (monthOffset === -2) {
-    data = historicalData.value.twoMonthsBack
-  }
-
+  const data = historyData.value[HISTORY_OFFSETS.indexOf(monthOffset)]
   if (!data) return 0
 
   const categoryData = data.categories.find(cat => cat.name === category)
@@ -520,78 +575,20 @@ const getCategoryAverageSpending = (category: string): number => {
 }
 
 const setBudgetToAverage = (category: string) => {
-  const average = getCategoryAverageSpending(category)
-  budgetInputs.value[category] = Math.round(average)
-  markAsChanged()
-}
-
-const getCategoryIcon = (categoryName: string): string => {
-  const name = categoryName.toLowerCase()
-
-  if (name.includes('restaurante') || name.includes('comida') || name.includes('alimentação') ||
-      name.includes('almoço') || name.includes('jantar') || name.includes('lanche') ||
-      name.includes('food') || name.includes('restaurant')) return '🍽️'
-  if (name.includes('mercado') || name.includes('supermercado') || name.includes('grocery')) return '🛒'
-  if (name.includes('uber') || name.includes('taxi') || name.includes('transporte') ||
-      name.includes('combustível') || name.includes('gasolina') || name.includes('transport')) return '🚗'
-  if (name.includes('saúde') || name.includes('farmácia') || name.includes('médico') ||
-      name.includes('hospital') || name.includes('health') || name.includes('pharmacy') || name.includes('medical')) return '⚕️'
-  if (name.includes('educação') || name.includes('escola') || name.includes('curso') ||
-      name.includes('livro') || name.includes('education')) return '📚'
-  if (name.includes('aluguel') || name.includes('condomínio') || name.includes('casa') ||
-      name.includes('rent') || name.includes('moradia')) return '🏠'
-  if (name.includes('conta') || name.includes('luz') || name.includes('água') ||
-      name.includes('internet') || name.includes('telefone') || name.includes('bill') ||
-      name.includes('utilities')) return '📄'
-  if (name.includes('cinema') || name.includes('streaming') || name.includes('netflix') ||
-      name.includes('spotify') || name.includes('lazer') || name.includes('entertainment')) return '🎬'
-  if (name.includes('roupa') || name.includes('vestuário') || name.includes('loja') ||
-      name.includes('clothes') || name.includes('fashion')) return '👕'
-  if (name.includes('tecnologia') || name.includes('eletrônico') || name.includes('tech') ||
-      name.includes('computador') || name.includes('celular')) return '💻'
-  if (name.includes('viagem') || name.includes('hotel') || name.includes('passagem') ||
-      name.includes('travel') || name.includes('flight')) return '✈️'
-  if (name.includes('pet') || name.includes('veterinário') || name.includes('animal')) return '🐾'
-  if (name.includes('beleza') || name.includes('salão') || name.includes('cabelo') ||
-      name.includes('beauty') || name.includes('cosmético')) return '💄'
-  if (name.includes('academia') || name.includes('esporte') || name.includes('fitness') ||
-      name.includes('gym')) return '💪'
-  if (name.includes('pagamento') || name.includes('transferência') || name.includes('pix') ||
-      name.includes('payment') || name.includes('transfer')) return '💳'
-  if (name.includes('investimento') || name.includes('poupança') || name.includes('invest') ||
-      name.includes('savings') || name.includes('investment')) return '📈'
-  if (name.includes('bar') || name.includes('bebida') || name.includes('café') ||
-      name.includes('drink') || name.includes('coffee')) return '☕'
-  if (name.includes('presente') || name.includes('gift')) return '🎁'
-  if (name.includes('installment') || name.includes('financing') ||
-      name.includes('parcela') || name.includes('parcelamento')) return '📅'
-  if (name.includes('business') || name.includes('tax') || name.includes('negócio')) return '💼'
-  if (name.includes('insurance') || name.includes('seguro')) return '🛡️'
-  if (name.includes('subscri') || name.includes('software') || name.includes('assinatura')) return '📱'
-
-  return '💰'
-}
-
-const formatCurrencyCompact = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value)
-}
-
-const formatMonthCompact = () => {
-  if (!selectedMonth.value) return ''
-  const [year, month] = selectedMonth.value.split('-')
-  const date = new Date(parseInt(year), parseInt(month) - 1)
-  return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
-}
-
-const markAsChanged = () => {
-  hasChanges.value = true
+  budgetEdits.value[category] = Math.round(getCategoryAverageSpending(category))
   clearMessages()
 }
+
+const onBudgetInput = (category: string, event: Event) => {
+  const raw = (event.target as HTMLInputElement).value
+  const parsed = Number(raw)
+
+  budgetEdits.value[category] = raw !== '' && Number.isFinite(parsed) ? parsed : null
+  clearMessages()
+}
+
+const formatMonthCompact = () =>
+  `${formatMonthName(monthIndexOfKey(selectedMonth.value), true)}/${selectedMonth.value.slice(2, 4)}`
 
 const clearMessages = () => {
   errorMessage.value = null
@@ -600,175 +597,42 @@ const clearMessages = () => {
   showSuccessAlert.value = false
 }
 
-const getMonthDateRange = (monthOffset: number = 0) => {
-  const [year, month] = selectedMonth.value.split('-')
-  const date = new Date(parseInt(year), parseInt(month) - 1)
-  date.setMonth(date.getMonth() + monthOffset)
+// Switching person changes which budget is being edited, so whatever was typed
+// for the other one no longer applies.
+watch(budgetPerson, () => {
+  budgetEdits.value = {}
+})
 
-  const targetYear = date.getFullYear()
-  const targetMonth = date.getMonth() + 1
+// Set while restoring the previous month after a declined confirm, so the
+// restore itself does not ask again.
+let revertingMonth = false
 
-  const startDate = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`
-  const lastDay = new Date(targetYear, targetMonth, 0).getDate()
-  const endDate = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-
-  return { startDate, endDate }
-}
-
-// Load data from cache (no refresh)
-const loadDataFromCache = async () => {
-  loading.value = true
-  clearMessages()
-
-  try {
-    const [year, month] = selectedMonth.value.split('-')
-
-    // Fetch all categories (from cache)
-    const categoriesResponse = await $fetch<CategoriesResponse>(`/api/categories`)
-
-    const allCategories = categoriesResponse.categories
-      .map(cat => cat.name)
-      .filter(name => !EXCLUDED_CATEGORIES.some(excluded =>
-        excluded.toLowerCase() === name.toLowerCase()
-      ))
-      .sort()
-
-    availableCategories.value = allCategories
-
-    // Fetch existing budgets for selected month (from cache)
-    const budgetsResponse = await $fetch<BudgetsResponse>(
-      `/api/budgets?month=${month}&year=${year}`
-    )
-
-    // Initialize budget inputs for current person
-    const inputs: Record<string, number> = {}
-
-    for (const category of allCategories) {
-      const personBudget = budgetsResponse.budgets.find(
-        b => b.category === category && b.person === selectedPerson.value
-      )
-
-      inputs[category] = personBudget?.amount || 0
-    }
-
-    budgetInputs.value = inputs
-
-    // Fetch historical spending data (current month, -1, -2) from cache
-    const currentRange = getMonthDateRange(0)
-    const previousRange = getMonthDateRange(-1)
-    const twoMonthsBackRange = getMonthDateRange(-2)
-
-    const [currentData, previousData, twoMonthsBackData] = await Promise.all([
-      $fetch<CategoriesResponse>(
-        `/api/categories?person=${selectedPerson.value}&startDate=${currentRange.startDate}&endDate=${currentRange.endDate}`
-      ),
-      $fetch<CategoriesResponse>(
-        `/api/categories?person=${selectedPerson.value}&startDate=${previousRange.startDate}&endDate=${previousRange.endDate}`
-      ),
-      $fetch<CategoriesResponse>(
-        `/api/categories?person=${selectedPerson.value}&startDate=${twoMonthsBackRange.startDate}&endDate=${twoMonthsBackRange.endDate}`
-      )
-    ])
-
-    historicalData.value = {
-      current: currentData,
-      previous: previousData,
-      twoMonthsBack: twoMonthsBackData
-    }
-
-    hasChanges.value = false
-  } catch (e: any) {
-    errorMessage.value = e.data || 'Não foi possível carregar os dados. Tente novamente.'
-    showErrorAlert.value = true
-  } finally {
-    loading.value = false
+watch(selectedMonth, (_next, previous) => {
+  if (revertingMonth) {
+    revertingMonth = false
+    return
   }
-}
 
-// Refresh both caches and reload data
-const loadData = async () => {
-  refreshing.value = true
-  loading.value = true
-  clearMessages()
+  if (!hasChanges.value) return
 
-  try {
-    // Transactions live in Postgres (synced from the sheet); budgets still come
-    // from the sheet via their own cache. Refresh each through its own path.
-    const [, budgetCacheResponse] = await Promise.all([
-      $fetch('/api/sync', { method: 'POST' }),
-      $fetch<CacheRefreshResponse>('/api/budgets/cache/refresh', { method: 'POST' })
-    ])
-
-    if (budgetCacheResponse.success) {
-      console.log('Budget cache atualizado:', budgetCacheResponse.message)
-    }
-
-    const [year, month] = selectedMonth.value.split('-')
-
-    // Fetch all categories (from cache)
-    const categoriesResponse = await $fetch<CategoriesResponse>(`/api/categories`)
-
-    // Update cache status display
-    await fetchCacheStatus()
-
-    const allCategories = categoriesResponse.categories
-      .map(cat => cat.name)
-      .filter(name => !EXCLUDED_CATEGORIES.some(excluded =>
-        excluded.toLowerCase() === name.toLowerCase()
-      ))
-      .sort()
-
-    availableCategories.value = allCategories
-
-    // Fetch existing budgets for selected month
-    const budgetsResponse = await $fetch<BudgetsResponse>(
-      `/api/budgets?month=${month}&year=${year}`
-    )
-
-    // Initialize budget inputs for current person
-    const inputs: Record<string, number> = {}
-
-    for (const category of allCategories) {
-      const personBudget = budgetsResponse.budgets.find(
-        b => b.category === category && b.person === selectedPerson.value
-      )
-
-      inputs[category] = personBudget?.amount || 0
-    }
-
-    budgetInputs.value = inputs
-
-    // Fetch historical spending data (current month, -1, -2)
-    const currentRange = getMonthDateRange(0)
-    const previousRange = getMonthDateRange(-1)
-    const twoMonthsBackRange = getMonthDateRange(-2)
-
-    const [currentData, previousData, twoMonthsBackData] = await Promise.all([
-      $fetch<CategoriesResponse>(
-        `/api/categories?person=${selectedPerson.value}&startDate=${currentRange.startDate}&endDate=${currentRange.endDate}`
-      ),
-      $fetch<CategoriesResponse>(
-        `/api/categories?person=${selectedPerson.value}&startDate=${previousRange.startDate}&endDate=${previousRange.endDate}`
-      ),
-      $fetch<CategoriesResponse>(
-        `/api/categories?person=${selectedPerson.value}&startDate=${twoMonthsBackRange.startDate}&endDate=${twoMonthsBackRange.endDate}`
-      )
-    ])
-
-    historicalData.value = {
-      current: currentData,
-      previous: previousData,
-      twoMonthsBack: twoMonthsBackData
-    }
-
-    hasChanges.value = false
-  } catch (e: any) {
-    errorMessage.value = e.data || 'Não foi possível carregar os dados. Tente novamente.'
-    showErrorAlert.value = true
-  } finally {
-    loading.value = false
-    refreshing.value = false
+  if (confirm('Você tem alterações não salvas. Deseja realmente mudar o período sem salvar?')) {
+    budgetEdits.value = {}
+    return
   }
+
+  revertingMonth = true
+  selectedMonth.value = previous
+})
+
+const selectPerson = (person: 'Juliana' | 'Gabriel') => {
+  if (person === budgetPerson.value && !showingPersonFallback.value) return
+
+  if (hasChanges.value &&
+      !confirm('Você tem alterações não salvas. Deseja realmente mudar de pessoa sem salvar?')) {
+    return
+  }
+
+  setPersonFilter(person)
 }
 
 const saveBudgets = async () => {
@@ -776,8 +640,6 @@ const saveBudgets = async () => {
   clearMessages()
 
   try {
-    const [year, month] = selectedMonth.value.split('-')
-
     const budgetsToSave: BudgetInput[] = []
 
     for (const category of availableCategories.value) {
@@ -786,9 +648,9 @@ const saveBudgets = async () => {
       if (amount && amount > 0) {
         budgetsToSave.push({
           category,
-          person: selectedPerson.value,
-          month: parseInt(month),
-          year: parseInt(year),
+          person: budgetPerson.value,
+          month: monthNumber.value,
+          year: yearNumber.value,
           amount: amount,
         })
       }
@@ -805,13 +667,13 @@ const saveBudgets = async () => {
       body: budgetsToSave,
     })
 
-    successMessage.value = `${budgetsToSave.length} orçamento(s) de ${selectedPerson.value} salvos com sucesso!`
+    successMessage.value = `${budgetsToSave.length} orçamento(s) de ${budgetPerson.value} salvos com sucesso!`
     showSuccessAlert.value = true
-    hasChanges.value = false
+    budgetEdits.value = {}
 
-    setTimeout(() => {
-      loadData()
-    }, 1000)
+    // The POST already invalidated the server-side budget cache, so this reads
+    // back what was just written.
+    await refreshBudgets()
   } catch (e: any) {
     errorMessage.value = e.data?.message || e.data || 'Não foi possível salvar os orçamentos. Tente novamente.'
     showErrorAlert.value = true
@@ -825,21 +687,20 @@ const copyFromPreviousMonth = async () => {
   clearMessages()
 
   try {
-    // Calculate previous month
-    const [year, month] = selectedMonth.value.split('-')
-    const currentDate = new Date(parseInt(year), parseInt(month) - 1)
-    currentDate.setMonth(currentDate.getMonth() - 1)
-
-    const previousYear = currentDate.getFullYear()
-    const previousMonth = currentDate.getMonth() + 1
+    const previousKey = addMonthsToKey(selectedMonth.value, -1)
+    const [previousYear, previousMonth] = previousKey.split('-')
 
     // Fetch budgets from previous month for the current person
-    const budgetsResponse = await $fetch<BudgetsResponse>(
-      `/api/budgets?month=${previousMonth}&year=${previousYear}&person=${selectedPerson.value}`
-    )
+    const budgetsResponse = await $fetch<BudgetsResponse>('/api/budgets', {
+      query: {
+        month: Number(previousMonth),
+        year: Number(previousYear),
+        person: budgetPerson.value,
+      },
+    })
 
     if (budgetsResponse.budgets.length === 0) {
-      errorMessage.value = `Não foram encontrados orçamentos de ${selectedPerson.value} para o mês anterior (${previousMonth.toString().padStart(2, '0')}/${previousYear}).`
+      errorMessage.value = `Não foram encontrados orçamentos de ${budgetPerson.value} para o mês anterior (${previousMonth}/${previousYear}).`
       showErrorAlert.value = true
       return
     }
@@ -848,14 +709,13 @@ const copyFromPreviousMonth = async () => {
     let copiedCount = 0
     for (const budget of budgetsResponse.budgets) {
       if (availableCategories.value.includes(budget.category)) {
-        budgetInputs.value[budget.category] = budget.amount
+        budgetEdits.value[budget.category] = budget.amount
         copiedCount++
       }
     }
 
-    successMessage.value = `${copiedCount} orçamento(s) copiado(s) do mês ${previousMonth.toString().padStart(2, '0')}/${previousYear}. Lembre-se de salvar as alterações!`
+    successMessage.value = `${copiedCount} orçamento(s) copiado(s) do mês ${previousMonth}/${previousYear}. Lembre-se de salvar as alterações!`
     showSuccessAlert.value = true
-    markAsChanged()
   } catch (e: any) {
     errorMessage.value = e.data?.message || e.data || 'Não foi possível copiar os orçamentos do mês anterior. Tente novamente.'
     showErrorAlert.value = true
@@ -871,12 +731,10 @@ const loadTemplatePreview = async () => {
   templateError.value = null
 
   try {
-    const [year, month] = selectedMonth.value.split('-')
-
     const response = await applyTemplate({
-      person: selectedPerson.value,
-      month: parseInt(month),
-      year: parseInt(year),
+      person: budgetPerson.value,
+      month: monthNumber.value,
+      year: yearNumber.value,
     })
 
     if (response) {
@@ -904,34 +762,9 @@ const confirmApplyTemplate = async () => {
   templatePreview.value = null
   templateError.value = null
 
-  // Reload data from cache (cache was already refreshed by apply-template endpoint)
-  await loadDataFromCache()
+  // The endpoint already wrote the budgets and invalidated the server cache.
+  await refreshBudgets()
 }
-
-// Lifecycle
-onMounted(() => {
-  loadDataFromCache() // Load from cache, no automatic refresh
-})
-
-watch(selectedMonth, () => {
-  if (hasChanges.value) {
-    if (confirm('Você tem alterações não salvas. Deseja realmente mudar o período sem salvar?')) {
-      loadDataFromCache() // Just reload from cache
-    }
-  } else {
-    loadDataFromCache() // Just reload from cache
-  }
-})
-
-watch(selectedPerson, () => {
-  if (hasChanges.value) {
-    if (confirm('Você tem alterações não salvas. Deseja realmente mudar de pessoa sem salvar?')) {
-      loadDataFromCache() // Just reload from cache
-    }
-  } else {
-    loadDataFromCache() // Just reload from cache
-  }
-})
 
 watch(showApplyTemplateModal, (newValue) => {
   if (newValue) {

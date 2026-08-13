@@ -10,10 +10,10 @@
         <div class="mb-6 border-b border-gray-200">
           <nav class="-mb-px flex space-x-8">
             <button
-              @click="selectedPerson = 'Gabriel'"
+              @click="selectPerson('Gabriel')"
               :class="[
                 'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
-                selectedPerson === 'Gabriel'
+                !showingPersonFallback && templatePerson === 'Gabriel'
                   ? 'border-accent text-accent'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               ]"
@@ -21,10 +21,10 @@
               Gabriel
             </button>
             <button
-              @click="selectedPerson = 'Juliana'"
+              @click="selectPerson('Juliana')"
               :class="[
                 'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
-                selectedPerson === 'Juliana'
+                !showingPersonFallback && templatePerson === 'Juliana'
                   ? 'border-accent text-accent'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               ]"
@@ -34,8 +34,12 @@
           </nav>
         </div>
 
+        <p v-if="showingPersonFallback" class="-mt-4 mb-6 text-xs text-gray-400">
+          Filtro global em "Ambos" — mostrando {{ templatePerson }}, o template é por pessoa.
+        </p>
+
         <!-- Loading State -->
-        <div v-if="loading" class="flex items-center justify-center py-12">
+        <div v-if="pending" class="flex items-center justify-center py-12">
           <div class="text-center">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p class="text-gray-600">Carregando categorias e histórico...</p>
@@ -240,10 +244,10 @@
 
             <button
               @click="saveAllTemplates"
-              :disabled="!hasModifications || currentTotal > 100 || loading"
+              :disabled="!hasModifications || currentTotal > 100 || saving"
               class="px-8 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {{ loading ? 'Salvando...' : 'Salvar Templates' }}
+              {{ saving ? 'Salvando...' : 'Salvar Templates' }}
             </button>
           </div>
 
@@ -272,44 +276,96 @@
 </template>
 
 <script setup lang="ts">
-import type { BudgetTemplate, BudgetTemplateInput } from '~/types/budgetTemplate'
+import type {
+  BudgetTemplate,
+  BudgetTemplateInput,
+  BudgetTemplatesResponse,
+} from '~/types/budgetTemplate'
+import type { CategoriesResponse } from '~/types/transaction'
+import { currentMonthKey, addMonthsToKey, daysInMonthKey, monthIndexOfKey } from '~/shared/dates'
+import { isSpendingCategory, UNCATEGORIZED } from '~/shared/expenseRules'
+import { getCategoryIcon } from '~/shared/categoryIcons'
 
-// System categories to filter out
-const SYSTEM_CATEGORIES = [
-  'Sem Categoria',
-  'Credit Account Juliana',
-  'Credit Account Gabriel',
-  'Bank Account Juliana',
-  'Bank Account Gabriel',
-  'Credit Card Juliana',
-  'Credit Card Gabriel',
-  'Adjustment'
-]
+const { formatCurrency: formatCurrencyValue, formatMonthName } = useFormatters()
+const { selectedPerson: globalPerson, setPersonFilter } = usePersonFilter()
+
+// This screen shows cents: a percentage of income rarely lands on a round real.
+const formatCurrency = (value: number) => formatCurrencyValue(value, { decimals: true })
 
 // State
-const selectedPerson = ref<'Juliana' | 'Gabriel'>('Gabriel')
 const simulatedIncome = ref<number>(10000)
-const hasModifications = ref(false)
 const successMessage = ref<string | null>(null)
-const loading = ref(false)
+const saving = ref(false)
 const error = ref<string | null>(null)
 
-// All categories from system
-const allCategories = ref<any[]>([])
+// A template belongs to one person, so "Ambos" has no meaning here: fall back
+// to Gabriel and tell the user which side they are looking at.
+const templatePerson = computed<'Juliana' | 'Gabriel'>(() =>
+  globalPerson.value === 'Ambos' ? 'Gabriel' : globalPerson.value
+)
+const showingPersonFallback = computed(() => globalPerson.value === 'Ambos')
 
-// Historical data for 3 months
-const historicalData = ref<{
-  current: any | null
-  previous: any | null
-  twoMonthsBack: any | null
-}>({
-  current: null,
-  previous: null,
-  twoMonthsBack: null
+/** Reference month and the two before it, in the order the payload comes back. */
+const HISTORY_OFFSETS = [0, -1, -2]
+
+// The history is anchored on the calendar month, not on a picker: this screen
+// has no month selector.
+const anchorMonth = currentMonthKey()
+
+const monthRange = (key: string) => ({
+  startDate: `${key}-01`,
+  endDate: `${key}-${String(daysInMonthKey(key)).padStart(2, '0')}`,
 })
 
-// Templates composable
-const { templates, fetchTemplates, saveTemplates } = useBudgetTemplates()
+// Data — reused across client-side navigation via getCachedData; `watch`
+// still forces a refetch when the person changes.
+const { data: categoriesData, status: categoriesStatus } = useAsyncData<CategoriesResponse | null>(
+  'budget-templates-categories',
+  () => $fetch<CategoriesResponse>('/api/categories', {
+    query: { person: templatePerson.value },
+  }),
+  {
+    default: () => null,
+    watch: [templatePerson],
+    getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key],
+  }
+)
+
+// The three history windows are one payload: they always move together, and a
+// single key keeps the page from flickering through three loading states.
+const { data: historyData, status: historyStatus } = useAsyncData<CategoriesResponse[]>(
+  'budget-templates-history',
+  () => Promise.all(HISTORY_OFFSETS.map(offset => {
+    const { startDate, endDate } = monthRange(addMonthsToKey(anchorMonth, offset))
+    return $fetch<CategoriesResponse>('/api/categories', {
+      query: { person: templatePerson.value, startDate, endDate },
+    })
+  })),
+  {
+    default: () => [],
+    watch: [templatePerson],
+    getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key],
+  }
+)
+
+const {
+  data: templatesData,
+  status: templatesStatus,
+  refresh: refreshTemplates,
+} = useAsyncData<BudgetTemplatesResponse | null>(
+  'budget-templates',
+  () => $fetch<BudgetTemplatesResponse>('/api/budget-templates'),
+  {
+    default: () => null,
+    getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key],
+  }
+)
+
+const pending = computed(() =>
+  categoriesStatus.value === 'pending' ||
+  historyStatus.value === 'pending' ||
+  templatesStatus.value === 'pending'
+)
 
 // Category budgets - unified view
 interface CategoryBudget {
@@ -325,49 +381,32 @@ interface CategoryBudget {
   }
 }
 
-// Estado reativo local para as categorias editáveis
-const categoryBudgets = ref<CategoryBudget[]>([])
+/**
+ * Percentages the user changed, layered over the saved templates. Derived state
+ * instead of a copy rebuilt by a watcher: watchers do not run during SSR, so a
+ * copy renders as the empty state on the server and only fills after hydration.
+ */
+const edits = ref<Record<string, { percentage: number; active: boolean }>>({})
+const hasModifications = computed(() => Object.keys(edits.value).length > 0)
 
-// Função para atualizar porcentagem e forçar reatividade
-function updatePercentage(category: CategoryBudget, event: Event) {
-  const input = event.target as HTMLInputElement
-  const value = parseFloat(input.value) || 0
-  category.percentage = value
-  // Se a porcentagem for maior que 0, marca como ativo automaticamente
-  if (value > 0) {
-    category.active = true
-  }
-  // Força reatividade triggerando uma nova referência
-  categoryBudgets.value = [...categoryBudgets.value]
-  markAsModified()
-}
-
-// Função para atualizar active e forçar reatividade
-function updateActive(category: CategoryBudget) {
-  category.active = !category.active
-  // Força reatividade triggerando uma nova referência
-  categoryBudgets.value = [...categoryBudgets.value]
-  markAsModified()
-}
-
-// Função para construir/reconstruir os budgets a partir dos templates
-function buildCategoryBudgets() {
-  categoryBudgets.value = allCategories.value
-    .filter(cat => !isSystemCategory(cat.name))
+const categoryBudgets = computed<CategoryBudget[]>(() =>
+  (categoriesData.value?.categories || [])
+    .filter(cat =>
+      isSpendingCategory(cat.name) && cat.name.toLowerCase() !== UNCATEGORIZED.toLowerCase()
+    )
     .map(category => {
       // Find existing template
-      const existingTemplate = templates.value.find(
-        t => t.category === category.name && t.person === selectedPerson.value
+      const existingTemplate = (templatesData.value?.templates || []).find(
+        t => t.category === category.name && t.person === templatePerson.value
       )
 
-      const percentage = existingTemplate?.percentage || 0
-      const active = existingTemplate?.active ?? false
+      const edit = edits.value[category.name]
 
       return {
         name: category.name,
         icon: getCategoryIcon(category.name),
-        percentage,
-        active,
+        percentage: edit?.percentage ?? existingTemplate?.percentage ?? 0,
+        active: edit?.active ?? existingTemplate?.active ?? false,
         spending: {
           current: getCategorySpending(category.name, 0),
           previous: getCategorySpending(category.name, -1),
@@ -377,6 +416,26 @@ function buildCategoryBudgets() {
       }
     })
     .sort((a, b) => a.name.localeCompare(b.name))
+)
+
+function updatePercentage(category: CategoryBudget, event: Event) {
+  const input = event.target as HTMLInputElement
+  const percentage = parseFloat(input.value) || 0
+
+  // Typing a percentage activates the category on its own.
+  edits.value[category.name] = {
+    percentage,
+    active: percentage > 0 ? true : category.active,
+  }
+  successMessage.value = null
+}
+
+function updateActive(category: CategoryBudget) {
+  edits.value[category.name] = {
+    percentage: category.percentage,
+    active: !category.active,
+  }
+  successMessage.value = null
 }
 
 // Computed para calcular o valor de cada categoria em tempo real
@@ -399,26 +458,11 @@ const totalCalculated = computed(() => {
 })
 
 // Helper functions
-function isSystemCategory(categoryName: string): boolean {
-  return SYSTEM_CATEGORIES.some(sys =>
-    categoryName.toLowerCase().includes(sys.toLowerCase())
-  )
-}
-
 function getCategorySpending(categoryName: string, monthOffset: number): number {
-  let data: any | null = null
+  const data = historyData.value[HISTORY_OFFSETS.indexOf(monthOffset)]
+  if (!data) return 0
 
-  if (monthOffset === 0) {
-    data = historicalData.value.current
-  } else if (monthOffset === -1) {
-    data = historicalData.value.previous
-  } else if (monthOffset === -2) {
-    data = historicalData.value.twoMonthsBack
-  }
-
-  if (!data || !data.categories) return 0
-
-  const category = data.categories.find((cat: any) => cat.name === categoryName)
+  const category = data.categories.find(cat => cat.name === categoryName)
   return category?.total || 0
 }
 
@@ -429,76 +473,9 @@ function getAverageSpending(categoryName: string): number {
   return Math.round((total / 3) * 100) / 100
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value)
-}
-
 function getMonthLabel(monthOffset: number): string {
-  const now = new Date()
-  const date = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
-
-  const monthNames = [
-    'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-  ]
-
-  return `${monthNames[date.getMonth()]}/${date.getFullYear().toString().slice(2)}`
-}
-
-function getMonthDateRange(monthOffset: number): { startDate: string; endDate: string } {
-  const now = new Date()
-  const date = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-
-  const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-  const lastDay = new Date(year, month, 0).getDate()
-  const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-
-  return { startDate, endDate }
-}
-
-function getCategoryIcon(category: string): string {
-  const categoryLower = category.toLowerCase()
-
-  // Food & Drinks
-  if (categoryLower.includes('food') || categoryLower.includes('alimentação') || categoryLower.includes('groceries')) return '🍔'
-  if (categoryLower.includes('restaurant') || categoryLower.includes('restaurante')) return '🍽️'
-
-  // Transportation
-  if (categoryLower.includes('transport') || categoryLower.includes('transporte') || categoryLower.includes('uber') || categoryLower.includes('gas')) return '🚗'
-
-  // Entertainment
-  if (categoryLower.includes('entertainment') || categoryLower.includes('lazer') || categoryLower.includes('streaming')) return '🎬'
-
-  // Housing
-  if (categoryLower.includes('housing') || categoryLower.includes('rent') || categoryLower.includes('aluguel') || categoryLower.includes('moradia')) return '🏠'
-
-  // Utilities
-  if (categoryLower.includes('utilities') || categoryLower.includes('conta') || categoryLower.includes('bill')) return '💡'
-
-  // Health
-  if (categoryLower.includes('health') || categoryLower.includes('saúde') || categoryLower.includes('medical')) return '🏥'
-
-  // Savings
-  if (categoryLower.includes('savings') || categoryLower.includes('poupança') || categoryLower.includes('investimento')) return '💰'
-
-  // Shopping
-  if (categoryLower.includes('shopping') || categoryLower.includes('compras') || categoryLower.includes('clothing')) return '🛍️'
-
-  // Education
-  if (categoryLower.includes('education') || categoryLower.includes('educação') || categoryLower.includes('course')) return '📚'
-
-  // Default
-  return '📦'
-}
-
-function markAsModified() {
-  hasModifications.value = true
-  successMessage.value = null
+  const key = addMonthsToKey(anchorMonth, monthOffset)
+  return `${formatMonthName(monthIndexOfKey(key), true)}/${key.slice(2, 4)}`
 }
 
 function setPercentageFromAverage(category: CategoryBudget) {
@@ -510,20 +487,12 @@ function setPercentageFromAverage(category: CategoryBudget) {
   // Round to 0.5%
   const roundedPercentage = Math.round(percentage * 2) / 2
 
-  // Limit between 0-100%
-  category.percentage = Math.max(0, Math.min(100, roundedPercentage))
-
-  // Força reatividade
-  categoryBudgets.value = [...categoryBudgets.value]
-  markAsModified()
-}
-
-function resetCategory(category: CategoryBudget) {
-  category.percentage = 0
-  category.active = false
-  // Força reatividade
-  categoryBudgets.value = [...categoryBudgets.value]
-  markAsModified()
+  edits.value[category.name] = {
+    // Limit between 0-100%
+    percentage: Math.max(0, Math.min(100, roundedPercentage)),
+    active: category.active,
+  }
+  successMessage.value = null
 }
 
 async function saveAllTemplates() {
@@ -533,7 +502,7 @@ async function saveAllTemplates() {
   }
 
   try {
-    loading.value = true
+    saving.value = true
     error.value = null
 
     // Build templates to save
@@ -541,36 +510,42 @@ async function saveAllTemplates() {
       .filter(cat => cat.percentage > 0 || cat.active)
       .map(cat => ({
         category: cat.name,
-        person: selectedPerson.value,
+        person: templatePerson.value,
         percentage: cat.percentage,
         active: cat.active
       }))
 
-    await saveTemplates(templatesToSave)
+    await $fetch<BudgetTemplate[]>('/api/budget-templates', {
+      method: 'POST',
+      body: templatesToSave,
+    })
 
-    hasModifications.value = false
+    edits.value = {}
     successMessage.value = `Templates salvos com sucesso! Total: ${currentTotal.value.toFixed(2)}%`
+
+    // The POST already invalidated the server-side template cache.
+    await refreshTemplates()
 
     setTimeout(() => {
       successMessage.value = null
     }, 5000)
   } catch (err: any) {
-    error.value = err.message || 'Erro ao salvar templates'
+    error.value = err.data?.message || err.message || 'Erro ao salvar templates'
   } finally {
-    loading.value = false
+    saving.value = false
   }
 }
 
-async function resetAllTemplates() {
-  await loadData()
-  hasModifications.value = false
+// "Reset" means back to what is saved, which is already loaded — no refetch.
+function resetAllTemplates() {
+  edits.value = {}
   successMessage.value = null
 }
 
 function exportToJson() {
   const exportData = {
     exportDate: new Date().toISOString(),
-    person: selectedPerson.value,
+    person: templatePerson.value,
     simulatedIncome: simulatedIncome.value,
     totalPercentage: currentTotal.value,
     totalCalculatedValue: totalCalculated.value,
@@ -600,60 +575,34 @@ function exportToJson() {
   
   const link = document.createElement('a')
   link.href = url
-  link.download = `budget-template-${selectedPerson.value.toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`
+  link.download = `budget-template-${templatePerson.value.toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
 
-async function loadHistoricalData() {
-  const ranges = [0, -1, -2].map(offset => getMonthDateRange(offset))
+function selectPerson(person: 'Juliana' | 'Gabriel') {
+  if (person === templatePerson.value && !showingPersonFallback.value) return
 
-  const [current, previous, twoMonthsBack] = await Promise.all([
-    $fetch(`/api/categories?person=${selectedPerson.value}&startDate=${ranges[0].startDate}&endDate=${ranges[0].endDate}`),
-    $fetch(`/api/categories?person=${selectedPerson.value}&startDate=${ranges[1].startDate}&endDate=${ranges[1].endDate}`),
-    $fetch(`/api/categories?person=${selectedPerson.value}&startDate=${ranges[2].startDate}&endDate=${ranges[2].endDate}`)
-  ])
-
-  historicalData.value = { current, previous, twoMonthsBack }
-}
-
-async function loadData() {
-  loading.value = true
-  error.value = null
-
-  try {
-    // Load in parallel
-    await Promise.all([
-      fetchTemplates(),
-      (async () => {
-        const response = await $fetch<any>(`/api/categories?person=${selectedPerson.value}`)
-        allCategories.value = response.categories || []
-      })(),
-      loadHistoricalData()
-    ])
-    
-    // Rebuild category budgets after data is loaded
-    buildCategoryBudgets()
-  } catch (err: any) {
-    console.error('Error loading data:', err)
-    error.value = err.message || 'Erro ao carregar dados'
-  } finally {
-    loading.value = false
+  if (hasModifications.value &&
+      !confirm('Você tem alterações não salvas. Deseja realmente mudar de pessoa sem salvar?')) {
+    return
   }
+
+  setPersonFilter(person)
 }
 
-// Watch person changes
-watch(selectedPerson, () => {
-  loadData()
-  hasModifications.value = false
+// Switching person changes which templates are being edited, so whatever was
+// typed for the other one no longer applies.
+watch(templatePerson, () => {
+  edits.value = {}
   successMessage.value = null
 })
 
 // Watch simulated income and save to localStorage
 watch(simulatedIncome, (newValue) => {
-  if (process.client) {
+  if (import.meta.client) {
     localStorage.setItem('budgetSimulation', newValue.toString())
   }
 })
@@ -661,13 +610,9 @@ watch(simulatedIncome, (newValue) => {
 // Lifecycle
 onMounted(() => {
   // Load simulated income from localStorage
-  if (process.client) {
-    const saved = localStorage.getItem('budgetSimulation')
-    if (saved) {
-      simulatedIncome.value = parseFloat(saved)
-    }
+  const saved = localStorage.getItem('budgetSimulation')
+  if (saved) {
+    simulatedIncome.value = parseFloat(saved)
   }
-
-  loadData()
 })
 </script>

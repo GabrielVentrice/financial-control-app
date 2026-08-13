@@ -3,6 +3,7 @@ import { loadTransactions } from '../utils/loadTransactions'
 import { validateQueryParams } from '../utils/transactionFilters'
 import { getBudgetsCached } from '../utils/budgetsCache'
 import { isSpendingCategory, expenseAmount, UNCATEGORIZED } from '~/shared/expenseRules'
+import { isCustoFixoCategory, isGastoComprometidoCategory } from '~/shared/categoryClassification'
 
 /**
  * Get category analysis and spending breakdown
@@ -128,40 +129,6 @@ function processCategoriesData(
   includeTransactions: boolean,
   selectedPerson?: 'Juliana' | 'Gabriel' | 'Ambos'
 ): CategoriesResponse {
-  // Configuration - Categories with same value every month (fixed costs)
-  const CUSTOS_FIXOS_CATEGORIES = [
-    'Rent',
-    'Subscriptions/Softwares',
-    'Insurance',
-    'Utilities',
-    'Business & Taxes',
-    'Medical',
-    'Cleaning Services'
-  ]
-
-  // Configuration - Categories that are recurring but with variable amounts
-  const GASTOS_COMPROMETIDOS_CATEGORIES = [
-    ...CUSTOS_FIXOS_CATEGORIES,
-    'Installments/Financing',
-    'Financing',
-    'Investments',
-  ]
-
-  // Helper functions
-  const isCustoFixoCategory = (categoryName: string): boolean => {
-    const lowerCaseName = categoryName.toLowerCase()
-    return CUSTOS_FIXOS_CATEGORIES.some(fixed =>
-      lowerCaseName.includes(fixed.toLowerCase())
-    )
-  }
-
-  const isGastoComprometidoCategory = (categoryName: string): boolean => {
-    const lowerCaseName = categoryName.toLowerCase()
-    return GASTOS_COMPROMETIDOS_CATEGORIES.some(comprometido =>
-      lowerCaseName.includes(comprometido.toLowerCase())
-    )
-  }
-
   // Keep only rows whose destination is an actual spending category — accounts,
   // cards and adjustments are movements, not spending (shared/expenseRules.ts).
   const filteredTransactions = transactions.filter(t => isSpendingCategory(t.destination))
