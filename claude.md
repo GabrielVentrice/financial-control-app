@@ -178,8 +178,17 @@ when does it ease, and which installments are active?
 - A series bills in a month only if that month ∈ `[startIdx, startIdx + total)`.
 - Installment identity/parse/expansion lives in [shared/installments.ts](shared/installments.ts)
   (re-exported by `useInstallments()` and `installmentProcessor.ts`). `processInstallments`
-  only regenerates a monthly schedule when the first installment (`01/XX`) is present; series
-  without it stay as-is — which is exactly why the page computes from the installment number.
+  only builds a schedule when the first installment (`01/XX`) is present; series without it
+  stay as-is — which is exactly why the page computes from the installment number.
+- **A real row always beats the projection.** `buildSeriesSchedule` lays out one row per month:
+  the ledger's own rows where they exist, a projected row only for the months it has nothing
+  for. The schedule used to be regenerated from `01/XX` with the real rows discarded, so card
+  purchases that had just synced disappeared from every screen — August showed a projected
+  `09/12` on day 02 at the first installment's amount instead of the real `08/12` of 10/08,
+  and a series that had already ended lost its last real charge entirely.
+- **One row per month, still.** The ledger writes several rows of a series on a single date
+  (01/12, 02/12 and 04/12 all on 16/12/2025); those are one charge written repeatedly. Two rows
+  of the same series in one month would triple that month's total.
 - Recognizes installments by `Installments/Financing` category **or** any credit-card-origin
   purchase with an `NN/NN` marker (e.g., "Netflix 01/12").
 

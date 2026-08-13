@@ -1,4 +1,5 @@
 import type { Transaction, InstallmentInfo } from '~/types/transaction'
+import { monthKeyOf, addMonthsToKey } from '~/shared/dates'
 
 /**
  * Shared installment logic used by BOTH the server pipeline
@@ -78,53 +79,80 @@ export function createInstallmentGroupKey(
   return `${installmentInfo.description.toLowerCase()}_${transaction.origin}_${installmentInfo.total}`
 }
 
+const pad = (n: number) => String(n).padStart(2, '0')
+
+const installmentNumberOf = (transaction: Transaction): number =>
+  parseInstallment(transaction.description)?.current ?? 0
+
 /**
- * Generates the full monthly schedule from the first installment.
- * Installment #1 keeps its original date; #2..N land on day 02 of each
- * subsequent month. Each generated row keeps the original category (destination),
- * origin and amount via the spread.
+ * Builds one row per month for a series: the ledger's own rows where it has
+ * them, a projection everywhere else.
+ *
+ * Two rules do the work, and they pull against each other:
+ *
+ * - **A month holds at most one installment.** The ledger writes several rows of
+ *   a series on a single date (this book has 01/12, 02/12 and 04/12 all on
+ *   16/12/2025), and those are one charge written repeatedly, not three charges.
+ *   Keeping them all triples that month.
+ * - **A row that exists wins over a row we invented.** The schedule used to be
+ *   regenerated from the first installment and the real rows thrown away, so a
+ *   card purchase that had just synced disappeared from every screen — replaced
+ *   by a projected row on day 02, carrying the first installment's amount and an
+ *   installment number that had drifted a month ahead of the ledger's.
+ *
+ * So the real rows claim their months first, and the projection fills the gaps
+ * with whatever installment numbers are left over. When the ledger's dates are
+ * erratic, a generated number can land a month before a larger real one; the
+ * month totals stay right, which is what every screen reads.
  */
-export function generateMonthlyInstallments(
+function buildSeriesSchedule(
+  rows: Transaction[],
   firstInstallment: Transaction,
   installmentInfo: InstallmentInfo
 ): Transaction[] {
   const { total, description } = installmentInfo
-  const transactions: Transaction[] = []
 
-  const firstDate = new Date(firstInstallment.date)
-
-  // Second installment onwards: day 02 of the following months
-  const nextMonth = new Date(firstDate)
-  nextMonth.setMonth(nextMonth.getMonth() + 1)
-  nextMonth.setDate(2)
-
-  for (let i = 1; i <= total; i++) {
-    let installmentDate: Date
-
-    if (i === 1) {
-      installmentDate = new Date(firstDate)
-    } else {
-      installmentDate = new Date(nextMonth)
-      installmentDate.setMonth(nextMonth.getMonth() + (i - 2))
-    }
-
-    const dateISO = installmentDate.toISOString().split('T')[0]
-
-    transactions.push({
-      ...firstInstallment,
-      transactionId: `${firstInstallment.transactionId}_${i}_${total}`,
-      date: dateISO,
-      description: `${description} ${String(i).padStart(2, '0')}/${String(total).padStart(2, '0')}`,
-      amount: firstInstallment.amount,
-      // Only the first installment is a row that actually exists in the sheet;
-      // the rest are a projected schedule. Screens that report what already
-      // happened need to be able to tell the two apart — without this flag a
-      // month with nothing synced still shows a spending total.
-      projected: i > 1,
-    })
+  const byMonth = new Map<string, Transaction>()
+  for (const row of rows) {
+    const monthKey = monthKeyOf(row.date)
+    const held = byMonth.get(monthKey)
+    const winsTheMonth =
+      !held ||
+      (Boolean(held.projected) && !row.projected) ||
+      (Boolean(held.projected) === Boolean(row.projected) &&
+        installmentNumberOf(row) < installmentNumberOf(held))
+    if (winsTheMonth) byMonth.set(monthKey, row)
   }
 
-  return transactions
+  const taken = new Set([...byMonth.values()].map(installmentNumberOf))
+  const occupiedMonths = new Set(byMonth.keys())
+
+  const generated: Transaction[] = []
+  let monthKey = monthKeyOf(firstInstallment.date)
+
+  for (let number = 1; number <= total; number++) {
+    if (taken.has(number)) continue
+
+    while (occupiedMonths.has(monthKey)) monthKey = addMonthsToKey(monthKey, 1)
+    occupiedMonths.add(monthKey)
+
+    generated.push({
+      ...firstInstallment,
+      transactionId: `${firstInstallment.transactionId}_${number}_${total}`,
+      // Day 02 as a plain string: building it through `new Date` is what used to
+      // roll month-boundary rows into the previous month under UTC-3.
+      date: `${monthKey}-02`,
+      description: `${description} ${pad(number)}/${pad(total)}`,
+      amount: firstInstallment.amount,
+      // Screens that report what already happened filter these out; without the
+      // flag an un-synced month shows spending out of thin air.
+      projected: true,
+    })
+
+    monthKey = addMonthsToKey(monthKey, 1)
+  }
+
+  return [...byMonth.values(), ...generated]
 }
 
 /**
@@ -132,10 +160,9 @@ export function generateMonthlyInstallments(
  *
  * 1. Non-installment transactions pass through unchanged.
  * 2. Installments are grouped by series (base description + origin + total).
- * 3. For each group, the first installment (01/XX) is found and the full
- *    schedule is regenerated, discarding the original rows. This is what
- *    prevents double counting when the sheet already contains later rows
- *    (e.g. 01/10 and 02/10 both present).
+ * 3. For each group with a first installment (01/XX), `buildSeriesSchedule`
+ *    lays out one row per month — the ledger's rows where they exist, a
+ *    projection for the rest.
  * 4. If no 01/XX is present (purchase predates the data window), the existing
  *    rows are kept as-is.
  */
@@ -178,9 +205,7 @@ export function processInstallments(transactions: Transaction[]): Transaction[] 
       }
 
       const installmentInfo = parseInstallment(firstInstallment.description)!
-      const generatedInstallments = generateMonthlyInstallments(firstInstallment, installmentInfo)
-
-      processed.push(...generatedInstallments)
+      processed.push(...buildSeriesSchedule(installments, firstInstallment, installmentInfo))
       processedGroupKeys.add(groupKey)
     } catch (error) {
       console.error('[Installments] Error processing group:', groupKey, error)

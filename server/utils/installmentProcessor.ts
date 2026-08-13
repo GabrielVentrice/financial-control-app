@@ -11,6 +11,5 @@ export {
   isInstallmentTransaction,
   isFirstInstallment,
   createInstallmentGroupKey,
-  generateMonthlyInstallments,
   processInstallments,
 } from '../../shared/installments'

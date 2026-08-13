@@ -91,6 +91,54 @@ describe('processInstallments', () => {
     expect(twice.reduce((s, t) => s + t.amount, 0)).toBe(once.reduce((s, t) => s + t.amount, 0))
   })
 
+  it('keeps the ledger row for a month instead of projecting over it', () => {
+    // The bug: a card purchase that had just synced vanished from every screen.
+    // The schedule was regenerated from 01/XX and the real rows discarded, so
+    // August showed a projected "09/12" on day 02 at the first installment's
+    // amount, in place of the real "08/12" of 10/08.
+    const result = processInstallments([
+      tx({ transactionId: 'a', date: '2025-12-16', description: 'Mercado 01/12', amount: 398.12 }),
+      tx({ transactionId: 'b', date: '2026-08-10', description: 'Mercado 08/12', amount: 398.08 }),
+    ])
+
+    const august = result.filter(t => monthKeyOf(t.date) === '2026-08')
+    expect(august).toHaveLength(1)
+    expect(august[0]).toMatchObject({
+      transactionId: 'b',
+      date: '2026-08-10',
+      description: 'Mercado 08/12',
+      amount: 398.08,
+    })
+    expect(august[0].projected).toBeFalsy()
+  })
+
+  it('still lays out one row per month, and only `total` of them', () => {
+    // Same series as above: the real rows claim their months, the projection
+    // fills the gaps with the installment numbers left over.
+    const result = processInstallments([
+      tx({ transactionId: 'a', date: '2025-12-16', description: 'Mercado 01/12', amount: 400 }),
+      tx({ transactionId: 'b', date: '2026-08-10', description: 'Mercado 08/12', amount: 400 }),
+    ])
+
+    expect(result).toHaveLength(12)
+    const months = result.map(t => monthKeyOf(t.date))
+    expect(new Set(months).size).toBe(12)
+    expect(result.reduce((sum, t) => sum + t.amount, 0)).toBe(4800)
+  })
+
+  it('treats a month written twice as one charge, not two', () => {
+    // This book carries 01/12, 02/12 and 04/12 all on 16/12/2025. Keeping every
+    // row would triple that month.
+    const result = processInstallments([
+      tx({ transactionId: 'a', date: '2025-12-16', description: 'Mercado 01/12', amount: 400 }),
+      tx({ transactionId: 'b', date: '2025-12-16', description: 'Mercado 02/12', amount: 400 }),
+      tx({ transactionId: 'c', date: '2025-12-16', description: 'Mercado 04/12', amount: 400 }),
+    ])
+
+    expect(result.filter(t => monthKeyOf(t.date) === '2025-12')).toHaveLength(1)
+    expect(result).toHaveLength(12)
+  })
+
   it('keeps a series whose first installment predates the data window', () => {
     const input = [tx({ transactionId: 'a', date: '2026-01-10', description: 'Sofá 05/10', amount: 200 })]
     expect(processInstallments(input)).toHaveLength(1)
