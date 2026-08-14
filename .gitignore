@@ -37,7 +37,13 @@ logs
 .env.*
 !.env.example
 
-# Cache files (local CSV cache)
+# Sobra local do cache em CSV, que foi removido junto com o espelho Postgres.
+# Nenhum codigo le mais esses arquivos; pode apagar a pasta a vontade.
 server/cache/
+
+# Claude Code: worktrees de task e settings da maquina.
+# O restante de .claude/ (settings.json, agents, skills) fica versionavel.
+.claude/worktrees/
+.claude/settings.local.json
 
 
