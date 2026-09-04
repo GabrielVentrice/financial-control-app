@@ -64,13 +64,19 @@ const num = (v: unknown): number => Number(v ?? 0)
  * version of this screen that never gets used twice. Every number is editable
  * from the screen afterwards.
  *
- * Two lines from the plan are deliberately absent: the R$ 450 loan repayment
- * and the R$ 1.000 reserve transfer. Neither has a ledger category of its own,
- * and inventing one would make the join lie. They show up as untargeted
- * spending until they earn a category.
+ * Three lines from the plan are deliberately absent.
+ *
+ * `Rent` because the R$ 4.000 is a target for *after* the move: seeding it now
+ * would credit R$ 4.000 of headroom every month against a bill that does not
+ * exist yet, and the one number the screen must never overstate is how much is
+ * left to spend. The commitment still lives in MOVE_PLAN.housingTarget, which
+ * the plan strip shows. When rent starts hitting the ledger the category
+ * appears in the untargeted list with a "definir" button.
+ *
+ * The R$ 450 loan repayment and the R$ 1.000 reserve transfer, because neither
+ * has a ledger category of its own and inventing one would make the join lie.
  */
 const SEED_TARGETS: Array<[string, number]> = [
-  ['Rent', 4_000],
   ['Utilities', 670],
   ['Supermarket', 800],
   ['Transportation', 600],
