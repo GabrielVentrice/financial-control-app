@@ -4,11 +4,6 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   runtimeConfig: {
-    // Private keys (server-side only) — the Google pair only feeds the budget
-    // screens (Sheets); transactions come from Bkper.
-    googleClientEmail: '',
-    googlePrivateKey: '',
-
     // Bkper: the ledger the transactions come from. `refreshToken` is what the
     // `bkper auth login` device flow stores; clientId/clientSecret are the CLI's
     // own OAuth client, which minted it.
@@ -20,15 +15,10 @@ export default defineNuxtConfig({
       apiKey: '',
     },
 
-    // TTL of the in-memory caches (Bkper snapshot, Sheets budgets/templates).
+    // TTL of the in-memory Bkper snapshot.
     cache: {
       ttlMinutes: 60,
     },
-
-    // Public keys (client-side accessible)
-    public: {
-      googleSpreadsheetId: '',
-    }
   },
 
   // tokens.css primeiro: global.css e as utilities do Tailwind consomem as
@@ -43,7 +33,7 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Sistema de controle financeiro integrado com Google Sheets' }
+        { name: 'description', content: 'Controle financeiro sobre o livro do Bkper' }
       ],
       link: [
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },

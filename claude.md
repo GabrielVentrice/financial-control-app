@@ -21,10 +21,11 @@ database mirror) and provides a web interface for visualization, filtering, and 
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS (light design system; tokens in [tailwind.config.js](tailwind.config.js))
 - **Source of truth & primary read source**: **Bkper** (REST API v5), read into an in-memory
-  server snapshot with a 60min TTL (see "Data Layer & Cache"). Google Sheets is still used,
-  but only by the budget screens (also behind the same TTL cache).
-- **Database**: PostgreSQL (Neon serverless, HTTP driver) via Drizzle ORM — holds ONLY
-  `debt_plans` (the cheque-especial anchor, app state that does not exist in the ledger)
+  server snapshot with a 60min TTL (see "Data Layer & Cache"). There is no Google Sheets
+  integration anymore — budget targets live in Postgres.
+- **Database**: PostgreSQL (Neon serverless, HTTP driver) via Drizzle ORM — holds only the
+  state the ledger cannot contain: `debt_plans` (the cheque-especial anchor) and
+  `budget_targets` (the monthly spending target per category)
 - **Charts**: Chart.js with vue-chartjs (plus a custom CSS/flex stacked-bar chart for installments)
 - **Deployment**: Vercel (Nitro `vercel` preset, serverless functions)
 - **Runtime**: Node.js 18+
@@ -52,28 +53,28 @@ financial-control-app/
 │   ├── useSync.ts                 # Snapshot freshness label + "Atualizar" action
 │   └── useFormatters.ts           # Currency/date/month formatting helpers
 ├── pages/
-│   ├── index.vue                  # Dashboard ("Coluna Refinada" layout)
+│   ├── index.vue                  # "Meu Mês": budget vs spending + the move-out plan
 │   ├── transactions.vue           # Full transaction list with filters
 │   ├── categories.vue             # Category spending (shared useTransactions)
 │   ├── installments.vue           # "Parcelas Ativas": commitment + 12-month projection
 │   ├── fixed-costs.vue            # Fixed costs historical analysis (6 months)
 │   ├── debt.vue                   # "Quitar Dívida": payoff plan over the raw snapshot
-│   ├── budget.vue                 # Monthly budgets (Sheets-backed)
-│   └── budget-templates.vue       # Budget templates (Sheets-backed)
+│   └── dashboard.vue              # The old dashboard, moved off `/`
 ├── server/
 │   ├── api/
 │   │   ├── transactions.get.ts    # Main endpoint (in-memory Bkper snapshot)
-│   │   ├── categories.get.ts      # Category aggregation + cached budgets
+│   │   ├── categories.get.ts      # Category aggregation + budget targets
+│   │   ├── month.get.ts           # The month measured against the budget (main screen)
+│   │   ├── budget-targets.post.ts # Sets one category's monthly target
 │   │   ├── sync.get.ts            # Snapshot age ("dados de há X")
-│   │   ├── sync.post.ts           # Force-refresh snapshot + invalidate budget caches
+│   │   ├── sync.post.ts           # Force-refresh snapshot
 │   │   ├── debt.get.ts/.post.ts   # Debt plan (debt_plans CRUD + JS analytics)
-│   │   └── budgets*, budget-templates* # Sheets-backed budget endpoints (cached)
 │   ├── database/                  # Drizzle schema + Neon client (debt_plans only)
 │   └── utils/
 │       ├── bkper.ts               # Bkper REST client (OAuth + pagination + mapping)
 │       ├── memoCache.ts           # createTtlCache: in-instance TTL cache w/ dedup + stale fallback
 │       ├── bookSnapshot.ts        # The whole-book snapshot every read consumes
-│       ├── budgetsCache.ts        # Sheets budgets/templates behind the same TTL cache
+│       ├── monthSnapshot.ts       # Budget targets + the month snapshot the main screen reads
 │       ├── loadTransactions.ts    # snapshot → installments → filters (single read path)
 │       ├── personIdentifier.ts    # Person identification logic
 │       ├── installmentProcessor.ts # Re-exports shared/installments
@@ -84,7 +85,9 @@ financial-control-app/
 │   ├── expenseRules.ts            # One definition of income/expense/transfer/exclusions
 │   ├── debtAnalytics.ts           # Debt math over the raw ledger (movement, interest, cashflow)
 │   ├── categoryClassification.ts  # Fixed/committed category lists (server + fixed-costs page)
-│   ├── categoryIcons.ts           # Category → emoji (budget screens)
+│   ├── monthBudget.ts             # Realized vs committed, pace, budget lines
+│   ├── movePlan.ts                # The move-out plan: cash curve, targets, open tasks
+│   ├── categoryIcons.ts           # Category → emoji
 │   └── dates.ts                   # Timezone-safe month bucketing
 └── types/
     └── transaction.ts             # TypeScript type definitions and interfaces
@@ -127,6 +130,34 @@ Sep/2025, ~R$ 4,3k, existed in the ledger and never reached the sheet).
 - **Installments (`/installments`)** — "Parcelas Ativas": how much income is committed to installments and when it eases. Hero cards (committed this month / total debt), KPIs (active count, next relief, end date), a 12-month commitment projection (stacked bar per parcela that shrinks as series end, with a 30%-of-income healthy-limit line), relief insight, and a sortable list with progress + drill-down modal
 - **Fixed Costs (`/fixed-costs`)**: Historical analysis of fixed costs over the last 6 months with chart visualization and category breakdown
 - **Debt (`/debt`)** — "Quitar Dívida": tracks paying off the cheque especial. Live balance, the interest it has actually cost, a month-by-month payoff projection, and a derived action plan. A band on the dashboard links to it.
+
+### 3a. "Meu Mês" — the main screen (`/`)
+
+Answers three questions in the order they occur to someone opening the app: **how much can I
+still spend**, **where is the month going**, and **am I on track for the move**.
+
+- **Hero**: `renda − realizado − comprometido`, plus the days left and what that allows per day.
+  It is a CASH number, not a budget one — a budget is an agreement, cash is what exists, and
+  when they disagree cash wins.
+- **Pace bar**: realized spending against the fraction of the month already lived. Committed
+  installments are excluded: they land on the card's dates, not at a steady drip, so counting
+  them would report "over pace" on the 10th of every month regardless of behaviour.
+- **Category list**: one line per category, ordered by **proximity to breaking**, not by amount.
+  Each uses `CeilingBar` (the empty space to the right is the headroom). The number on the right
+  is what still fits, and it goes negative rather than clamping.
+- **Targets are editable inline** and persist to `budget_targets`. Saving returns the recomputed
+  snapshot, so the totals and the line can never disagree.
+- **Plan strip**: expected cash for the month vs. actual (derived from the debt anchor), plus the
+  open moves that cost money while they wait.
+
+**The rule this screen rests on** (`shared/monthBudget.ts`): a month holds two kinds of row, and
+merging them is what makes a budget screen lie. `realizado` already left the account;
+`comprometido` is an installment row #2..N carrying `projected: true` — it has not happened but
+it will. Adding them together reports a month that never happened; ignoring the projected half
+promises headroom that is already spoken for. Both halves survive all the way to the UI.
+
+The plan's own curve (`shared/movePlan.ts`) is code, not a table: it changes once a quarter, and
+a plan you can edit from a form is a plan you edit instead of following.
 
 ### 3b. Debt Payoff Feature ("Quitar Dívida")
 
@@ -260,9 +291,9 @@ The fixed costs page provides historical analysis of recurring expenses:
 ## Important Files
 
 ### Configuration
-- [nuxt.config.ts](nuxt.config.ts): Nuxt app configuration, runtime config for Bkper/Google credentials, OpenAPI settings
+- [nuxt.config.ts](nuxt.config.ts): Nuxt app configuration, runtime config for Bkper credentials, OpenAPI settings
 - [tailwind.config.js](tailwind.config.js): Custom theme colors (primary blue palette)
-- `.env`: Environment variables (NUXT_BKPER_*, DATABASE_URL, and the NUXT_GOOGLE_* pair used by the budget screens)
+- `.env`: Environment variables (NUXT_BKPER_*, DATABASE_URL)
 - `/_openapi.json`: **OpenAPI 3.1 specification** - Auto-generated API documentation for AI agents and tools
 
 ### Server-Side Logic (NEW Architecture)
@@ -298,22 +329,17 @@ npm run preview      # Preview production build
 ```
 
 ### Environment Setup
-1. Create Google Cloud project
-2. Enable Google Sheets API (only needed for the budget screens)
-3. Create Service Account and download JSON key
-4. Share target Google Sheets with service account email
-5. Configure `.env` with credentials and spreadsheet ID
-6. Authenticate against Bkper: `npm i -g bkper && bkper auth login`, then copy the
+1. Configure `.env` with the Bkper credentials and `DATABASE_URL`
+2. Authenticate against Bkper: `npm i -g bkper && bkper auth login`, then copy the
    `refresh_token` from `~/.config/bkper/.bkper-credentials.json` into `NUXT_BKPER_REFRESH_TOKEN`
    (with the CLI's own OAuth client in `NUXT_BKPER_CLIENT_ID`/`NUXT_BKPER_CLIENT_SECRET`), and
    the book id in `NUXT_BKPER_BOOK_ID` (`GET https://api.bkper.app/v5/books` lists them).
-7. Set `DATABASE_URL` (Neon Postgres) — only needed by the debt screen (`debt_plans` table).
+3. Set `DATABASE_URL` (Neon Postgres) — the main screen and the debt screen both need it.
 
 **Key env vars:** `NUXT_BKPER_BOOK_ID`, `NUXT_BKPER_REFRESH_TOKEN`, `NUXT_BKPER_CLIENT_ID`,
-`NUXT_BKPER_CLIENT_SECRET`, `DATABASE_URL`, plus
-`NUXT_PUBLIC_GOOGLE_SPREADSHEET_ID` / `NUXT_GOOGLE_CLIENT_EMAIL` / `NUXT_GOOGLE_PRIVATE_KEY`
-for the budget screens. **All of them must also exist in the Vercel project** — a deploy without
-`NUXT_BKPER_*` fails every transaction read.
+`NUXT_BKPER_CLIENT_SECRET`, `DATABASE_URL`. **All of them must also exist in the Vercel
+project** — a deploy without `NUXT_BKPER_*` fails every transaction read, and one without
+`DATABASE_URL` takes down the main screen.
 
 ## Customization Points
 
@@ -500,7 +526,7 @@ See **"Data Layer & Cache"** below for the cache/TTL details.
 **Benefits:**
 - ✅ **Better Performance**: Reduced client-side processing, lower bandwidth usage
 - ✅ **Scalability**: Server handles larger datasets more efficiently
-- ✅ **Security**: All Google credentials and business logic stay server-side
+- ✅ **Security**: All ledger credentials and business logic stay server-side
 - ✅ **Maintainability**: Clear separation of concerns, single source of truth for logic
 - ✅ **Testability**: Server utilities can be tested independently
 
@@ -558,10 +584,9 @@ await fetchTransactions({
 
 ## Security Notes
 
-- Google credentials stored server-side only (never exposed to client)
+- Ledger credentials stored server-side only (never exposed to client)
 - Environment variables used for sensitive data
 - `.env` file is git-ignored
-- Service Account has read-only access to specific spreadsheet (budgets only)
 - The Bkper refresh token grants full access to the ledger — it belongs in env vars, never in the repo
 
 ## Data Layer & Cache
@@ -576,18 +601,20 @@ await fetchTransactions({
   `getBookSnapshot()` → `processInstallments()` → `applyFilters()`. `/api/transactions`,
   `/api/categories` and `apply-template` all go through it; `/api/debt` reads the RAW snapshot
   (no installment expansion — projected rows must never count as account movement).
-- **Budgets/templates** (Google Sheets) sit behind the same `createTtlCache` in
-  [server/utils/budgetsCache.ts](server/utils/budgetsCache.ts); the POST endpoints invalidate
-  after writing to the Sheet.
+- **Budget targets** live in Postgres and are read fresh on every request — there is nothing
+  to cache and nothing to invalidate. `readTargets()` in
+  [server/utils/monthSnapshot.ts](server/utils/monthSnapshot.ts) seeds the plan's budget the
+  first time it finds the table empty.
 - `GET /api/sync` reports the snapshot's age (the "dados de há X" label — warns when refreshes
   seem to be failing). `POST /api/sync` (the "Atualizar" button) forces a fresh Bkper read and
-  invalidates the budget caches; the client then calls `refreshNuxtData()`.
+  the client then calls `refreshNuxtData()`.
 - **Failure mode**: a background refresh that fails serves the previous (stale) snapshot and
   logs; an explicit refresh (the button) propagates the error so the user sees it.
 - **Multi-instance caveat (Vercel)**: each serverless instance holds its own snapshot, so the
   "dados de há X" label can differ between requests and "Atualizar" only renews the instance
   that served it. Fine for a personal app; the TTL bounds the drift at 60min.
-- **Postgres (Neon)** holds only `debt_plans` ([server/database/schema.ts](server/database/schema.ts)).
+- **Postgres (Neon)** holds `debt_plans` and `budget_targets`
+  ([server/database/schema.ts](server/database/schema.ts)).
   The old `transactions`/`budgets`/`sync_metadata` tables may still exist in the database until
   `npm run db:push` is run against the slimmed schema — leaving them for a few days after the
   migration is the free rollback.
@@ -626,7 +653,6 @@ await fetchTransactions({
 
 - Read-only access to Bkper (no write operations); the ledger is the source of truth.
 - Single book support
-- Budgets and budget templates still live in Google Sheets, not in Bkper.
 - No user authentication
 - Data freshness is bounded by the snapshot TTL (60min) — the "Atualizar" button forces a
   fresh read when needed.
@@ -634,7 +660,6 @@ await fetchTransactions({
 ## Future Enhancement Ideas
 
 See [README.md](README.md) for detailed list of potential improvements including:
-- Write capabilities to Google Sheets
 - Multiple spreadsheet/account support
 - User authentication
 - Data caching and performance optimization
@@ -725,4 +750,3 @@ await fetchTransactions({ person: 'Gabriel' })
 - [Nitro OpenAPI Documentation](https://nitro.unjs.io/guide/openapi)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [Bkper REST API](https://bkper.com/docs/api/rest)
-- [Google Sheets API Documentation](https://developers.google.com/sheets/api)

@@ -1,9 +1,11 @@
-import { pgTable, serial, varchar, date, decimal, timestamp } from 'drizzle-orm/pg-core'
+import { pgTable, serial, varchar, date, decimal, timestamp, integer, boolean } from 'drizzle-orm/pg-core'
 
 /**
- * The only table left. Transactions are read straight from the Bkper API into
- * an in-memory snapshot (server/utils/bookSnapshot.ts) — the Postgres mirror
- * of the book, its sync metadata and the never-used budgets table are gone.
+ * Two tables, and both hold the same kind of thing: app state that the ledger
+ * cannot contain. Transactions themselves are read straight from the Bkper API
+ * into an in-memory snapshot (server/utils/bookSnapshot.ts) — the Postgres
+ * mirror of the book, its sync metadata and the never-used budgets table are
+ * gone.
  *
  * NOTE: the old `transactions`, `budgets` and `sync_metadata` tables may still
  * exist in the database until `npm run db:push` is run against this slimmed
@@ -41,3 +43,35 @@ export const debtPlans = pgTable('debt_plans', {
 
 export type DebtPlan = typeof debtPlans.$inferSelect
 export type NewDebtPlan = typeof debtPlans.$inferInsert
+
+/**
+ * Monthly spending targets, one row per category.
+ *
+ * The ledger says what was spent; nothing in it says what *should* be spent.
+ * That half of the budget is a decision, so it lives here — the same reason
+ * `debt_plans` exists.
+ *
+ * Targets are RECURRING, not per-month: the budget is a standing agreement with
+ * yourself, and asking for sixteen numbers again every 1st of the month is how
+ * budgets get abandoned. A per-month override can be layered on later if a
+ * month ever genuinely needs different numbers.
+ *
+ * `category` matches the ledger's own destination names ("Supermarket",
+ * "Transportation"), so a target joins to spending without a mapping table.
+ */
+export const budgetTargets = pgTable('budget_targets', {
+  id: serial('id').primaryKey(),
+  /** Ledger destination name, or one of the synthetic keys in shared/monthBudget.ts. */
+  category: varchar('category', { length: 120 }).notNull().unique(),
+  /** What this category is allowed to cost in a month. */
+  monthlyAmount: decimal('monthly_amount', { precision: 12, scale: 2 }).notNull(),
+  /** Display order, so the budget reads top-down the way it was decided. */
+  sortOrder: integer('sort_order').notNull().default(0),
+  /** Retired targets stay for history instead of being deleted. */
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+export type BudgetTarget = typeof budgetTargets.$inferSelect
+export type NewBudgetTarget = typeof budgetTargets.$inferInsert

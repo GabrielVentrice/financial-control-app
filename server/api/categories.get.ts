@@ -1,7 +1,8 @@
-import type { Transaction, CategoriesQueryParams, CategoriesResponse, CategoryData, CategoryTotals, Budget } from '~/types/transaction'
+import type { Transaction, CategoriesQueryParams, CategoriesResponse, CategoryData, CategoryTotals } from '~/types/transaction'
 import { loadTransactions } from '../utils/loadTransactions'
 import { validateQueryParams } from '../utils/transactionFilters'
-import { getBudgetsCached } from '../utils/budgetsCache'
+import { readTargets } from '../utils/monthSnapshot'
+import type { BudgetTarget } from '~/shared/monthBudget'
 import { isSpendingCategory, expenseAmount, UNCATEGORIZED } from '~/shared/expenseRules'
 import { isCustoFixoCategory, isGastoComprometidoCategory } from '~/shared/categoryClassification'
 
@@ -12,7 +13,7 @@ import { isCustoFixoCategory, isGastoComprometidoCategory } from '~/shared/categ
  * and categorization rules.
  *
  * 📊 **Processing Pipeline:**
- * 1. Fetches raw data from Google Sheets
+ * 1. Reads the in-memory Bkper snapshot
  * 2. Enriches transactions with person identification (Juliana/Gabriel)
  * 3. Processes and expands installments across months (optional)
  * 4. Applies filters based on query parameters
@@ -78,28 +79,22 @@ export default defineEventHandler(async (event) => {
     // enrichment, installment expansion, filters).
     const transactions = await loadTransactions(query)
 
-    // STEP 5: Fetch budgets for the filtered period. Cached — this endpoint
-    // used to pay a Sheets round-trip on every request.
-    let budgets: Budget[] = []
+    // STEP 5: Monthly targets. They are recurring and person-agnostic, so
+    // there is nothing to filter by period — the target for "Supermarket" is
+    // the same in every month until it is changed.
+    //
+    // A missing database must not take this endpoint down: budgets are extra
+    // context here, while the spending breakdown is the answer being asked for.
+    let budgets: BudgetTarget[] = []
     try {
-      budgets = await getBudgetsCached()
-
-      // If date filters are present, filter budgets to match the period.
-      // The month comes from the "YYYY-MM" slice — building a Date out of the
-      // ISO day parses it as UTC and can land on the previous month in UTC-3.
-      if (query.endDate) {
-        const [filterYear, filterMonth] = query.endDate.split('-').map(Number)
-        budgets = budgets.filter(
-          budget => budget.year === filterYear && budget.month === filterMonth
-        )
-      }
+      budgets = await readTargets()
     } catch (error) {
-      console.warn('[API] Could not fetch budgets, continuing without budget data:', error)
+      console.warn('[API] Could not read budget targets, continuing without them:', error)
     }
 
     // STEP 6: Process categories
     const includeTransactions = query.includeTransactions === 'true' || query.includeTransactions === true
-    const categoriesResponse = processCategoriesData(transactions, budgets, includeTransactions, query.person)
+    const categoriesResponse = processCategoriesData(transactions, budgets, includeTransactions)
 
     console.log('[API] Processed categories. Categories count:', categoriesResponse.categories.length)
 
@@ -125,9 +120,8 @@ export default defineEventHandler(async (event) => {
  */
 function processCategoriesData(
   transactions: Transaction[],
-  budgets: Budget[],
+  budgets: BudgetTarget[],
   includeTransactions: boolean,
-  selectedPerson?: 'Juliana' | 'Gabriel' | 'Ambos'
 ): CategoriesResponse {
   // Keep only rows whose destination is an actual spending category — accounts,
   // cards and adjustments are movements, not spending (shared/expenseRules.ts).
@@ -150,44 +144,18 @@ function processCategoriesData(
   // Calculate total amount for percentage calculations
   const totalAmount = filteredTransactions.reduce((sum, t) => sum + expenseAmount(t), 0)
 
-  // Helper function to calculate budget info for a category
+  // Budget info for a category, when it has a target at all.
+  const targetOf = new Map(budgets.map(b => [b.category, b.monthlyAmount]))
+
   const calculateBudgetInfo = (categoryName: string, spent: number) => {
-    const categoryBudgets = budgets.filter(b => b.category === categoryName)
-    const julianaBudget = categoryBudgets.find(b => b.person === 'Juliana')?.amount || 0
-    const gabrielBudget = categoryBudgets.find(b => b.person === 'Gabriel')?.amount || 0
+    const total = targetOf.get(categoryName) || 0
+    if (total <= 0) return undefined
 
-    // Calculate budget based on selected person
-    let totalBudget = 0
-    let displayJulianaBudget = 0
-    let displayGabrielBudget = 0
-
-    if (selectedPerson === 'Gabriel') {
-      totalBudget = gabrielBudget
-      displayGabrielBudget = gabrielBudget
-    } else if (selectedPerson === 'Juliana') {
-      totalBudget = julianaBudget
-      displayJulianaBudget = julianaBudget
-    } else {
-      totalBudget = julianaBudget + gabrielBudget
-      displayJulianaBudget = julianaBudget
-      displayGabrielBudget = gabrielBudget
+    return {
+      total,
+      remaining: total - spent,
+      percentageUsed: (spent / total) * 100
     }
-
-    // Calculate budget metrics if budget exists
-    if (totalBudget > 0) {
-      const remaining = totalBudget - spent
-      const percentageUsed = (spent / totalBudget) * 100
-
-      return {
-        juliana: displayJulianaBudget,
-        gabriel: displayGabrielBudget,
-        total: totalBudget,
-        remaining: remaining,
-        percentageUsed: percentageUsed
-      }
-    }
-
-    return undefined
   }
 
   // Build categories array with budget information
@@ -213,7 +181,8 @@ function processCategoriesData(
     processedCategories.add(name)
   })
 
-  // Then, add categories that have budgets but no transactions
+  // Then, add categories that have a target but no spending this period — a
+  // budget line at zero is information, not an empty row.
   budgets.forEach(budget => {
     if (!processedCategories.has(budget.category)) {
       const budgetInfo = calculateBudgetInfo(budget.category, 0)

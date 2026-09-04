@@ -1,5 +1,4 @@
 import { getBookSnapshot } from '../utils/bookSnapshot'
-import { invalidateBudgets, invalidateBudgetTemplates } from '../utils/budgetsCache'
 
 /**
  * POST /api/sync
@@ -7,15 +6,13 @@ import { invalidateBudgets, invalidateBudgetTemplates } from '../utils/budgetsCa
  * The "Atualizar" button: force a fresh read of the Bkper book, bypassing the
  * TTL. The route name survives from the Postgres-mirror era so the composables
  * and every screen keep working unchanged — semantically it is now a cache
- * refresh, not a database sync. Budgets/templates are invalidated too, so one
- * button refreshes everything the app serves.
+ * refresh, not a database sync. There is nothing else to invalidate: budget
+ * targets live in Postgres and are read fresh on every request.
  */
 export default defineEventHandler(async () => {
   const started = Date.now()
 
   try {
-    invalidateBudgets()
-    invalidateBudgetTemplates()
     const { transactions } = await getBookSnapshot({ forceRefresh: true })
 
     return {

@@ -20,7 +20,6 @@ export default defineEventHandler(() => {
         config.bkper?.clientId &&
         config.bkper?.clientSecret
       ),
-      googleSheets: Boolean(config.googleClientEmail && config.googlePrivateKey),
       database: Boolean(process.env.DATABASE_URL),
     },
     snapshot: {

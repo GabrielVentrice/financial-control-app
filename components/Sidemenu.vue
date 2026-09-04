@@ -130,7 +130,8 @@ const navGroups = [
   {
     label: 'Acompanhar',
     items: [
-      { label: 'Dashboard', path: '/' },
+      { label: 'Meu Mês', path: '/' },
+      { label: 'Dashboard', path: '/dashboard' },
       { label: 'Gastos por Categoria', path: '/categories' },
       { label: 'Transações', path: '/transactions' },
     ]
@@ -138,8 +139,6 @@ const navGroups = [
   {
     label: 'Planejar',
     items: [
-      { label: 'Orçamento', path: '/budget' },
-      { label: 'Templates de Orçamento', path: '/budget-templates' },
       { label: 'Custos Fixos', path: '/fixed-costs' },
       { label: 'Parcelas', path: '/installments' },
       { label: 'Quitar Dívida', path: '/debt' },
