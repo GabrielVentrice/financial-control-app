@@ -7,6 +7,7 @@ import {
   buildBudgetLines,
   monthTotals,
   paceSignal,
+  groupBudgetLines,
   type BudgetTarget,
 } from '~/shared/monthBudget'
 
@@ -177,5 +178,70 @@ describe('timezone', () => {
     expect(incomeOf(rows, '2026-08')).toBe(0)
     expect(splitMonth(rows, '2026-08').realized).toHaveLength(1)
     expect(splitMonth(rows, '2026-09').realized).toHaveLength(0)
+  })
+})
+
+describe('grouping by situation', () => {
+  const rows = [
+    // over: R$ 400 spent against a R$ 100 target
+    tx({ transactionId: 'g1', destination: 'Gifts', amount: 400 }),
+    // over only because of what is still going to land
+    tx({ transactionId: 'g2', destination: 'Medical', amount: 517, projected: true }),
+    // within, 90% gone
+    tx({ transactionId: 'g3', destination: 'Taxes Due', amount: 90 }),
+    // within, barely touched
+    tx({ transactionId: 'g4', destination: 'Subscriptions', amount: 75 }),
+    // spending with no target at all
+    tx({ transactionId: 'g5', destination: 'Variable Expenses', amount: 60 }),
+  ]
+
+  const built = () =>
+    groupBudgetLines(
+      buildBudgetLines(rows, '2026-09', targets(
+        ['Gifts', 100],
+        ['Medical', 400],
+        ['Taxes Due', 100],
+        ['Subscriptions', 1295],
+        ['Supermarket', 800],
+        ['Food', 400],
+      ))
+    )
+
+  it('puts each category in the group that describes it', () => {
+    const byKey = Object.fromEntries(built().map(g => [g.key, g.lines.map(l => l.category)]))
+
+    expect(byKey.over).toEqual(['Gifts', 'Medical'])
+    expect(byKey.within).toEqual(['Taxes Due', 'Subscriptions'])
+    expect(byKey.untouched).toEqual(['Supermarket', 'Food'])
+    expect(byKey.untargeted).toEqual(['Variable Expenses'])
+  })
+
+  /** A projected installment breaks a budget as surely as a realized one. */
+  it('counts committed money when deciding a category has broken', () => {
+    const medical = built().find(g => g.key === 'over')!.lines.find(l => l.category === 'Medical')!
+    expect(medical.spent).toBe(0)
+    expect(medical.remaining).toBe(-117)
+  })
+
+  it('reports the number each group is about', () => {
+    const byKey = Object.fromEntries(built().map(g => [g.key, g.amount]))
+
+    expect(byKey.over).toBe(417)        // 300 past the Gifts target + 117 past Medical
+    expect(byKey.within).toBe(1230)     // 10 left on Taxes + 1.220 on Subscriptions
+    expect(byKey.untouched).toBe(1200)  // the whole Supermarket + Food budget
+    expect(byKey.untargeted).toBe(60)
+  })
+
+  /** Proportion, not absolute headroom: R$ 10 of R$ 100 is tighter than R$ 1.220 of R$ 1.295. */
+  it('orders the healthy group by how little room is left, proportionally', () => {
+    const within = built().find(g => g.key === 'within')!
+    expect(within.lines.map(l => l.category)).toEqual(['Taxes Due', 'Subscriptions'])
+  })
+
+  it('drops groups with nothing in them', () => {
+    const groups = groupBudgetLines(
+      buildBudgetLines([tx({ destination: 'Food', amount: 50 })], '2026-09', targets(['Food', 400]))
+    )
+    expect(groups.map(g => g.key)).toEqual(['within'])
   })
 })

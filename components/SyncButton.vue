@@ -1,5 +1,12 @@
 <template>
   <div class="inline-flex items-baseline gap-2.5">
+    <!-- A idade do dado vem antes do botão: é ela que decide se vale clicar. -->
+    <span
+      v-if="lastSyncLabel"
+      class="text-meta whitespace-nowrap"
+      :class="isStale ? 'text-warn font-semibold' : 'text-text-3'"
+    >dados de {{ lastSyncLabel }}</span>
+
     <button
       type="button"
       :disabled="syncing"
@@ -8,12 +15,6 @@
     >
       {{ syncing ? 'atualizando…' : 'atualizar' }}
     </button>
-
-    <span
-      v-if="lastSyncLabel"
-      class="text-meta whitespace-nowrap"
-      :class="isStale ? 'text-warn font-semibold' : 'text-text-3'"
-    >dados de {{ lastSyncLabel }}</span>
   </div>
 </template>
 

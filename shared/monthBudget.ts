@@ -255,3 +255,67 @@ export function paceSignal(lines: BudgetLine[], pace: MonthPace) {
     onPace: spent <= expected,
   }
 }
+
+/** The four situations a category can be in, in reading order. */
+export type BudgetGroupKey = 'over' | 'within' | 'untouched' | 'untargeted'
+
+export interface BudgetGroup {
+  key: BudgetGroupKey
+  lines: BudgetLine[]
+  /**
+   * The one number the group is about: money already past the target (over),
+   * money that still fits (within), budget not touched yet (untouched), or
+   * spending with no target at all (untargeted).
+   */
+  amount: number
+  /** Realized rows in the group. */
+  count: number
+}
+
+/**
+ * The month's categories, split by situation.
+ *
+ * A flat list ordered by "closest to breaking" hides the only thing the reader
+ * is scanning for: which categories are already broken. Grouping answers that
+ * before any number is read, and it lets the two halves that need no attention
+ * — budgets untouched so far, spending with no target — collapse into chips
+ * instead of eating a row each.
+ *
+ * Within each group the order is the one that group is about: biggest overrun
+ * first, then the tightest headroom (proportionally, so a R$ 50 target that is
+ * 90% gone outranks a R$ 1.300 one that is 6% gone), then the biggest untouched
+ * budget, then the biggest untargeted spend.
+ *
+ * Empty groups are dropped — a heading over nothing is noise.
+ */
+export function groupBudgetLines(lines: BudgetLine[]): BudgetGroup[] {
+  const over: BudgetLine[] = []
+  const within: BudgetLine[] = []
+  const untouched: BudgetLine[] = []
+  const untargeted: BudgetLine[] = []
+
+  for (const line of lines) {
+    if (!line.hasTarget) untargeted.push(line)
+    else if (line.remaining < 0) over.push(line)
+    else if (line.used > 0) within.push(line)
+    else untouched.push(line)
+  }
+
+  over.sort((a, b) => a.remaining - b.remaining)
+  within.sort((a, b) => a.remaining / a.target - b.remaining / b.target)
+  untouched.sort((a, b) => b.target - a.target)
+  untargeted.sort((a, b) => b.used - a.used)
+
+  const sum = (group: BudgetLine[], of: (l: BudgetLine) => number) =>
+    group.reduce((total, line) => total + of(line), 0)
+  const counted = (group: BudgetLine[]) => sum(group, l => l.count)
+
+  const groups: BudgetGroup[] = [
+    { key: 'over', lines: over, amount: sum(over, l => -l.remaining), count: counted(over) },
+    { key: 'within', lines: within, amount: sum(within, l => l.remaining), count: counted(within) },
+    { key: 'untouched', lines: untouched, amount: sum(untouched, l => l.target), count: 0 },
+    { key: 'untargeted', lines: untargeted, amount: sum(untargeted, l => l.used), count: counted(untargeted) },
+  ]
+
+  return groups.filter(group => group.lines.length > 0)
+}

@@ -11,14 +11,14 @@
       <template v-else-if="snapshot">
         <!-- ═══ HERO — a única pergunta que importa ao abrir o app ═══ -->
         <section
-          class="grid grid-cols-[1.35fr_1fr] max-xl:grid-cols-2 max-lg:grid-cols-1 gap-30 max-lg:gap-18 pb-26 border-b border-[color:var(--border)]"
+          class="grid grid-cols-[1.15fr_1fr] max-xl:grid-cols-2 max-lg:grid-cols-1 gap-30 max-lg:gap-18 pb-26 border-b border-[color:var(--border)]"
         >
-          <div class="flex flex-col gap-[10px]">
+          <div class="flex flex-col">
             <p class="om-rise text-label uppercase text-text-3" :style="om(40, 520)">
               {{ pace.isCurrent ? 'Disponível para o resto do mês' : 'Sobrou no mês' }}
             </p>
 
-            <div class="flex items-baseline gap-[14px] flex-wrap">
+            <div class="flex items-baseline gap-[18px] flex-wrap mt-1.5">
               <span v-if="loading" class="block w-[300px] h-[74px] rounded-control bg-rule" aria-hidden="true"></span>
               <span
                 v-else
@@ -26,55 +26,82 @@
                 :class="totals.available < 0 ? 'text-neg-text' : 'text-ink'"
                 :style="om(90, 760)"
               >{{ formatCurrency(totals.available) }}</span>
+
+              <MonthStatusChip
+                v-if="paceVerdict"
+                :tone="paceVerdict.tone"
+                dot
+                class="om-rise"
+                :style="om(200, 520)"
+              >
+                <span class="maskable num">{{ formatCurrency(paceVerdict.amount) }}</span>
+                {{ paceVerdict.label }}
+              </MonthStatusChip>
             </div>
 
-            <p class="om-rise text-body text-text-2 [text-wrap:pretty]" :style="om(240, 560)">
-              <template v-if="pace.isCurrent && pace.daysLeft > 0">
-                Faltam <b class="font-semibold text-ink num">{{ pace.daysLeft }}</b>
-                {{ pace.daysLeft === 1 ? 'dia' : 'dias' }} —
-                <b class="font-semibold text-ink num maskable">{{ formatCurrency(totals.dailyAllowance) }}</b> por dia.
-              </template>
-              <template v-else>
-                Mês fechado: entrou
-                <b class="font-semibold text-ink num maskable">{{ formatCurrency(totals.income) }}</b>,
-                saiu <b class="font-semibold text-ink num maskable">{{ formatCurrency(totals.spent) }}</b>.
-              </template>
-            </p>
+            <!-- O número grande traduzido para as duas decisões que ele permite. -->
+            <div
+              v-if="showsDaily || totals.budgeted > 0"
+              class="om-rise grid grid-cols-2 gap-[24px] max-w-[460px] mt-22"
+              :style="om(240, 560)"
+            >
+              <div v-if="showsDaily" class="flex flex-col gap-0.5">
+                <p class="maskable num font-display text-hero-3 text-ink">
+                  {{ formatCurrency(totals.dailyAllowance) }}
+                </p>
+                <p class="text-body-sm text-text-3">
+                  por dia, pelos próximos
+                  <b class="font-semibold text-ink num">{{ pace.daysLeft }}</b>
+                  {{ pace.daysLeft === 1 ? 'dia' : 'dias' }}
+                </p>
+              </div>
 
-            <!-- Ritmo: gasto realizado contra a fração do mês já vivida. -->
-            <div v-if="pace.isCurrent && signal.budgeted > 0" class="om-rise mt-2 max-w-[420px]" :style="om(320, 560)">
-              <CeilingBar :value="signal.spent" :ceiling="signal.budgeted" :used-pct="pace.ratio * 100" :delay="380">
-                <template v-if="signal.onPace">
-                  No ritmo — <span class="maskable num">{{ formatCurrency(Math.abs(signal.excess)) }}</span>
-                  abaixo do esperado para o dia {{ pace.daysElapsed }}.
-                </template>
-                <template v-else>
-                  <span class="text-neg-text">
-                    <span class="maskable num">{{ formatCurrency(signal.excess) }}</span>
-                    acima do ritmo do dia {{ pace.daysElapsed }}.
-                  </span>
-                </template>
-              </CeilingBar>
+              <div v-if="totals.budgeted > 0" class="flex flex-col gap-0.5">
+                <p
+                  class="maskable num font-display text-hero-3"
+                  :class="totals.budgetRemaining < 0 ? 'text-neg-text' : 'text-ink'"
+                >{{ formatCurrency(Math.abs(totals.budgetRemaining)) }}</p>
+                <p class="text-body-sm text-text-3">
+                  {{ totals.budgetRemaining < 0 ? 'além dos' : 'de folga sobre' }}
+                  <span class="maskable num">{{ formatCurrency(totals.budgeted) }}</span> orçados
+                </p>
+              </div>
+            </div>
+
+            <!-- Quanto da renda já foi, contra quanto do mês já foi. -->
+            <div v-if="totals.income > 0" class="om-rise max-w-[460px] mt-22" :style="om(320, 560)">
+              <MonthPaceBar
+                :used="totals.spent + totals.committed"
+                :income="totals.income"
+                :pace="pace"
+                :over-pace="!signal.onPace"
+                :delay="380"
+              />
             </div>
           </div>
 
-          <!-- Coluna direita: as três parcelas do número grande. -->
-          <div class="flex flex-col gap-[18px] pl-30 max-lg:pl-0 border-l max-lg:border-l-0 border-[color:var(--border)]">
-            <div v-for="(tile, i) in tiles" :key="tile.label" class="om-rise flex flex-col gap-1" :style="om(300 + i * 60, 560)">
-              <p class="text-label uppercase text-text-3">{{ tile.label }}</p>
-              <p class="maskable num font-display text-hero-2" :class="tile.cls">{{ formatCurrency(tile.value) }}</p>
-              <p class="text-meta text-text-3">{{ tile.note }}</p>
-            </div>
+          <!-- Coluna direita: o número grande escrito como a conta que ele é. -->
+          <div class="pl-34 max-lg:pl-0 border-l max-lg:border-l-0 border-[color:var(--border)]">
+            <MonthCashEquation :totals="totals" :count="realizedCount" :delay="300" />
           </div>
         </section>
 
         <!-- ═══ CATEGORIAS ═══ -->
         <section class="flex flex-col gap-18">
-          <div class="om-rise flex flex-wrap items-baseline justify-between gap-3" :style="om(440, 560)">
+          <div class="om-rise flex flex-wrap items-baseline justify-between gap-x-18 gap-y-2" :style="om(440, 560)">
             <h2 class="font-display text-section text-ink">Onde o mês está indo</h2>
-            <span class="text-meta text-text-3">
-              ordenado por quem está mais perto de estourar
-            </span>
+
+            <div class="flex flex-wrap gap-x-18 gap-y-1 text-body-sm text-text-3">
+              <span v-for="item in legend" :key="item.key">
+                <span
+                  class="inline-block w-[9px] h-[9px] rounded-bar mr-1.5"
+                  :style="{ background: item.swatch }"
+                  aria-hidden="true"
+                ></span>{{ item.text }}
+                <b v-if="item.amount" class="maskable num font-semibold" :style="{ color: item.amountColor }">{{ item.amount }}</b>
+                {{ item.suffix }}
+              </span>
+            </div>
           </div>
 
           <p v-if="saveError" role="alert" class="text-body-sm text-neg-text">{{ saveError }}</p>
@@ -85,21 +112,13 @@
             description="Sincronize o livro ou escolha outro mês."
           />
 
-          <div v-else class="flex flex-col">
-            <div
-              class="grid grid-cols-[minmax(0,1fr)_260px_150px] max-xl:grid-cols-[minmax(0,1fr)_200px_130px] max-lg:hidden gap-18 items-center pb-2 border-b border-rule-strong text-[10px] font-bold tracking-[0.14em] uppercase text-text-3"
-            >
-              <span>Categoria</span>
-              <span>Gasto sobre a meta</span>
-              <span class="text-right">Ainda cabe</span>
-            </div>
-
-            <MonthCategoryBudgetRow
-              v-for="(line, i) in snapshot.lines"
-              :key="line.category"
-              :line="line"
-              :delay="600 + i * 38"
-              :busy="saving === line.category"
+          <div v-else class="flex flex-col gap-26">
+            <MonthCategoryGroup
+              v-for="(group, i) in groups"
+              :key="group.key"
+              :group="group"
+              :delay="500 + i * 60"
+              :busy="saving"
               @save="saveTarget"
             />
           </div>
@@ -114,18 +133,21 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { currentMonthKey } from '~/shared/dates'
+import { groupBudgetLines } from '~/shared/monthBudget'
 
 /**
  * "Meu Mês" — a tela principal.
  *
- * Responde, nesta ordem: quanto ainda posso gastar, onde o mês está indo, e
- * estou no trilho do plano de mudança. O número grande é de CAIXA (renda menos
- * o que saiu menos o que ainda vai cair), não de orçamento — orçamento é um
- * acordo, caixa é o que existe, e quando os dois discordam quem manda é o caixa.
+ * Responde, nesta ordem: quanto ainda posso gastar, como esse número se forma,
+ * onde o mês está indo, e estou no trilho do plano de mudança. O número grande é
+ * de CAIXA (renda menos o que saiu menos o que ainda vai cair), não de
+ * orçamento — orçamento é um acordo, caixa é o que existe, e quando os dois
+ * discordam quem manda é o caixa.
  *
- * Nada é recalculado aqui: /api/month devolve o mês inteiro medido, e salvar
- * uma meta devolve o mês recomputado. A tela e o servidor não têm como
- * discordar sobre um total.
+ * Nada é medido aqui: /api/month devolve o mês inteiro medido, e salvar uma meta
+ * devolve o mês recomputado. A tela e o servidor não têm como discordar sobre um
+ * total. O agrupamento das categorias é ordenação, não medição — vive em
+ * shared/monthBudget.ts, puro e testado, e não em um computed nesta página.
  */
 useHead({ title: 'Meu Mês — Controle Financeiro' })
 
@@ -148,30 +170,55 @@ const signal = computed(
   () => snapshot.value?.signal ?? { spent: 0, budgeted: 0, expected: 0, excess: 0, onPace: true }
 )
 
-const tiles = computed(() => [
-  {
-    label: 'Entrou',
-    value: totals.value.income,
-    cls: 'text-pos-text',
-    note: 'salário e outras entradas do mês',
-  },
-  {
-    label: 'Já saiu',
-    value: totals.value.spent,
-    cls: 'text-ink',
-    note: `${snapshot.value?.lines.reduce((n, l) => n + l.count, 0) ?? 0} lançamentos realizados`,
-  },
-  {
-    label: 'Ainda vai cair',
-    value: totals.value.committed,
-    cls: totals.value.committed > 0 ? 'text-warn' : 'text-text-3',
-    note: 'parcelas projetadas para este mês',
-  },
-  {
-    label: 'Folga no orçamento',
-    value: totals.value.budgetRemaining,
-    cls: totals.value.budgetRemaining < 0 ? 'text-neg-text' : 'text-ink',
-    note: `de ${formatCurrency(totals.value.budgeted)} orçados`,
-  },
-])
+/** A closed month has no "por dia" left to allow. */
+const showsDaily = computed(() => pace.value.isCurrent && pace.value.daysLeft > 0)
+
+const groups = computed(() => groupBudgetLines(snapshot.value?.lines ?? []))
+const realizedCount = computed(() => snapshot.value?.lines.reduce((n, l) => n + l.count, 0) ?? 0)
+
+/**
+ * The verdict next to the headline.
+ *
+ * The same comparison reads differently depending on the month: while it is
+ * running, spending is measured against the fraction of the month already
+ * lived; once it is closed, the fraction is 1 and the comparison is simply
+ * against the budget. A month that has not started yet has nothing to say.
+ */
+const paceVerdict = computed(() => {
+  if (signal.value.budgeted <= 0) return null
+  if (monthKey.value > currentMonthKey()) return null
+
+  const over = !signal.value.onPace
+  const against = pace.value.isCurrent ? 'do ritmo' : 'do orçado'
+
+  return {
+    tone: (over ? 'neg' : 'pos') as 'neg' | 'pos',
+    amount: Math.abs(signal.value.excess),
+    label: `${over ? 'acima' : 'abaixo'} ${against}`,
+  }
+})
+
+/** The three situations, summarised on the section's own heading line. */
+const LEGEND_STYLE = {
+  over: { swatch: 'var(--neg)', amountColor: 'var(--neg-text)' },
+  within: { swatch: 'var(--accent)', amountColor: 'var(--pos-text)' },
+  untouched: { swatch: 'var(--rule-strong)', amountColor: 'var(--text-2)' },
+} as const
+
+const legend = computed(() =>
+  groups.value
+    .filter(group => group.key !== 'untargeted')
+    .map(group => {
+      const style = LEGEND_STYLE[group.key as keyof typeof LEGEND_STYLE]
+      const n = group.lines.length
+
+      if (group.key === 'over') {
+        return { key: group.key, ...style, text: `${n} ${n === 1 ? 'estourou' : 'estouraram'} ·`, amount: `-${formatCurrency(group.amount)}`, suffix: '' }
+      }
+      if (group.key === 'within') {
+        return { key: group.key, ...style, text: `${n} dentro da meta`, amount: '', suffix: '' }
+      }
+      return { key: group.key, ...style, text: `${n} sem gasto ·`, amount: formatCurrency(group.amount), suffix: 'livres' }
+    })
+)
 </script>

@@ -92,8 +92,18 @@ module.exports = {
         // Serifa
         hero: ['82px', { lineHeight: '0.9', letterSpacing: '-0.01em', fontWeight: '400' }],
         'hero-2': ['38px', { lineHeight: '1', fontWeight: '400' }],
+        'hero-3': ['32px', { lineHeight: '1', fontWeight: '400' }],
         section: ['22px', { lineHeight: '1.2', fontWeight: '400' }],
         brand: ['21px', { lineHeight: '1.1', fontWeight: '400' }],
+
+        // Serifa, degraus de valor. Um número que é resultado de uma conta
+        // (uma parcela da soma, a folga de uma categoria) é lido em serifa, e
+        // precisa de degraus entre o hero e o corpo de texto — do contrário a
+        // única forma de dar peso a um valor é negrito, que é o que faz a tela
+        // virar uma parede de negrito.
+        amount: ['30px', { lineHeight: '1', fontWeight: '400' }],
+        'amount-sm': ['26px', { lineHeight: '1', fontWeight: '400' }],
+        'amount-xs': ['18px', { lineHeight: '1', fontWeight: '400' }],
 
         // Interface
         value: ['15px', { lineHeight: '1.3', fontWeight: '600' }],

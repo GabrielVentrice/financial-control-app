@@ -44,6 +44,7 @@ financial-control-app/
 │   ├── LightStatCard.vue          # KPI/stat card (light design system)
 │   ├── installments/
 │   │   └── CommitmentChart.vue    # Custom CSS/flex stacked-bar projection chart
+│   ├── month/                     # "Meu Mês": equation, pace bar, category groups, plan
 │   └── dashboard/                 # Dashboard-specific chart/list components
 ├── composables/
 │   ├── usePersonFilter.ts         # Global person filter UI state (useState, default: Gabriel)
@@ -138,13 +139,24 @@ still spend**, **where is the month going**, and **am I on track for the move**.
 
 - **Hero**: `renda − realizado − comprometido`, plus the days left and what that allows per day.
   It is a CASH number, not a budget one — a budget is an agreement, cash is what exists, and
-  when they disagree cash wins.
-- **Pace bar**: realized spending against the fraction of the month already lived. Committed
-  installments are excluded: they land on the card's dates, not at a steady drip, so counting
-  them would report "over pace" on the 10th of every month regardless of behaviour.
-- **Category list**: one line per category, ordered by **proximity to breaking**, not by amount.
-  Each uses `CeilingBar` (the empty space to the right is the headroom). The number on the right
-  is what still fits, and it goes negative rather than clamping.
+  when they disagree cash wins. Next to it, a status chip carries the verdict ("R$ 2.419 acima
+  do ritmo"), red or green from the same signal that colours the bar under it.
+- **The equation** (`MonthCashEquation`): the hero shown as the subtraction it is —
+  entrou − já saiu − ainda vai cair = disponível. Four stacked KPI cards said the same four
+  numbers but left the reader to work out that the first three make the fourth, and the third
+  one ("ainda vai cair") is exactly the one people assume is not in the total.
+- **Pace bar** (`MonthPaceBar`): how much of the income is already spoken for (saiu + a cair,
+  scaled by income), with a marker at the fraction of the month already lived. The *verdict* it
+  is coloured by (`paceSignal`) excludes committed installments: they land on the card's dates,
+  not at a steady drip, so counting them would report "over pace" on the 10th of every month
+  regardless of behaviour.
+- **Categories grouped by situation** (`groupBudgetLines`): estouraram / dentro da meta / sem
+  gasto ainda / sem meta, each with its own heading and total. A flat list ordered by proximity
+  to breaking carried the same information but made the reader find the boundary between broken
+  and healthy by reading colours row by row. The two groups that need attention get full rows
+  (icon, bar scaled by the target, headroom on the right, going negative rather than clamping);
+  the other two collapse into chips, which is what stopped six untouched budgets from pushing
+  the four broken ones below the fold.
 - **Targets are editable inline** and persist to `budget_targets`. Saving returns the recomputed
   snapshot, so the totals and the line can never disagree.
 - **Plan strip**: expected cash for the month vs. actual (derived from the debt anchor), plus the
