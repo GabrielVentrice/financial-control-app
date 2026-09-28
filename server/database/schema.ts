@@ -1,7 +1,7 @@
-import { pgTable, serial, varchar, date, decimal, timestamp, integer, boolean } from 'drizzle-orm/pg-core'
+import { pgTable, serial, varchar, date, decimal, timestamp, integer, boolean, text } from 'drizzle-orm/pg-core'
 
 /**
- * Two tables, and both hold the same kind of thing: app state that the ledger
+ * Three tables, and all hold the same kind of thing: app state that the ledger
  * cannot contain. Transactions themselves are read straight from the Bkper API
  * into an in-memory snapshot (server/utils/bookSnapshot.ts) — the Postgres
  * mirror of the book, its sync metadata and the never-used budgets table are
@@ -75,3 +75,25 @@ export const budgetTargets = pgTable('budget_targets', {
 
 export type BudgetTarget = typeof budgetTargets.$inferSelect
 export type NewBudgetTarget = typeof budgetTargets.$inferInsert
+
+/**
+ * The morning briefing, one row per day.
+ *
+ * Written by the `financas-diario` skill through `POST /api/briefing`, read by
+ * the main screen. It is judgement, not data — the ledger cannot contain it, so
+ * it lives here for the same reason the other two tables do.
+ *
+ * Created on first use (server/utils/briefing.ts) as well as by `db:push`, so a
+ * deploy never depends on someone remembering to migrate before the first
+ * morning run.
+ */
+export const dailyBriefings = pgTable('daily_briefings', {
+  id: serial('id').primaryKey(),
+  date: date('date').notNull().unique(),
+  verdict: varchar('verdict', { length: 20 }).notNull(),
+  headline: varchar('headline', { length: 140 }).notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+export type DailyBriefing = typeof dailyBriefings.$inferSelect

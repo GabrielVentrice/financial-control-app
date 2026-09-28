@@ -1,6 +1,8 @@
 <template>
   <Sidemenu>
     <main class="min-h-screen max-w-app px-30 pt-26 pb-34 max-lg:px-5 flex flex-col gap-26">
+      <MonthBriefing />
+
       <div class="flex flex-wrap items-center justify-between gap-3">
         <MonthSelector v-model="monthKey" />
         <SyncButton />

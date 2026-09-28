@@ -137,6 +137,12 @@ Sep/2025, ~R$ 4,3k, existed in the ledger and never reached the sheet).
 Answers three questions in the order they occur to someone opening the app: **how much can I
 still spend**, **where is the month going**, and **am I on track for the move**.
 
+- **Morning briefing** (`MonthBriefing`, above everything): a ≤200-word note written each
+  morning by the `financas-diario` skill (`~/.claude/skills/financas-diario`), which reads the
+  month against the move-out plan and says what to act on. Stored in `daily_briefings` via
+  `POST /api/briefing` (Bearer `NUXT_BRIEFING_TOKEN`), read via `GET /api/briefing`. The app
+  only stores and shows it; the judgement lives in the skill. A missing briefing or a failed
+  read hides the card — never an error state on the main screen. Old briefings show, flagged.
 - **Hero**: `renda − realizado − comprometido`, plus the days left and what that allows per day.
   It is a CASH number, not a budget one — a budget is an agreement, cash is what exists, and
   when they disagree cash wins. Next to it, a status chip carries the verdict ("R$ 2.419 acima
@@ -349,7 +355,7 @@ npm run preview      # Preview production build
 3. Set `DATABASE_URL` (Neon Postgres) — the main screen and the debt screen both need it.
 
 **Key env vars:** `NUXT_BKPER_BOOK_ID`, `NUXT_BKPER_REFRESH_TOKEN`, `NUXT_BKPER_CLIENT_ID`,
-`NUXT_BKPER_CLIENT_SECRET`, `DATABASE_URL`. **All of them must also exist in the Vercel
+`NUXT_BKPER_CLIENT_SECRET`, `DATABASE_URL`, `NUXT_BRIEFING_TOKEN`. **All of them must also exist in the Vercel
 project** — a deploy without `NUXT_BKPER_*` fails every transaction read, and one without
 `DATABASE_URL` takes down the main screen.
 
@@ -625,7 +631,7 @@ await fetchTransactions({
 - **Multi-instance caveat (Vercel)**: each serverless instance holds its own snapshot, so the
   "dados de há X" label can differ between requests and "Atualizar" only renews the instance
   that served it. Fine for a personal app; the TTL bounds the drift at 60min.
-- **Postgres (Neon)** holds `debt_plans` and `budget_targets`
+- **Postgres (Neon)** holds `debt_plans`, `budget_targets` and `daily_briefings`
   ([server/database/schema.ts](server/database/schema.ts)).
   The old `transactions`/`budgets`/`sync_metadata` tables may still exist in the database until
   `npm run db:push` is run against the slimmed schema — leaving them for a few days after the

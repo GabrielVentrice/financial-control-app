@@ -20,6 +20,16 @@ export function currentMonthKey(now: Date = new Date()): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
+/**
+ * Today as "YYYY-MM-DD" in the household's timezone.
+ *
+ * The server runs in UTC, where a briefing written at 22h in São Paulo would
+ * already be filed under tomorrow.
+ */
+export function todayKeyIn(timeZone = 'America/Sao_Paulo', now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(now)
+}
+
 /** Absolute month index, so month math is plain integer math. */
 export function monthKeyToIdx(key: string): number {
   const [y, m] = key.split('-').map(Number)
