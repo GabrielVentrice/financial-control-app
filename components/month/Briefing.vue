@@ -22,7 +22,7 @@
       </template>
     </p>
 
-    <div class="flex flex-col gap-2 text-body text-text-2 max-w-[760px] [text-wrap:pretty]">
+    <div class="flex flex-col gap-2 text-body text-text-2 [text-wrap:pretty]">
       <template v-for="(block, b) in blocks" :key="b">
         <p v-if="block.kind === 'paragraph'">
           <template v-for="(seg, i) in moneySegments(block.text)" :key="i">
