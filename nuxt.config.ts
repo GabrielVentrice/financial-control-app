@@ -15,6 +15,11 @@ export default defineNuxtConfig({
       apiKey: '',
     },
 
+    // Bearer token the financas-diario skill sends to POST /api/briefing.
+    briefing: {
+      token: '',
+    },
+
     // TTL of the in-memory Bkper snapshot.
     cache: {
       ttlMinutes: 60,
