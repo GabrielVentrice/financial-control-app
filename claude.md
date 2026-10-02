@@ -143,6 +143,10 @@ still spend**, **where is the month going**, and **am I on track for the move**.
   `POST /api/briefing` (Bearer `NUXT_BRIEFING_TOKEN`), read via `GET /api/briefing`. The app
   only stores and shows it; the judgement lives in the skill. A missing briefing or a failed
   read hides the card — never an error state on the main screen. Old briefings show, flagged.
+  The note is structured JSON, not prose (`shared/briefing.ts`): a verdict sentence
+  (`headline`) whose numbers are coloured by `highlights`, then `items` triaged into
+  **agir** / **segurar** / **tranquilo** columns. Empty columns are hidden. Briefings from
+  before that format only carry a legacy `body` and still render as text.
 - **Hero**: `renda − realizado − comprometido`, plus the days left and what that allows per day.
   It is a CASH number, not a budget one — a budget is an agreement, cash is what exists, and
   when they disagree cash wins. Next to it, a status chip carries the verdict ("R$ 2.419 acima

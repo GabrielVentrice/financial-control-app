@@ -89,7 +89,7 @@
         </section>
 
         <!-- ═══ CATEGORIAS ═══ -->
-        <section class="flex flex-col gap-18">
+        <section id="categorias" class="flex flex-col gap-18 scroll-mt-6">
           <div class="om-rise flex flex-wrap items-baseline justify-between gap-x-18 gap-y-2" :style="om(440, 560)">
             <h2 class="font-display text-section text-ink">Onde o mês está indo</h2>
 

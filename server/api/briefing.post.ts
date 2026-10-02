@@ -21,7 +21,7 @@ export default defineEventHandler(async (event): Promise<{ briefing: Briefing }>
     openAPI: {
       summary: 'Publish the daily briefing',
       description:
-        'Upserts the briefing for `date` (defaults to today in America/Sao_Paulo). Requires `Authorization: Bearer <NUXT_BRIEFING_TOKEN>`. Headline + body together are capped at 200 words.',
+        'Upserts the briefing for `date` (defaults to today in America/Sao_Paulo). Requires `Authorization: Bearer <NUXT_BRIEFING_TOKEN>`. Body: `{ date?, verdict, headline, highlights: [{ match, tone: good|bad }], items: [{ bucket: agir|segurar|tranquilo, title, amount, amountTone: good|bad|neutral, note, progress?, href? }] }`. Every `highlights[].match` must be an exact substring of `headline`; at most 4 items per bucket; headline + titles + notes are capped at 200 words.',
       tags: ['Briefing'],
       responses: {
         200: { description: 'Saved briefing' },

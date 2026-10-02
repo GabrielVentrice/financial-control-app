@@ -12,18 +12,30 @@ let tableReady: Promise<unknown> | null = null
  * fail silently every day until someone opened the app and wondered why the
  * briefing was a week old.
  */
+async function migrate() {
+  const db = getDb()
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS daily_briefings (
+      id serial PRIMARY KEY,
+      date date NOT NULL UNIQUE,
+      verdict varchar(20) NOT NULL,
+      headline varchar(240) NOT NULL,
+      highlights jsonb NOT NULL DEFAULT '[]'::jsonb,
+      items jsonb NOT NULL DEFAULT '[]'::jsonb,
+      body text,
+      created_at timestamp DEFAULT now()
+    )
+  `)
+  // Tables created before the triage format: widen the headline, add the
+  // structured columns and let the legacy body go empty.
+  await db.execute(sql`ALTER TABLE daily_briefings ALTER COLUMN headline TYPE varchar(240)`)
+  await db.execute(sql`ALTER TABLE daily_briefings ADD COLUMN IF NOT EXISTS highlights jsonb NOT NULL DEFAULT '[]'::jsonb`)
+  await db.execute(sql`ALTER TABLE daily_briefings ADD COLUMN IF NOT EXISTS items jsonb NOT NULL DEFAULT '[]'::jsonb`)
+  await db.execute(sql`ALTER TABLE daily_briefings ALTER COLUMN body DROP NOT NULL`)
+}
+
 function ensureTable() {
-  tableReady ??= getDb()
-    .execute(sql`
-      CREATE TABLE IF NOT EXISTS daily_briefings (
-        id serial PRIMARY KEY,
-        date date NOT NULL UNIQUE,
-        verdict varchar(20) NOT NULL,
-        headline varchar(140) NOT NULL,
-        body text NOT NULL,
-        created_at timestamp DEFAULT now()
-      )
-    `)
+  tableReady ??= migrate()
     .catch((error) => {
       tableReady = null
       throw error
@@ -35,7 +47,9 @@ const toBriefing = (row: DailyBriefing): Briefing => ({
   date: row.date,
   verdict: row.verdict as BriefingVerdict,
   headline: row.headline,
-  body: row.body,
+  highlights: row.highlights ?? [],
+  items: row.items ?? [],
+  ...(row.body && { body: row.body }),
   createdAt: row.createdAt?.toISOString(),
 })
 
@@ -57,7 +71,9 @@ export async function saveBriefing(briefing: Briefing): Promise<Briefing> {
     date: briefing.date,
     verdict: briefing.verdict,
     headline: briefing.headline,
-    body: briefing.body,
+    highlights: briefing.highlights,
+    items: briefing.items,
+    body: briefing.body ?? null,
   }
 
   const [row] = await getDb()

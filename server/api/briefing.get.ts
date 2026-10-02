@@ -12,7 +12,7 @@ export default defineEventHandler(async (): Promise<{ briefing: Briefing | null 
     openAPI: {
       summary: 'Get the latest daily briefing',
       description:
-        'Returns the most recent briefing written by the financas-diario skill: date, verdict (no-trilho | fora-do-trilho), a one-line headline and a plain-text body of at most 200 words. `briefing` is null when none exists.',
+        'Returns the most recent briefing written by the financas-diario skill: date, verdict (no-trilho | fora-do-trilho), the verdict sentence (`headline`) with its coloured `highlights`, and the triage `items` (bucket agir | segurar | tranquilo). Briefings from before the triage format carry a legacy plain-text `body` instead. `briefing` is null when none exists.',
       tags: ['Briefing'],
       responses: {
         200: { description: 'Latest briefing, or null' },
