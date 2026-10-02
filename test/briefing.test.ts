@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { validateBriefing, briefingBlocks, moneySegments, countWords } from '~/shared/briefing'
+import {
+  validateBriefing,
+  briefingBlocks,
+  moneySegments,
+  countWords,
+  highlightSegments,
+  triageColumns,
+  isSafeHref,
+} from '~/shared/briefing'
 import { todayKeyIn } from '~/shared/dates'
 
 const valid = {
@@ -31,6 +39,78 @@ describe('validateBriefing', () => {
   })
 })
 
+const triage = {
+  verdict: 'no-trilho',
+  headline: 'Você está R$ 1.293 acima da curva e gastando R$ 442 abaixo do ritmo.',
+  highlights: [
+    { match: 'R$ 1.293 acima', tone: 'good' },
+    { match: 'R$ 442 abaixo', tone: 'good' },
+  ],
+  items: [
+    { bucket: 'agir', title: 'Classificar no Bkper', amount: 'R$ 420', amountTone: 'neutral', note: 'Hoje.' },
+    { bucket: 'segurar', title: 'Home & Maintenance', amount: 'R$ 5 livres', amountTone: 'neutral', note: '97% de R$ 150.', progress: 0.97, href: '#categorias' },
+  ],
+}
+
+describe('validateBriefing — triage format', () => {
+  it('accepts the structured briefing and defaults amountTone', () => {
+    const { briefing, errors } = validateBriefing(
+      { ...triage, items: [{ ...triage.items[0], amountTone: undefined }] },
+      '2026-10-02'
+    )
+    expect(errors).toEqual([])
+    expect(briefing?.items[0].amountTone).toBe('neutral')
+  })
+
+  /** A highlight that is not in the sentence would silently colour nothing. */
+  it('rejects a highlight that is not part of the headline', () => {
+    const { errors } = validateBriefing(
+      { ...triage, highlights: [{ match: 'R$ 999', tone: 'good' }] },
+      '2026-10-02'
+    )
+    expect(errors[0]).toMatch(/trecho exato da headline/)
+  })
+
+  it('rejects an unknown bucket and a script href', () => {
+    const { errors } = validateBriefing(
+      { ...triage, items: [{ ...triage.items[0], bucket: 'hoje', href: 'javascript:alert(1)' }] },
+      '2026-10-02'
+    )
+    expect(errors).toHaveLength(2)
+  })
+
+  it('requires items when there is no legacy body', () => {
+    const { errors } = validateBriefing({ verdict: 'no-trilho', headline: 'Ok.' }, '2026-10-02')
+    expect(errors).toEqual(['items é obrigatório'])
+  })
+})
+
+describe('highlightSegments', () => {
+  it('splits the sentence at each highlight', () => {
+    expect(highlightSegments(triage.headline, triage.highlights as any)).toEqual([
+      { text: 'Você está ', tone: null },
+      { text: 'R$ 1.293 acima', tone: 'good' },
+      { text: ' da curva e gastando ', tone: null },
+      { text: 'R$ 442 abaixo', tone: 'good' },
+      { text: ' do ritmo.', tone: null },
+    ])
+  })
+})
+
+describe('triageColumns', () => {
+  it('keeps reading order and drops empty buckets', () => {
+    const columns = triageColumns([...triage.items].reverse() as any)
+    expect(columns.map(c => c.bucket)).toEqual(['agir', 'segurar'])
+  })
+})
+
+describe('isSafeHref', () => {
+  it('allows in-app paths, anchors and https only', () => {
+    expect(['/debt', '#plano', 'https://app.bkper.com'].every(isSafeHref)).toBe(true)
+    expect(['//evil.com', 'javascript:x', 'http://x'].some(isSafeHref)).toBe(false)
+  })
+})
+
 describe('briefingBlocks', () => {
   it('groups consecutive bullets into one list', () => {
     expect(briefingBlocks(valid.body)).toEqual([
@@ -47,6 +127,10 @@ describe('moneySegments', () => {
       { text: 'R$ 2.419,50', money: true },
       { text: ' até dia 30', money: false },
     ])
+  })
+
+  it('treats a typographic minus as part of the amount', () => {
+    expect(moneySegments('−R$ 117')).toEqual([{ text: '−R$ 117', money: true }])
   })
 })
 

@@ -1,4 +1,5 @@
-import { pgTable, serial, varchar, date, decimal, timestamp, integer, boolean, text } from 'drizzle-orm/pg-core'
+import { pgTable, serial, varchar, date, decimal, timestamp, integer, boolean, text, jsonb } from 'drizzle-orm/pg-core'
+import type { TriageItem, VerdictHighlight } from '../../shared/briefing'
 
 /**
  * Three tables, and all hold the same kind of thing: app state that the ledger
@@ -91,8 +92,10 @@ export const dailyBriefings = pgTable('daily_briefings', {
   id: serial('id').primaryKey(),
   date: date('date').notNull().unique(),
   verdict: varchar('verdict', { length: 20 }).notNull(),
-  headline: varchar('headline', { length: 140 }).notNull(),
-  body: text('body').notNull(),
+  headline: varchar('headline', { length: 240 }).notNull(),
+  highlights: jsonb('highlights').$type<VerdictHighlight[]>().notNull().default([]),
+  items: jsonb('items').$type<TriageItem[]>().notNull().default([]),
+  body: text('body'),
   createdAt: timestamp('created_at').defaultNow(),
 })
 

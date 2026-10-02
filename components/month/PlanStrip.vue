@@ -1,5 +1,5 @@
 <template>
-  <section class="flex flex-col gap-18">
+  <section id="plano" class="flex flex-col gap-18 scroll-mt-6">
     <div class="om-rise flex flex-wrap items-baseline justify-between gap-3" :style="om(520, 560)">
       <h2 class="font-display text-section text-ink">O plano</h2>
       <a
